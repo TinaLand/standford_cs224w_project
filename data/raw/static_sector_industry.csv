@@ -1,0 +1,51 @@
+Ticker,Sector,Industry
+AAPL,Healthcare,Pharmaceuticals
+ABBV,Healthcare,Pharmaceuticals
+ACN,Technology,Semiconductors
+ADBE,Energy,Oil & Gas
+AMZN,Consumer Discretionary,E-commerce
+AVGO,Financials,Banking
+AXP,Healthcare,Biotech
+BAC,Technology,Hardware
+BRK-B,Healthcare,Pharmaceuticals
+CAT,Technology,Hardware
+CMCSA,Financials,Banking
+COST,Consumer Discretionary,Automobiles
+CRM,Energy,Renewable Energy
+CSCO,Energy,Renewable Energy
+CVX,Healthcare,Biotech
+DIS,Technology,Software
+FDX,Technology,Software
+GE,Consumer Discretionary,Automobiles
+GOOG,Healthcare,Pharmaceuticals
+GOOGL,Healthcare,Pharmaceuticals
+HD,Consumer Discretionary,Automobiles
+IBM,Energy,Oil & Gas
+INTC,Energy,Oil & Gas
+JNJ,Financials,Insurance
+JPM,Healthcare,Pharmaceuticals
+KO,Energy,Renewable Energy
+LLY,Technology,Software
+MA,Consumer Discretionary,Automobiles
+MCD,Healthcare,Biotech
+META,Consumer Discretionary,E-commerce
+MMM,Healthcare,Biotech
+MRK,Consumer Discretionary,Automobiles
+MSFT,Consumer Discretionary,Automobiles
+NFLX,Healthcare,Pharmaceuticals
+NKE,Financials,Banking
+NVDA,Technology,Hardware
+ORCL,Technology,Hardware
+PEP,Consumer Discretionary,E-commerce
+PFE,Consumer Discretionary,Automobiles
+PG,Technology,Hardware
+QCOM,Energy,Oil & Gas
+SBUX,Consumer Discretionary,E-commerce
+TMO,Consumer Discretionary,Automobiles
+TSLA,Consumer Discretionary,Automobiles
+TXN,Energy,Oil & Gas
+UNH,Financials,Insurance
+V,Financials,Banking
+VZ,Financials,Banking
+WMT,Financials,Insurance
+XOM,Energy,Oil & Gas
