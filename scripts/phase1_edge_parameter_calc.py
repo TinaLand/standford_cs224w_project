@@ -65,7 +65,7 @@ def compute_rolling_correlation(technical_data, window=30, min_periods=20):
         return None
     
     # Pivot data to have tickers as columns and dates as rows
-    returns_pivot = technical_data.pivot(index='date', columns='ticker', values='returns')
+    returns_pivot = technical_data.pivot(index='Date', columns='ticker', values='returns')
     
     # Remove any columns (tickers) with insufficient data
     valid_tickers = returns_pivot.columns[returns_pivot.count() >= min_periods * 2]
@@ -103,7 +103,7 @@ def compute_rolling_correlation(technical_data, window=30, min_periods=20):
         # Store results
         for date, correlation in rolling_corr.dropna().items():
             correlation_data.append({
-                'date': date,
+                'Date': date,
                 'ticker1': ticker1,
                 'ticker2': ticker2,
                 'correlation': correlation,
@@ -321,24 +321,90 @@ def main():
         # Load processed data
         print("📁 Loading processed data...")
         
-        # Load technical features
-        technical_file = DATA_PROCESSED_DIR / "features_technical.csv"
-        if technical_file.exists():
-            technical_data = pd.read_csv(technical_file)
-            technical_data['date'] = pd.to_datetime(technical_data['date'])
-            print(f"✅ Loaded technical data: {technical_data.shape}")
+        # Load consolidated node features (contains technical + fundamental + sentiment data)
+        consolidated_file = DATA_PROCESSED_DIR / "node_features_X_t_final.csv"
+        if consolidated_file.exists():
+            consolidated_data = pd.read_csv(consolidated_file, index_col='Date', parse_dates=True)
+            print(f"✅ Loaded consolidated data: {consolidated_data.shape}")
+            
+            # Extract technical indicators (log returns) from consolidated data
+            technical_cols = [col for col in consolidated_data.columns if 'LogRet_1d_' in col]
+            if technical_cols:
+                # Create long format data for correlation calculation
+                technical_data_list = []
+                for col in technical_cols:
+                    ticker = col.split('_')[-1]  # Extract ticker from column name
+                    temp_df = consolidated_data[[col]].reset_index()
+                    temp_df.columns = ['Date', 'returns']
+                    temp_df['ticker'] = ticker
+                    technical_data_list.append(temp_df)
+                
+                technical_data = pd.concat(technical_data_list, ignore_index=True)
+                technical_data['Date'] = pd.to_datetime(technical_data['Date'])
+                print(f"✅ Extracted technical features for correlation: {technical_data.shape}")
+            else:
+                print("❌ No technical indicators found in consolidated data")
+                technical_data = None
         else:
-            print(f"❌ Technical data file not found: {technical_file}")
+            print(f"❌ Consolidated data file not found: {consolidated_file}")
             technical_data = None
         
-        # Load fundamental features
-        fundamental_file = DATA_PROCESSED_DIR / "features_fundamental.csv"
-        if fundamental_file.exists():
-            fundamental_data = pd.read_csv(fundamental_file)
-            print(f"✅ Loaded fundamental data: {fundamental_data.shape}")
+        # Extract fundamental features from consolidated data
+        if 'consolidated_data' in locals() and consolidated_data is not None:
+            # Extract fundamental columns (PE, ROE ratios)
+            pe_cols = [col for col in consolidated_data.columns if '_PE' in col and not '_PE_Log' in col]
+            roe_cols = [col for col in consolidated_data.columns if '_ROE' in col and not '_ROE_Log' in col]
+            
+            if pe_cols or roe_cols:
+                # Transform wide format to long format for fundamental similarity calculation
+                fundamental_data_list = []
+                
+                # Get the latest date's fundamental data (fundamentals don't change daily)
+                latest_fundamentals = consolidated_data.iloc[-1]
+                
+                # Extract tickers and their fundamental metrics
+                tickers_with_fundamentals = set()
+                if pe_cols:
+                    tickers_with_fundamentals.update([col.split('_PE')[0] for col in pe_cols])
+                if roe_cols:
+                    tickers_with_fundamentals.update([col.split('_ROE')[0] for col in roe_cols])
+                
+                for ticker in tickers_with_fundamentals:
+                    row_data = {'ticker': ticker}
+                    
+                    # Add PE ratio if available
+                    pe_col = f'{ticker}_PE'
+                    if pe_col in latest_fundamentals.index:
+                        row_data['pe_ratio'] = latest_fundamentals[pe_col]
+                    
+                    # Add ROE if available
+                    roe_col = f'{ticker}_ROE'
+                    if roe_col in latest_fundamentals.index:
+                        row_data['roe'] = latest_fundamentals[roe_col]
+                    
+                    fundamental_data_list.append(row_data)
+                
+                if fundamental_data_list:
+                    fundamental_data = pd.DataFrame(fundamental_data_list)
+                    print(f"✅ Transformed fundamental features for {len(fundamental_data_list)} tickers: {fundamental_data.shape}")
+                else:
+                    print("❌ No valid fundamental features found")
+                    fundamental_data = None
+            else:
+                print("❌ No fundamental features found in consolidated data")
+                fundamental_data = None
+                
+            # Extract sentiment/macro features from consolidated data
+            sentiment_cols = [col for col in consolidated_data.columns if any(metric in col for metric in ['VIX', 'Sentiment'])]
+            if sentiment_cols:
+                sentiment_data = consolidated_data[sentiment_cols].reset_index()
+                print(f"✅ Extracted sentiment/macro features: {sentiment_data.shape}")
+            else:
+                print("❌ No sentiment/macro features found in consolidated data")
+                sentiment_data = None
         else:
-            print(f"❌ Fundamental data file not found: {fundamental_file}")
             fundamental_data = None
+            sentiment_data = None
         
         print("\n" + "-" * 30)
         
