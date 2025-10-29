@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------
 # Core Project Exclusion (Recommended)
 # ----------------------------------------------------------------------
-venv/              # Exclude Python Virtual Environment
+/venv/              # Exclude Python Virtual Environment
 /data/              # Exclude all raw inputs, processed features, and large graph snapshots
 
 # ----------------------------------------------------------------------
