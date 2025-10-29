@@ -1,2 +1,13 @@
+# ----------------------------------------------------------------------
+# Core Project Exclusion (Recommended)
+# ----------------------------------------------------------------------
+venv/              # Exclude Python Virtual Environment
+/data/              # Exclude all raw inputs, processed features, and large graph snapshots
 
-/venv
+# ----------------------------------------------------------------------
+# Standard Python/System Exclusions
+# ----------------------------------------------------------------------
+__pycache__/        # Compiled Python bytecode
+*.pyc
+.DS_Store           # macOS system files
+.pytest_cache/      # Pytest cache
