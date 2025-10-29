@@ -330,15 +330,52 @@ def construct_graph_for_date(date, node_features_df, correlations_df, similariti
     return graph
 
 def save_graph_snapshot(graph, date, output_dir):
-    """Save a graph snapshot to disk."""
+    """Save a graph snapshot to disk with verification."""
     date_str = date.strftime('%Y%m%d')
     filename = f"graph_t_{date_str}.pt"
     filepath = output_dir / filename
     
-    # Save using PyTorch
-    torch.save(graph, filepath)
-    
-    return filepath
+    try:
+        # Save using PyTorch
+        torch.save(graph, filepath)
+        
+        # VERIFICATION: Immediately reload and verify the saved object
+        try:
+            # Fix for PyTorch 2.6+ weights_only security feature
+            loaded_graph = torch.load(filepath, weights_only=False)
+            
+            # Basic integrity checks
+            if not hasattr(loaded_graph, 'edge_types'):
+                raise ValueError("Loaded graph missing edge_types attribute")
+            
+            if not hasattr(loaded_graph, 'num_edges'):
+                raise ValueError("Loaded graph missing num_edges attribute")
+            
+            # Check node features exist and have correct shape
+            if 'stock' not in loaded_graph.node_types:
+                raise ValueError("Loaded graph missing 'stock' node type")
+            
+            if not hasattr(loaded_graph['stock'], 'x'):
+                raise ValueError("Loaded graph missing node features")
+            
+            node_features = loaded_graph['stock'].x
+            if not isinstance(node_features, torch.Tensor):
+                raise ValueError("Node features not a PyTorch tensor")
+            
+            if len(node_features.shape) != 2:
+                raise ValueError(f"Node features wrong shape: {node_features.shape}")
+            
+            # If we get here, the graph is valid
+            return filepath
+            
+        except Exception as e:
+            # If verification fails, remove the corrupted file
+            if filepath.exists():
+                filepath.unlink()
+            raise ValueError(f"Graph verification failed: {e}")
+            
+    except Exception as e:
+        raise RuntimeError(f"Failed to save graph for {date_str}: {e}")
 
 # --- Main Execution ---
 
@@ -390,10 +427,14 @@ def main():
                 if graph is None:
                     continue
                 
-                # Save graph snapshot
-                filepath = save_graph_snapshot(graph, date, DATA_GRAPHS_DIR)
-                
-                successful_graphs += 1
+                # Save graph snapshot with verification
+                try:
+                    filepath = save_graph_snapshot(graph, date, DATA_GRAPHS_DIR)
+                    successful_graphs += 1
+                except Exception as save_error:
+                    print(f"❌ Failed to save graph for {date.strftime('%Y-%m-%d')}: {save_error}")
+                    failed_graphs += 1
+                    continue
                 
                 # Progress update
                 if (i + 1) % 50 == 0 or i == len(date_range) - 1:
