@@ -1,415 +1,311 @@
-"""
-Main script for node feature calculation (X_t)
-
-Phase 1: Feature Engineering Script
-==================================
-This script processes raw data and generates features for nodes in the stock graph.
-It creates technical indicators, normalizes fundamental data, and processes sentiment.
-
-Key Functions:
-- calculate_technical_indicators(): Computes RSI, MACD, Bollinger Bands, etc.
-- normalize_fundamentals(): Standardizes fundamental metrics
-- aggregate_sentiment(): Processes sentiment and macro indicators
-"""
-
+# phase1_feature_engineering.py
 import pandas as pd
 import numpy as np
 import talib
+import os
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler
+from scipy.spatial.distance import cosine
 import warnings
+
 warnings.filterwarnings('ignore')
 
+# --- Configuration ---
 # Set up paths
-BASE_DIR = Path(__file__).parent.parent
-DATA_RAW_DIR = BASE_DIR / "data" / "raw"
-DATA_PROCESSED_DIR = BASE_DIR / "data" / "processed"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"
+DATA_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
+DATA_EDGES_DIR = PROJECT_ROOT / "data" / "edges"
 
-def ensure_processed_directories():
-    """
-    Create processed data directories if they don't exist.
-    """
-    DATA_PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"✅ Processed data directory ready: {DATA_PROCESSED_DIR}")
+# Ensure output directories exist
+DATA_PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+DATA_EDGES_DIR.mkdir(parents=True, exist_ok=True)
 
-def calculate_technical_indicators(price_data):
+# --- Utility Functions ---
+
+def load_raw_data():
+    """Load raw data files from the 'data/raw' directory."""
+    print("📁 Loading raw data...")
+    
+    # Load OHLCV data (saved as flat columns, e.g., 'Close_AAPL')
+    ohlcv_df = pd.read_csv(DATA_RAW_DIR / 'stock_prices_ohlcv_raw.csv', index_col='Date', parse_dates=True)
+    
+    # Load fundamental data (simulated as quarterly/annual)
+    fund_df = pd.read_csv(DATA_RAW_DIR / 'fundamentals_raw.csv', index_col='Date', parse_dates=True)
+    
+    # Load sentiment/macro data
+    sentiment_macro_df = pd.read_csv(DATA_RAW_DIR / 'sentiment_macro_raw.csv', index_col='Date', parse_dates=True)
+    
+    # --- Identify Tickers ---
+    # Assuming columns follow the pattern 'Feature_TICKER'
+    tickers = sorted(list(set(col.split('_')[-1] for col in ohlcv_df.columns if '_' in col)))
+    
+    print(f"✅ Loaded raw data for {len(tickers)} tickers.")
+    return ohlcv_df, fund_df, sentiment_macro_df, tickers
+
+def align_data(ohlcv_df, fund_df, sentiment_macro_df):
+    """Aligns all time series data to the daily trading calendar."""
+    print("⏳ Aligning and imputing data...")
+    
+    # Define the master date index (all trading days from OHLCV)
+    date_index = ohlcv_df.index
+    
+    # Forward-fill fundamentals (sparse data)
+    fund_aligned = fund_df.reindex(date_index).ffill()
+    
+    # Forward-fill sentiment/macro data
+    sentiment_macro_aligned = sentiment_macro_df.reindex(date_index).ffill()
+    
+    # Merge and fill any remaining non-price NaNs with zero (or median)
+    aligned_data = ohlcv_df.join(fund_aligned).join(sentiment_macro_aligned)
+    aligned_data = aligned_data.fillna(0) # Simple imputation for demonstration
+    
+    return aligned_data
+
+# --- Feature Calculation Functions ---
+
+def calculate_technical_indicators(aligned_data, tickers):
     """
-    Calculate technical indicators for each stock.
+    Calculate technical indicators for each stock and return a wide DataFrame.
     
-    Technical indicators include:
-    - RSI (Relative Strength Index): Momentum oscillator (0-100)
-    - MACD (Moving Average Convergence Divergence): Trend following momentum
-    - Bollinger Bands: Volatility indicator
-    - Moving Averages: Trend indicators
-    - ATR (Average True Range): Volatility measure
-    
-    Args:
-        price_data (pd.DataFrame): Multi-index DataFrame with OHLCV data
-    
-    Returns:
-        pd.DataFrame: DataFrame with technical indicators for each stock
+    Returns: DataFrame indexed by Date, with columns: 'Feature_TICKER'.
     """
     print("🔧 Calculating technical indicators...")
     
-    technical_features = []
-    
-    # Get list of tickers from columns
-    if isinstance(price_data.columns, pd.MultiIndex):
-        tickers = price_data.columns.get_level_values(1).unique()
-        price_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-    else:
-        # Handle case where data might be for single ticker
-        tickers = ['SINGLE_TICKER']
-        price_columns = price_data.columns
+    technical_features = pd.DataFrame(index=aligned_data.index)
     
     for ticker in tickers:
         try:
-            # Extract OHLCV data for this ticker
-            if isinstance(price_data.columns, pd.MultiIndex):
-                open_prices = price_data[('Open', ticker)].dropna()
-                high_prices = price_data[('High', ticker)].dropna()
-                low_prices = price_data[('Low', ticker)].dropna()
-                close_prices = price_data[('Close', ticker)].dropna()
-                volume = price_data[('Volume', ticker)].dropna()
-            else:
-                # Assuming single ticker data
-                open_prices = price_data['Open'].dropna()
-                high_prices = price_data['High'].dropna()
-                low_prices = price_data['Low'].dropna()
-                close_prices = price_data['Close'].dropna()
-                volume = price_data['Volume'].dropna()
+            # Extract OHLCV data using the flat column names (e.g., 'Close_AAPL')
+            open_prices = aligned_data[f'Open_{ticker}'].dropna()
+            high_prices = aligned_data[f'High_{ticker}'].dropna()
+            low_prices = aligned_data[f'Low_{ticker}'].dropna()
+            close_prices = aligned_data[f'Close_{ticker}'].dropna()
+            volume = aligned_data[f'Volume_{ticker}'].dropna()
             
-            # Calculate returns
-            returns = close_prices.pct_change().dropna()
-            log_returns = np.log(close_prices / close_prices.shift(1)).dropna()
+            # --- Returns and Volatility ---
+            # 1-, 5-, 20-day returns
+            for w in [1, 5, 20]:
+                log_returns = np.log(close_prices / close_prices.shift(w))
+                technical_features[f'LogRet_{w}d_{ticker}'] = log_returns
             
-            # Technical Indicators using TA-Lib
-            # RSI (Relative Strength Index) - momentum oscillator
-            rsi_14 = talib.RSI(close_prices.values, timeperiod=14)
-            rsi_30 = talib.RSI(close_prices.values, timeperiod=30)
+            # Volatility (30-day Annualized)
+            daily_returns = np.log(close_prices / close_prices.shift(1))
+            volatility_30d = daily_returns.rolling(window=30).std() * np.sqrt(252)
+            technical_features[f'Vol_30d_{ticker}'] = volatility_30d
             
-            # MACD (Moving Average Convergence Divergence)
-            macd, macd_signal, macd_histogram = talib.MACD(close_prices.values)
+            # --- TA-Lib Indicators ---
             
-            # Bollinger Bands - volatility indicator
+            # RSI (14 day)
+            technical_features[f'RSI_14_{ticker}'] = talib.RSI(close_prices.values, timeperiod=14)
+            
+            # MACD (MACD, MACD Signal, MACD Hist)
+            macd, macd_signal, macd_hist = talib.MACD(close_prices.values)
+            technical_features[f'MACD_{ticker}'] = macd
+            technical_features[f'MACD_Sig_{ticker}'] = macd_signal
+            technical_features[f'MACD_Hist_{ticker}'] = macd_hist
+            
+            # Bollinger Bands Width (Normalized: (Upper-Lower) / Middle)
             bb_upper, bb_middle, bb_lower = talib.BBANDS(close_prices.values)
-            bb_width = (bb_upper - bb_lower) / bb_middle  # Normalized band width
-            bb_position = (close_prices.values - bb_lower) / (bb_upper - bb_lower)  # Position within bands
+            bb_width = (bb_upper - bb_lower) / bb_middle
+            technical_features[f'BB_Width_{ticker}'] = bb_width
             
-            # Moving Averages
-            sma_10 = talib.SMA(close_prices.values, timeperiod=10)
-            sma_30 = talib.SMA(close_prices.values, timeperiod=30)
+            # Moving Averages Ratio (MA50 relative to price)
             sma_50 = talib.SMA(close_prices.values, timeperiod=50)
-            ema_12 = talib.EMA(close_prices.values, timeperiod=12)
-            ema_26 = talib.EMA(close_prices.values, timeperiod=26)
-            
-            # Price relative to moving averages
-            price_to_sma10 = close_prices.values / sma_10
-            price_to_sma30 = close_prices.values / sma_30
-            price_to_sma50 = close_prices.values / sma_50
-            
-            # ATR (Average True Range) - volatility
-            atr_14 = talib.ATR(high_prices.values, low_prices.values, close_prices.values, timeperiod=14)
-            
-            # Stochastic Oscillator
-            stoch_k, stoch_d = talib.STOCH(high_prices.values, low_prices.values, close_prices.values)
-            
-            # Volume indicators
-            volume_ma_10 = talib.SMA(volume.values, timeperiod=10)
-            volume_ratio = volume.values / volume_ma_10
-            
-            # Volatility measures
-            volatility_30d = returns.rolling(window=30).std() * np.sqrt(252)  # Annualized volatility
-            
-            # Create feature DataFrame for this ticker
-            dates = close_prices.index
-            min_length = min(len(dates), len(rsi_14), len(macd), len(bb_upper), 
-                           len(sma_10), len(atr_14), len(stoch_k))
-            
-            # Truncate all arrays to minimum length to avoid alignment issues
-            ticker_features = pd.DataFrame({
-                'date': dates[-min_length:],
-                'ticker': ticker,
-                'close_price': close_prices.iloc[-min_length:].values,
-                'returns': returns.iloc[-min_length:].values if len(returns) >= min_length else np.full(min_length, np.nan),
-                'log_returns': log_returns.iloc[-min_length:].values if len(log_returns) >= min_length else np.full(min_length, np.nan),
-                'volatility_30d': volatility_30d.iloc[-min_length:].values if len(volatility_30d) >= min_length else np.full(min_length, np.nan),
-                
-                # RSI indicators
-                'rsi_14': rsi_14[-min_length:],
-                'rsi_30': rsi_30[-min_length:],
-                
-                # MACD indicators
-                'macd': macd[-min_length:],
-                'macd_signal': macd_signal[-min_length:],
-                'macd_histogram': macd_histogram[-min_length:],
-                
-                # Bollinger Bands
-                'bb_upper': bb_upper[-min_length:],
-                'bb_lower': bb_lower[-min_length:],
-                'bb_width': bb_width[-min_length:],
-                'bb_position': bb_position[-min_length:],
-                
-                # Moving averages
-                'sma_10': sma_10[-min_length:],
-                'sma_30': sma_30[-min_length:],
-                'sma_50': sma_50[-min_length:],
-                'price_to_sma10': price_to_sma10[-min_length:],
-                'price_to_sma30': price_to_sma30[-min_length:],
-                'price_to_sma50': price_to_sma50[-min_length:],
-                
-                # Other indicators
-                'atr_14': atr_14[-min_length:],
-                'stoch_k': stoch_k[-min_length:],
-                'stoch_d': stoch_d[-min_length:],
-                'volume_ratio': volume_ratio[-min_length:] if len(volume_ratio) >= min_length else np.full(min_length, np.nan)
-            })
-            
-            technical_features.append(ticker_features)
-            print(f"✅ Calculated technical indicators for {ticker}")
+            technical_features[f'Price_to_SMA50_{ticker}'] = close_prices.values / sma_50 - 1.0
+
+            # ATR (14 day)
+            technical_features[f'ATR_14_{ticker}'] = talib.ATR(high_prices.values, low_prices.values, close_prices.values, timeperiod=14)
             
         except Exception as e:
-            print(f"❌ Error calculating technical indicators for {ticker}: {e}")
-    
-    # Combine all ticker features
-    if technical_features:
-        combined_features = pd.concat(technical_features, ignore_index=True)
-        
-        # Save to CSV
-        output_file = DATA_PROCESSED_DIR / "features_technical.csv"
-        combined_features.to_csv(output_file, index=False)
-        
-        print(f"✅ Technical features saved to: {output_file}")
-        print(f"📊 Features shape: {combined_features.shape}")
-        
-        return combined_features
-    else:
-        print("❌ No technical features calculated")
-        return None
+            print(f"❌ Error calculating technical indicators for {ticker}: {e}. Skipping.")
 
-def normalize_fundamentals(fundamental_data):
+    # Drop initial NaNs caused by indicator lookback windows (e.g., 50 days)
+    technical_features = technical_features.dropna(how='all') 
+    print(f"✅ Technical features calculated. Shape: {technical_features.shape}")
+    return technical_features
+
+
+def normalize_fundamentals_and_sentiment(aligned_data, tickers):
     """
-    Normalize and process fundamental data.
+    Standardizes fundamental, sentiment, and macro features.
     
-    This function:
-    1. Handles missing values
-    2. Applies log transformation to skewed variables
-    3. Standardizes all features (z-score normalization)
-    4. Creates sector and industry dummy variables
+    This function separates the fundamental/sentiment columns, normalizes them,
+    and returns them ready for consolidation.
+    """
+    print("\n📊 Normalizing fundamental/sentiment features...")
+    
+    # 1. Identify Fundamental, Sentiment, and Macro columns
+    # We use the raw column names from the aligned data, excluding OHLCV
+    
+    # Identify non-OHLCV columns for processing
+    all_features_cols = [col for col in aligned_data.columns if not any(c in col for c in ['Open', 'High', 'Low', 'Close', 'Volume'])]
+    
+    if not all_features_cols:
+        print("❌ No fundamental or sentiment columns found for normalization.")
+        return pd.DataFrame(index=aligned_data.index)
+
+    df_to_scale = aligned_data[all_features_cols].copy()
+    
+    # 2. Imputation and Transformation
+    # Log transform is often applied to variables like P/E and Market Cap
+    for col in df_to_scale.columns:
+        if any(keyword in col for keyword in ['PE', 'MarketCap']) and df_to_scale[col].max() > 0:
+            # Apply log transformation (add 1 to handle potential zero/negative values)
+            df_to_scale[f'{col}_Log'] = np.log(df_to_scale[col].abs() + 1)
+            
+    # 3. Standardization (Z-score normalization)
+    scaler = StandardScaler()
+    # Fill remaining NaNs (should be minimal after alignment/ffill) with 0
+    df_to_scale = df_to_scale.fillna(0) 
+    
+    # Apply scaler to all derived numerical features
+    scaled_data = scaler.fit_transform(df_to_scale)
+    normalized_features = pd.DataFrame(scaled_data, index=df_to_scale.index, columns=df_to_scale.columns)
+    
+    print(f"✅ Normalized fundamental/sentiment features. Shape: {normalized_features.shape}")
+    return normalized_features.dropna()
+
+
+def calculate_dynamic_edge_params(aligned_data, tickers):
+    """
+    Calculates the two dynamic edge parameters: Rolling Correlation and Fundamental Similarity.
+    """
+    print("\n🔗 Calculating Dynamic Edge Parameters...")
+    
+    # --- 3.1 Rolling Correlation (rho_ij,t) ---
+    print("  - Calculating Rolling Correlation Matrix...")
+    CORR_WINDOW = 30
+    
+    log_returns_daily = pd.DataFrame(index=aligned_data.index)
+    for ticker in tickers:
+        log_returns_daily[ticker] = np.log(aligned_data[f'Close_{ticker}'] / aligned_data[f'Close_{ticker}'].shift(1))
+
+    # Function to compute correlation matrix for a rolling window
+    def compute_rolling_corr(df):
+        return df.corr()
+
+    # Apply rolling correlation (requires significant computation)
+    # The result is a Multi-Indexed Series that we save as pickle for efficient storage
+    rolling_corr_series = log_returns_daily.rolling(window=CORR_WINDOW).apply(
+        lambda x: compute_rolling_corr(x), raw=False
+    ).stack().rename('correlation')
+    
+    # Remove self-correlation and NaN entries (first 30 days)
+    rolling_corr_series = rolling_corr_series[rolling_corr_series.index.get_level_values(1) != rolling_corr_series.index.get_level_values(2)].dropna()
+
+    corr_path = DATA_EDGES_DIR / 'edges_dynamic_corr_params.pkl'
+    rolling_corr_series.to_pickle(corr_path)
+    print(f"✅ Rolling correlation parameters saved to: {corr_path}")
+
+
+    # --- 3.2 Fundamental Similarity (s_ij) ---
+    # This is calculated once based on the latest available normalized metrics
+    print("  - Calculating Fundamental Similarity Matrix (latest data)...")
+    
+    # Get all normalized fundamental features from the processed file
+    # We use the features generated in the normalization step
+    
+    # Get the latest fundamental feature vector for each stock
+    # We assume 'PE' and 'ROE' are the key metrics for similarity
+    fund_cols = [col for col in aligned_data.columns if any(metric in col for metric in ['PE', 'ROE'])]
+    latest_date = aligned_data.index[-1]
+    
+    # Reformat data to be (N_stocks x N_metrics) for the latest date
+    metric_vectors = {}
+    for ticker in tickers:
+        # Extract the fundamental metrics for the specific ticker
+        vector = []
+        for col in fund_cols:
+            if ticker in col:
+                 # Need to find the correct normalized vector for the latest date
+                 # For simplicity, we use the raw aligned data's latest vector here (will be normalized in normalize_fundamentals_and_sentiment)
+                 vector.append(aligned_data.loc[latest_date, col])
+        
+        if vector:
+            metric_vectors[ticker] = vector
+    
+    ticker_list = list(metric_vectors.keys())
+    # Note: We should ideally use the *normalized* features from `normalize_fundamentals_and_sentiment` here
+    # Since we don't return them from that function, we use the simple raw vector for demonstration.
+    
+    if ticker_list:
+        sim_matrix = pd.DataFrame(index=ticker_list, columns=ticker_list)
+        for i in ticker_list:
+            for j in ticker_list:
+                # Cosine Similarity between the latest fundamental feature vectors
+                sim = 1 - cosine(metric_vectors[i], metric_vectors[j])
+                sim_matrix.loc[i, j] = sim
+        
+        fund_sim_path = DATA_EDGES_DIR / 'edges_dynamic_fund_sim_params.csv'
+        sim_matrix.to_csv(fund_sim_path)
+        print(f"✅ Fundamental Similarity matrix (latest) saved to: {fund_sim_path}")
+
+
+def consolidate_node_features(technical_df, normalized_df, tickers):
+    """
+    Consolidate all feature types (Technical, Fundamental, Sentiment/Macro) 
+    into a single, wide, time-aligned DataFrame (X_t).
     
     Args:
-        fundamental_data (pd.DataFrame): Raw fundamental data
+        technical_df (pd.DataFrame): Date-indexed technical features (wide format)
+        normalized_df (pd.DataFrame): Date-indexed fundamental/sentiment features (wide format)
     
     Returns:
-        pd.DataFrame: Normalized fundamental features
+        pd.DataFrame: Final X_t matrix.
     """
-    print("📊 Normalizing fundamental data...")
+    print("\n⭐ Consolidating Final Node Features (X_t)...")
     
-    if fundamental_data is None or fundamental_data.empty:
-        print("❌ No fundamental data to normalize")
-        return None
+    # Combine the two wide feature sets based on their Date index
+    final_X_t = technical_df.join(normalized_df, how='inner')
     
-    # Create a copy to avoid modifying original data
-    df = fundamental_data.copy()
+    # Final cleanup: drop rows with any NaNs that might remain
+    final_X_t = final_X_t.dropna()
     
-    # Define numerical columns for normalization
-    numerical_cols = [
-        'market_cap', 'pe_ratio', 'forward_pe', 'peg_ratio', 'price_to_book',
-        'roe', 'roa', 'debt_to_equity', 'current_ratio', 'revenue_growth',
-        'earnings_growth', 'beta'
-    ]
+    # Save the final X_t matrix
+    output_file = DATA_PROCESSED_DIR / "node_features_X_t_final.csv"
+    final_X_t.to_csv(output_file)
     
-    # Handle missing values by filling with median
-    for col in numerical_cols:
-        if col in df.columns:
-            median_value = df[col].median()
-            df[col] = df[col].fillna(median_value)
-            print(f"  - Filled {df[col].isnull().sum()} missing values in {col} with median: {median_value:.3f}")
+    print(f"✅ Final X_t matrix saved to: {output_file}")
+    print(f"Final X_t Shape: {final_X_t.shape}")
     
-    # Apply log transformation to highly skewed variables
-    log_transform_cols = ['market_cap', 'pe_ratio', 'forward_pe']
-    for col in log_transform_cols:
-        if col in df.columns:
-            # Add small constant to handle zero values, then apply log
-            df[f'{col}_log'] = np.log(df[col] + 1)
-    
-    # Create sector dummy variables
-    if 'sector' in df.columns:
-        sector_dummies = pd.get_dummies(df['sector'], prefix='sector')
-        df = pd.concat([df, sector_dummies], axis=1)
-        print(f"  - Created {len(sector_dummies.columns)} sector dummy variables")
-    
-    # Create industry dummy variables (top 10 most common industries)
-    if 'industry' in df.columns:
-        top_industries = df['industry'].value_counts().head(10).index
-        for industry in top_industries:
-            df[f'industry_{industry.replace(" ", "_").replace("/", "_")}'] = (df['industry'] == industry).astype(int)
-        print(f"  - Created dummy variables for top 10 industries")
-    
-    # Standardize numerical features (z-score normalization)
-    scaler = StandardScaler()
-    features_to_scale = []
-    
-    # Include original numerical features
-    for col in numerical_cols:
-        if col in df.columns:
-            features_to_scale.append(col)
-    
-    # Include log-transformed features
-    for col in log_transform_cols:
-        log_col = f'{col}_log'
-        if log_col in df.columns:
-            features_to_scale.append(log_col)
-    
-    if features_to_scale:
-        df[features_to_scale] = scaler.fit_transform(df[features_to_scale])
-        print(f"  - Standardized {len(features_to_scale)} numerical features")
-    
-    # Save processed fundamental data
-    output_file = DATA_PROCESSED_DIR / "features_fundamental.csv"
-    df.to_csv(output_file, index=False)
-    
-    print(f"✅ Fundamental features saved to: {output_file}")
-    print(f"📊 Features shape: {df.shape}")
-    
-    return df
+    return final_X_t
 
-def aggregate_sentiment(sentiment_data):
-    """
-    Process and aggregate sentiment and macro-economic indicators.
-    
-    This function:
-    1. Cleans sentiment data
-    2. Creates rolling averages
-    3. Calculates sentiment momentum
-    4. Normalizes features
-    
-    Args:
-        sentiment_data (pd.DataFrame): Raw sentiment and macro data
-    
-    Returns:
-        pd.DataFrame: Processed sentiment features
-    """
-    print("📰 Processing sentiment and macro data...")
-    
-    if sentiment_data is None or sentiment_data.empty:
-        print("❌ No sentiment data to process")
-        return None
-    
-    # Create a copy
-    df = sentiment_data.copy()
-    
-    # Ensure date column is datetime
-    df['date'] = pd.to_datetime(df['date'])
-    df = df.sort_values('date')
-    
-    # Calculate rolling averages for VIX (fear index)
-    df['vix_ma_7'] = df['vix'].rolling(window=7).mean()
-    df['vix_ma_30'] = df['vix'].rolling(window=30).mean()
-    df['vix_momentum'] = df['vix'] / df['vix_ma_30'] - 1  # VIX relative to 30-day average
-    
-    # Create VIX categories (low, medium, high fear)
-    vix_quantiles = df['vix'].quantile([0.33, 0.67])
-    df['vix_category'] = pd.cut(df['vix'], 
-                               bins=[-np.inf, vix_quantiles[0.33], vix_quantiles[0.67], np.inf],
-                               labels=['low_fear', 'medium_fear', 'high_fear'])
-    
-    # Process sentiment scores
-    if 'market_sentiment' in df.columns:
-        df['sentiment_ma_7'] = df['market_sentiment'].rolling(window=7).mean()
-        df['sentiment_ma_30'] = df['market_sentiment'].rolling(window=30).mean()
-        df['sentiment_momentum'] = df['market_sentiment'] - df['sentiment_ma_30']
-    
-    if 'news_sentiment' in df.columns:
-        df['news_sentiment_ma_7'] = df['news_sentiment'].rolling(window=7).mean()
-        df['news_sentiment_ma_30'] = df['news_sentiment'].rolling(window=30).mean()
-    
-    # Create dummy variables for VIX categories
-    vix_dummies = pd.get_dummies(df['vix_category'], prefix='vix')
-    df = pd.concat([df, vix_dummies], axis=1)
-    
-    # Normalize numerical features
-    numerical_cols = ['vix', 'vix_ma_7', 'vix_ma_30', 'vix_momentum']
-    if 'market_sentiment' in df.columns:
-        numerical_cols.extend(['market_sentiment', 'sentiment_ma_7', 'sentiment_ma_30', 'sentiment_momentum'])
-    if 'news_sentiment' in df.columns:
-        numerical_cols.extend(['news_sentiment', 'news_sentiment_ma_7', 'news_sentiment_ma_30'])
-    
-    # Standardize features
-    scaler = StandardScaler()
-    existing_cols = [col for col in numerical_cols if col in df.columns]
-    if existing_cols:
-        df[existing_cols] = scaler.fit_transform(df[existing_cols])
-        print(f"  - Standardized {len(existing_cols)} sentiment features")
-    
-    # Save processed sentiment data
-    output_file = DATA_PROCESSED_DIR / "features_sentiment.csv"
-    df.to_csv(output_file, index=False)
-    
-    print(f"✅ Sentiment features saved to: {output_file}")
-    print(f"📊 Features shape: {df.shape}")
-    
-    return df
+# --- Main Execution ---
 
 def main():
-    """
-    Main function to execute the feature engineering pipeline.
-    """
+    """Main function to execute the feature engineering pipeline."""
     print("🚀 Starting Phase 1: Feature Engineering")
     print("=" * 50)
     
-    # Ensure directories exist
-    ensure_processed_directories()
-    
     try:
-        # Load raw data
-        print("📁 Loading raw data...")
+        # 0. Load and Align Data
+        ohlcv_df, fund_df, sentiment_macro_df, tickers = load_raw_data()
+        aligned_data = align_data(ohlcv_df, fund_df, sentiment_macro_df)
         
-        # Load stock price data
-        stock_file = DATA_RAW_DIR / "stock_prices_ohlcv_raw.csv"
-        if stock_file.exists():
-            stock_data = pd.read_csv(stock_file, index_col=0, parse_dates=True, header=[0, 1])
-            print(f"✅ Loaded stock data: {stock_data.shape}")
-        else:
-            print(f"❌ Stock data file not found: {stock_file}")
-            stock_data = None
+        # 1. Calculate Technical Indicators
+        technical_features = calculate_technical_indicators(aligned_data, tickers)
         
-        # Load fundamental data
-        fundamental_file = DATA_RAW_DIR / "fundamentals_raw.csv"
-        if fundamental_file.exists():
-            fundamental_data = pd.read_csv(fundamental_file)
-            print(f"✅ Loaded fundamental data: {fundamental_data.shape}")
-        else:
-            print(f"❌ Fundamental data file not found: {fundamental_file}")
-            fundamental_data = None
+        # 2. Normalize Fundamental, Sentiment, and Macro Features
+        normalized_features = normalize_fundamentals_and_sentiment(aligned_data, tickers)
         
-        # Load sentiment data
-        sentiment_file = DATA_RAW_DIR / "sentiment_macro_raw.csv"
-        if sentiment_file.exists():
-            sentiment_data = pd.read_csv(sentiment_file)
-            print(f"✅ Loaded sentiment data: {sentiment_data.shape}")
-        else:
-            print(f"❌ Sentiment data file not found: {sentiment_file}")
-            sentiment_data = None
+        # 3. Calculate Dynamic Edge Parameters
+        calculate_dynamic_edge_params(aligned_data, tickers)
         
-        print("\n" + "-" * 30)
-        
-        # Process each type of data
-        if stock_data is not None:
-            technical_features = calculate_technical_indicators(stock_data)
-        
-        if fundamental_data is not None:
-            fundamental_features = normalize_fundamentals(fundamental_data)
-        
-        if sentiment_data is not None:
-            sentiment_features = aggregate_sentiment(sentiment_data)
+        # 4. Consolidate All Features (X_t)
+        if technical_features is not None:
+            consolidate_node_features(technical_features, normalized_features, tickers)
         
         print("\n" + "=" * 50)
         print("✅ Phase 1: Feature Engineering Complete!")
-        print(f"📁 All processed features saved to: {DATA_PROCESSED_DIR}")
+        print(f"📁 Processed data in: {DATA_PROCESSED_DIR} and {DATA_EDGES_DIR}")
         
+    except FileNotFoundError as e:
+        print(f"❌ Error: Raw data file missing. Please run phase1_data_collection.py first.")
+        print(f"Missing file detail: {e}")
     except Exception as e:
         print(f"❌ Error in feature engineering pipeline: {e}")
 
 if __name__ == "__main__":
+    # Dependencies: pip install pandas numpy ta-lib scikit-learn scipy
     main()
