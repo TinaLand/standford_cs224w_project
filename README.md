@@ -24,12 +24,14 @@ CS224W_Stock_RL_GNN/
 │       ├── edges_dynamic_fund_sim_params.csv # Fundamental similarity parameters
 │       └── edges_sector_connections.csv     # Sector-based connections
 ├── scripts/
-│   ├── phase1_data_collection.py     # Data download and collection
-│   ├── phase1_feature_engineering.py # Feature calculation and normalization
-│   ├── phase1_edge_parameter_calc.py # Edge parameter computation
-│   └── utils_data.py                 # Data utility functions
-├── requirements.txt                  # Python dependencies
-└── README.md                        # This file
+│   ├── phase1_data_collection.py          # Data download and collection
+│   ├── phase1_feature_engineering.py      # Feature calculation (with TA-Lib)
+│   ├── phase1_feature_engineering_simple.py # Feature calculation (no TA-Lib)
+│   ├── phase1_edge_parameter_calc.py      # Edge parameter computation
+│   └── utils_data.py                      # Data utility functions
+├── requirements.txt                       # Python dependencies (with TA-Lib)
+├── requirements_simple.txt               # Python dependencies (no TA-Lib)
+└── README.md                             # This file
 ```
 
 ## 🚀 Getting Started
@@ -47,13 +49,27 @@ CS224W_Stock_RL_GNN/
    cd cs224_porject
    ```
 
-2. **Install dependencies**:
+2. **Create and activate virtual environment** (recommended):
+   ```bash
+   # create virtual env
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies**:
+
+   **Option A: Full Version** (includes TA-Lib, full functionality):
    ```bash
    pip install -r requirements.txt
    ```
+   
+   **Option B: Simple Version** (no TA-Lib dependency, recommended for quick start):
+   ```bash
+   pip install -r requirements_simple.txt
+   ```
 
-   **Note:** TA-Lib installation might require additional steps:
-   - **MacOS**: `brew install libta-lib` then `pip install TA-Lib`
+   **TA-Lib Installation Notes** (only needed for Option A):
+   - **MacOS**: `brew install ta-lib` then `pip install TA-Lib`
    - **Ubuntu**: `sudo apt-get install libta-lib-dev` then `pip install TA-Lib`
    - **Windows**: Download pre-compiled wheels from [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib)
 
@@ -71,9 +87,18 @@ Execute the Phase 1 scripts in order:
    - Gathers sentiment and VIX data
 
 2. **Feature Engineering**:
+   
+   **Option A: Full Version** (if TA-Lib is installed):
    ```bash
    python phase1_feature_engineering.py
    ```
+   
+   **Option B: Simple Version** (recommended, no TA-Lib needed):
+   ```bash
+   python phase1_feature_engineering_simple.py
+   ```
+   
+   Features include:
    - Calculates technical indicators (RSI, MACD, Bollinger Bands)
    - Normalizes fundamental features
    - Processes sentiment data
@@ -194,11 +219,31 @@ results = validate_ticker_data(
 ## 🐛 Troubleshooting
 
 ### Common Issues
-1. **TA-Lib installation**: See installation section above
-2. **VIX data download**: Ensure internet connection and try running again
-3. **Memory issues**: Reduce the number of stocks in CONFIG if running on limited memory
+
+1. **TA-Lib installation problems**: 
+   - **Quick solution**: Use the simple version: `python phase1_feature_engineering_simple.py`
+   - **Full solution**: Follow platform-specific TA-Lib installation steps above
+   - The simple version provides equivalent functionality without TA-Lib dependency
+
+2. **Virtual environment activation**:
+   - Ensure virtual environment is activated before installing packages
+   - Windows users: Try different activation commands (PowerShell vs Command Prompt)
+   - If activation fails, create a new virtual environment
+
+3. **VIX data download**: 
+   - Ensure internet connection and try running again
+   - Script includes fallback to dummy data if VIX download fails
+
+4. **Memory issues**: 
+   - Reduce the number of stocks in CONFIG if running on limited memory
+   - Use smaller date ranges for initial testing
+
+5. **Module import errors**:
+   - Verify virtual environment is activated
+   - Reinstall requirements: `pip install -r requirements_simple.txt`
 
 ### Getting Help
 - Check the validation output from `utils_data.py` functions
 - Ensure all data directories exist before running scripts
-- Verify date ranges are valid for market data availability
+- Verify date ranges are valid for market data availability  
+- Try the simple version first before troubleshooting TA-Lib issues

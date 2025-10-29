@@ -181,65 +181,222 @@ def calculate_dynamic_edge_params(aligned_data, tickers):
     for ticker in tickers:
         log_returns_daily[ticker] = np.log(aligned_data[f'Close_{ticker}'] / aligned_data[f'Close_{ticker}'].shift(1))
 
-    # Function to compute correlation matrix for a rolling window
-    def compute_rolling_corr(df):
-        return df.corr()
-
-    # Apply rolling correlation (requires significant computation)
-    # The result is a Multi-Indexed Series that we save as pickle for efficient storage
-    rolling_corr_series = log_returns_daily.rolling(window=CORR_WINDOW).apply(
-        lambda x: compute_rolling_corr(x), raw=False
-    ).stack().rename('correlation')
+    # --- FIX: Use optimized Pandas rolling correlation ---
+    print(f"    Computing rolling cross-correlations over a {CORR_WINDOW}-day window...")
     
-    # Remove self-correlation and NaN entries (first 30 days)
-    rolling_corr_series = rolling_corr_series[rolling_corr_series.index.get_level_values(1) != rolling_corr_series.index.get_level_values(2)].dropna()
-
-    corr_path = DATA_EDGES_DIR / 'edges_dynamic_corr_params.pkl'
-    rolling_corr_series.to_pickle(corr_path)
-    print(f"✅ Rolling correlation parameters saved to: {corr_path}")
+    # 1. Calculate the rolling correlation matrix (MultiIndex Output)
+    # The result is a 3D structure (Time x Stock1 x Stock2) flattened to a MultiIndex Series
+    rolling_corr_matrix = log_returns_daily.rolling(window=CORR_WINDOW).corr()
+    
+    # 2. Extract and format the correlation series
+    # The output MultiIndex is (Date, Stock1, Stock2). We need to filter it.
+    
+    # Reset index to convert MultiIndex to columns (Date, Stock1, Stock2)
+    rolling_corr_df = rolling_corr_matrix.stack().rename('correlation').to_frame().reset_index()
+    rolling_corr_df.columns = ['Date', 'ticker1', 'ticker2', 'correlation']
+    
+    # Remove self-correlation (ticker1 == ticker2) and NaNs (from the first CORR_WINDOW days)
+    rolling_corr_series = rolling_corr_df[rolling_corr_df['ticker1'] < rolling_corr_df['ticker2']]
+    rolling_corr_series = rolling_corr_series.set_index(['Date', 'ticker1', 'ticker2'])['correlation'].dropna()
+    
+    if len(rolling_corr_series) > 0:
+        corr_path = DATA_EDGES_DIR / 'edges_dynamic_corr_params.pkl'
+        rolling_corr_series.to_pickle(corr_path)
+        print(f"✅ Rolling correlation parameters saved to: {corr_path}")
+        print(f"    Total correlation pairs computed: {len(rolling_corr_series)} (time-series pairs)")
+    else:
+        print("⚠️ No correlation data computed - insufficient data quality after rolling window.")
 
 
     # --- 3.2 Fundamental Similarity (s_ij) ---
-    # This is calculated once based on the latest available normalized metrics
     print("  - Calculating Fundamental Similarity Matrix (latest data)...")
     
-    # Get all normalized fundamental features from the processed file
-    # We use the features generated in the normalization step
+    # 1. Define Universal Fundamental Metrics
+    # Find ALL unique fundamental/ROE/PE columns across the entire ALIGNED_DATA set.
+    # This creates a standardized feature space for all stocks.
     
-    # Get the latest fundamental feature vector for each stock
-    # We assume 'PE' and 'ROE' are the key metrics for similarity
-    fund_cols = [col for col in aligned_data.columns if any(metric in col for metric in ['PE', 'ROE'])]
-    latest_date = aligned_data.index[-1]
+    # Identify unique feature suffixes for fundamental data across all stocks
+    # Example: ['PE', 'ROE', 'PE_Log', 'ROE_Log']
+    universal_metrics = sorted(list(set(
+        '_'.join(col.split('_')[1:]) 
+        for col in aligned_data.columns 
+        if any(metric in col for metric in ['PE', 'ROE']) # Focus on key metrics
+    )))
+    
+    print(f"    Universal fundamental metrics identified: {universal_metrics}")
     
     # Reformat data to be (N_stocks x N_metrics) for the latest date
+    latest_date = aligned_data.index[-1]
     metric_vectors = {}
+    
     for ticker in tickers:
-        # Extract the fundamental metrics for the specific ticker
         vector = []
-        for col in fund_cols:
-            if ticker in col:
-                 # Need to find the correct normalized vector for the latest date
-                 # For simplicity, we use the raw aligned data's latest vector here (will be normalized in normalize_fundamentals_and_sentiment)
-                 vector.append(aligned_data.loc[latest_date, col])
+        is_valid = False
         
-        if vector:
+        # Build the vector using the universal list of metrics
+        for metric_suffix in universal_metrics:
+            # The column name is reconstructed: e.g., 'PE_AAPL', 'PE_Log_AAPL'
+            col_name = f'{metric_suffix}_{ticker}'
+            
+            if col_name in aligned_data.columns:
+                vector.append(aligned_data.loc[latest_date, col_name])
+                is_valid = True
+            else:
+                # IMPORTANT FIX: Append 0 for missing metrics, ensuring uniform vector length
+                vector.append(0.0)
+        
+        if is_valid:
             metric_vectors[ticker] = vector
     
     ticker_list = list(metric_vectors.keys())
-    # Note: We should ideally use the *normalized* features from `normalize_fundamentals_and_sentiment` here
-    # Since we don't return them from that function, we use the simple raw vector for demonstration.
     
     if ticker_list:
         sim_matrix = pd.DataFrame(index=ticker_list, columns=ticker_list)
         for i in ticker_list:
             for j in ticker_list:
-                # Cosine Similarity between the latest fundamental feature vectors
-                sim = 1 - cosine(metric_vectors[i], metric_vectors[j])
-                sim_matrix.loc[i, j] = sim
+                if i == j:
+                    sim_matrix.loc[i, j] = 1.0
+                else:
+                    try:
+                        # Cosine Similarity between the latest fundamental feature vectors
+                        v_i = metric_vectors[i]
+                        v_j = metric_vectors[j]
+                        
+                        # NOTE: Since we ensured len(v_i) == len(v_j) using universal_metrics, this should pass.
+                        sim = 1 - cosine(v_i, v_j)
+                        sim_matrix.loc[i, j] = sim
+                    except Exception as e:
+                        sim_matrix.loc[i, j] = 0.0 # Safety fallback
         
         fund_sim_path = DATA_EDGES_DIR / 'edges_dynamic_fund_sim_params.csv'
         sim_matrix.to_csv(fund_sim_path)
         print(f"✅ Fundamental Similarity matrix (latest) saved to: {fund_sim_path}")
+        print(f"    Similarity matrix shape: {sim_matrix.shape}")
+    else:
+        print("⚠️ Fundamental Similarity: No valid metric vectors found.")
+
+
+def calculate_static_edge_data(tickers):
+    """
+    Calculate static edge relationships: Sector, Industry, and Market Cap-based connections.
+    
+    This creates time-invariant edge connections based on:
+    1. Sector relationships (same sector = strong connection)
+    2. Industry relationships (same industry = moderate connection)  
+    3. Market cap tiers (similar size = weak connection)
+    
+    Returns:
+        pd.DataFrame: Static edge connections with weights
+    """
+    print("\n🏢 Calculating Static Edge Data (Sector, Industry, Market Cap)...")
+    
+    # Define sector and industry mappings for major stocks
+    # In a real implementation, this would come from financial APIs
+    stock_metadata = {
+        'AAPL': {'sector': 'Technology', 'industry': 'Consumer Electronics', 'market_cap_tier': 'Mega'},
+        'MSFT': {'sector': 'Technology', 'industry': 'Software', 'market_cap_tier': 'Mega'},
+        'GOOGL': {'sector': 'Technology', 'industry': 'Internet Services', 'market_cap_tier': 'Mega'},
+        'GOOG': {'sector': 'Technology', 'industry': 'Internet Services', 'market_cap_tier': 'Mega'},
+        'AMZN': {'sector': 'Consumer Discretionary', 'industry': 'E-commerce', 'market_cap_tier': 'Mega'},
+        'NVDA': {'sector': 'Technology', 'industry': 'Semiconductors', 'market_cap_tier': 'Mega'},
+        'META': {'sector': 'Technology', 'industry': 'Social Media', 'market_cap_tier': 'Mega'},
+        'TSLA': {'sector': 'Consumer Discretionary', 'industry': 'Electric Vehicles', 'market_cap_tier': 'Large'},
+        'JPM': {'sector': 'Financial Services', 'industry': 'Banking', 'market_cap_tier': 'Mega'},
+        'V': {'sector': 'Financial Services', 'industry': 'Payment Processing', 'market_cap_tier': 'Mega'},
+        'JNJ': {'sector': 'Healthcare', 'industry': 'Pharmaceuticals', 'market_cap_tier': 'Mega'},
+        'WMT': {'sector': 'Consumer Staples', 'industry': 'Retail', 'market_cap_tier': 'Mega'},
+        'PG': {'sector': 'Consumer Staples', 'industry': 'Consumer Goods', 'market_cap_tier': 'Large'},
+        'HD': {'sector': 'Consumer Discretionary', 'industry': 'Home Improvement', 'market_cap_tier': 'Large'},
+        'CVX': {'sector': 'Energy', 'industry': 'Oil & Gas', 'market_cap_tier': 'Large'},
+        'XOM': {'sector': 'Energy', 'industry': 'Oil & Gas', 'market_cap_tier': 'Large'},
+        'BAC': {'sector': 'Financial Services', 'industry': 'Banking', 'market_cap_tier': 'Large'},
+        'ABBV': {'sector': 'Healthcare', 'industry': 'Pharmaceuticals', 'market_cap_tier': 'Large'},
+        'PFE': {'sector': 'Healthcare', 'industry': 'Pharmaceuticals', 'market_cap_tier': 'Large'},
+        'KO': {'sector': 'Consumer Staples', 'industry': 'Beverages', 'market_cap_tier': 'Large'},
+        'PEP': {'sector': 'Consumer Staples', 'industry': 'Beverages', 'market_cap_tier': 'Large'},
+        'CSCO': {'sector': 'Technology', 'industry': 'Networking', 'market_cap_tier': 'Large'},
+        'ADBE': {'sector': 'Technology', 'industry': 'Software', 'market_cap_tier': 'Large'},
+        'NFLX': {'sector': 'Communication Services', 'industry': 'Streaming', 'market_cap_tier': 'Large'},
+        'INTC': {'sector': 'Technology', 'industry': 'Semiconductors', 'market_cap_tier': 'Large'},
+        'ORCL': {'sector': 'Technology', 'industry': 'Software', 'market_cap_tier': 'Large'},
+    }
+    
+    # Add default metadata for any missing tickers
+    for ticker in tickers:
+        if ticker not in stock_metadata:
+            stock_metadata[ticker] = {
+                'sector': 'Other', 
+                'industry': 'Other', 
+                'market_cap_tier': 'Large'
+            }
+    
+    static_edges = []
+    
+    # Calculate static relationships for all pairs
+    for i, ticker1 in enumerate(tickers):
+        for j, ticker2 in enumerate(tickers):
+            if i < j:  # Avoid duplicates
+                meta1 = stock_metadata.get(ticker1, {})
+                meta2 = stock_metadata.get(ticker2, {})
+                
+                # Initialize edge weight
+                edge_weight = 0.0
+                connection_types = []
+                
+                # 1. Sector Connection (Strongest)
+                if meta1.get('sector') == meta2.get('sector') and meta1.get('sector') != 'Other':
+                    edge_weight += 0.8
+                    connection_types.append('same_sector')
+                
+                # 2. Industry Connection (Moderate)
+                if meta1.get('industry') == meta2.get('industry') and meta1.get('industry') != 'Other':
+                    edge_weight += 0.6
+                    connection_types.append('same_industry')
+                
+                # 3. Market Cap Tier Connection (Weak)
+                if meta1.get('market_cap_tier') == meta2.get('market_cap_tier'):
+                    edge_weight += 0.2
+                    connection_types.append('same_cap_tier')
+                
+                # Only store edges with some connection
+                if edge_weight > 0:
+                    static_edges.append({
+                        'ticker1': ticker1,
+                        'ticker2': ticker2,
+                        'static_weight': min(edge_weight, 1.0),  # Cap at 1.0
+                        'connection_types': ','.join(connection_types),
+                        'sector1': meta1.get('sector'),
+                        'sector2': meta2.get('sector'),
+                        'industry1': meta1.get('industry'),
+                        'industry2': meta2.get('industry')
+                    })
+    
+    if static_edges:
+        static_df = pd.DataFrame(static_edges)
+        
+        # Save static edge data
+        static_path = DATA_EDGES_DIR / 'edges_static_connections.csv'
+        static_df.to_csv(static_path, index=False)
+        
+        # Statistics
+        print(f"✅ Static edge connections saved to: {static_path}")
+        print(f"    Total static connections: {len(static_df)}")
+        print(f"    Same sector pairs: {static_df['connection_types'].str.contains('same_sector').sum()}")
+        print(f"    Same industry pairs: {static_df['connection_types'].str.contains('same_industry').sum()}")
+        print(f"    Same cap tier pairs: {static_df['connection_types'].str.contains('same_cap_tier').sum()}")
+        
+        # Show sector distribution
+        sector_counts = {}
+        for ticker in tickers:
+            sector = stock_metadata.get(ticker, {}).get('sector', 'Other')
+            sector_counts[sector] = sector_counts.get(sector, 0) + 1
+        
+        print(f"    Sector distribution: {dict(sorted(sector_counts.items(), key=lambda x: x[1], reverse=True))}")
+        
+        return static_df
+    else:
+        print("⚠️ No static connections found")
+        return None
 
 
 def consolidate_node_features(technical_df, normalized_df, tickers):
@@ -292,13 +449,25 @@ def main():
         # 3. Calculate Dynamic Edge Parameters
         calculate_dynamic_edge_params(aligned_data, tickers)
         
-        # 4. Consolidate All Features (X_t)
+        # 4. Calculate Static Edge Data (Sector, Industry, Market Cap)
+        calculate_static_edge_data(tickers)
+        
+        # 5. Consolidate All Features (X_t)
         if technical_features is not None:
             consolidate_node_features(technical_features, normalized_features, tickers)
         
         print("\n" + "=" * 50)
         print("✅ Phase 1: Feature Engineering Complete!")
-        print(f"📁 Processed data in: {DATA_PROCESSED_DIR} and {DATA_EDGES_DIR}")
+        print(f"📁 All data ready for Phase 2 Graph Construction!")
+        print(f"📁 Node features: {DATA_PROCESSED_DIR}")
+        print(f"📁 Edge parameters: {DATA_EDGES_DIR}")
+        
+        # Summary of generated files
+        print(f"\n📋 Generated Files Summary:")
+        print(f"   🎯 Node Features: node_features_X_t_final.csv")
+        print(f"   📊 Dynamic Edges: edges_dynamic_corr_params.pkl") 
+        print(f"   🔗 Fundamental Similarity: edges_dynamic_fund_sim_params.csv")
+        print(f"   🏢 Static Connections: edges_static_connections.csv")
         
     except FileNotFoundError as e:
         print(f"❌ Error: Raw data file missing. Please run phase1_data_collection.py first.")
