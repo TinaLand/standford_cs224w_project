@@ -224,6 +224,105 @@ results = validate_ticker_data(
 - **Phase 5**: RL Integration
 - **Phase 6**: Evaluation
 
+## ✅ Open TODOs
+
+- **Phase 2 – Graph Construction**
+  - [ ] Persist ticker list metadata into each `HeteroData` graph for training scripts.
+  - [ ] Add static edge types for `supply_chain` and `competitor` if available; ensure schemas match `('stock', edge_type, 'stock')`.
+  - [ ] Store and normalize `edge_attr` tensors for dynamic edges (e.g., correlation magnitude, similarity score).
+  - [x] Add integrity checker to validate saved graphs (load right after save with `weights_only=False`).
+
+- **Phase 3 – Baseline Training**
+  - [x] Temporal time-based split (70/15/15) to avoid leakage.
+  - [ ] Handle class imbalance (class weights or focal loss).
+  - [ ] Save full checkpoints (model, optimizer, epoch, metrics) and resume support.
+  - [ ] Add early stopping and learning rate scheduler.
+  - [ ] Log metrics to TensorBoard and add ROC-AUC, confusion matrix reporting.
+
+- **Phase 4 – Core Transformer**
+  - [ ] Replace simulated PEARL with the component in `scripts/components/pearl_embedding.py`.
+  - [ ] Support edge-type–specific attention parameters and relation-aware aggregation.
+  - [ ] Enable neighbor sampling / mini-batch training for large graphs.
+  - [ ] Add mixed precision (AMP) and gradient clipping for stability.
+  - [ ] Provide hyperparameter sweep script (grid or Optuna).
+
+- **Phase 5 – RL Integration**
+  - [ ] Finalize `rl_environment.py` reward shaping; include transaction costs and risk penalties.
+  - [ ] Integrate SB3 (PPO/A2C) training loop using model embeddings as state.
+  - [ ] Add portfolio constraints, position sizing, and risk metrics (max drawdown, Sharpe).
+  - [ ] Implement backtesting with slippage and latency modeling.
+
+- **Phase 6 – Evaluation**
+  - [ ] Produce plots: equity curve, drawdown, rolling Sharpe, turnover, exposure.
+  - [ ] Run ablations for edge types and feature groups.
+  - [ ] Compare against baselines (buy-and-hold, sector ETF, equal-weight).
+
+- **Data & Infrastructure**
+  - [ ] Centralize configuration in YAML (paths, tickers, thresholds, seeds); load in all scripts.
+  - [ ] Add robust logging (structured logs) and progress bars across phases.
+  - [ ] Unit tests for data loaders, feature builders, and graph constructors; add CI workflow.
+  - [ ] Add `Dockerfile`/DevContainer for reproducible environment.
+  - [x] Ensure large artifacts are excluded from git; regenerate from scripts (history cleaned, `.gitignore` covers data/ and venv/).
+  - [ ] Determinism: set global seeds and PyTorch deterministic flags; document reproducibility.
+  - [ ] Caching for downloads and intermediate features to speed up reruns.
+  - [ ] Document hardware requirements and runtime expectations per phase.
+
+- **Known Issues / Notes**
+  - macOS OpenMP shared memory errors: set `export OMP_NUM_THREADS=1` if needed.
+  - `torch-scatter` / `torch-sparse` warnings are optional; PyG falls back to pure PyTorch.
+  - For PyTorch ≥ 2.6, ensure `torch.serialization.add_safe_globals([...])` and `weights_only=False` when loading graphs/models.
+
+## 📌 Proposal-Aligned TODOs (From CS224W Project Proposal)
+
+- **Datasets & Scope**
+  - Expand beyond SPY top holdings: include QQQ or sector-specific subsets for robustness.
+  - Evaluate different time spans (e.g., pre-/post-COVID) and market regimes.
+
+- **Feature Engineering**
+  - Add alternative technical indicators cited in proposal and verify incremental utility.
+  - Include macro features (e.g., yields, inflation, unemployment) per proposal scope.
+  - Add alternative normalization strategies (z-score vs. robust scaling) and compare.
+
+- **Graph Design**
+  - Sweep correlation thresholds (e.g., 0.4–0.8) and evaluate graph density impact.
+  - Compare edge construction variants: signed vs. absolute correlation, top-k per node.
+  - Evaluate additional static edges (supply chain, competitor) as proposed.
+  - Test homogeneous vs. heterogeneous processing pipelines.
+
+- **Models & Baselines**
+  - Implement and compare: GCN, GAT, GraphSAGE, HGT/Relational GNN per proposal.
+  - Non-graph baselines: Logistic Regression, MLP, LSTM/Transformer on per-stock features.
+  - Add loss variants (weighted CE, focal loss) and label smoothing.
+
+- **Training Protocol**
+  - Strict temporal CV: rolling or expanding window validation as proposed.
+  - Seed control and deterministic flags for reproducibility.
+  - Hyperparameter tuning (grid/Optuna) following proposal’s search ranges.
+
+- **Evaluation & Metrics**
+  - Statistical significance testing (e.g., block bootstrap) for metric differences.
+  - Financial metrics: annualized return, Sharpe/Sortino, max drawdown, turnover, hit rate.
+  - Robustness checks: sensitivity to transaction cost assumptions and slippage.
+
+- **Ablation Studies**
+  - Remove edge types one-by-one and measure performance drop.
+  - Remove feature groups (technical/fundamental/sentiment) per proposal.
+  - Vary lookahead horizon (e.g., 1/5/10 days) and measure sensitivity.
+
+- **Interpretability**
+  - Attention score analysis: top neighbors/relations contributing to predictions.
+  - Per-feature SHAP/attribution on node logits.
+
+- **RL Integration**
+  - Use proposal’s action/state design; test PPO/A2C and risk-aware rewards.
+  - Portfolio constraints and risk controls per proposal (exposure, leverage caps).
+  - Walk-forward backtesting aligned with temporal splits.
+
+- **Engineering & Reproducibility**
+  - Comprehensive experiment logging and run configs committed.
+  - Scripts to fully reproduce figures and tables in the report.
+  - Document compute costs and runtime; include a small “quickstart” subset.
+
 ## 📋 Mathematical Foundation
 
 ### Technical Indicators

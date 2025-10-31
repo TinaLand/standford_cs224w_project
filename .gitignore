@@ -11,3 +11,4 @@ __pycache__/        # Compiled Python bytecode
 *.pyc
 .DS_Store           # macOS system files
 .pytest_cache/      # Pytest cache
+.DS_Store
