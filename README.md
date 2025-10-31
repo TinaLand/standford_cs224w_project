@@ -1,17 +1,17 @@
 # CS224W Stock RL GNN Project
 
-## 📋 Project Overview
+## Project Overview
 
 This project implements a Graph Neural Network (GNN) approach for stock market prediction and reinforcement learning-based trading. The project is structured into phases:
 
-- Phase 1: Data Collection & Feature Engineering ✅
-- Phase 2: Graph Construction ✅
-- Phase 3: Baseline GNN Training ✅ (baseline pipeline wired and runnable)
-- Phase 4: Core Transformer Training ✅ (model and loop implemented)
+- Phase 1: Data Collection & Feature Engineering
+- Phase 2: Graph Construction
+- Phase 3: Baseline GNN Training (baseline pipeline wired and runnable)
+- Phase 4: Core Transformer Training (model and loop implemented)
 - Phase 5: RL Integration (scripts scaffolded)
 - Phase 6: Evaluation (scripts scaffolded)
 
-## 🗂️ Project Structure
+## Project Structure
 
 ```
 cs224_porject/
@@ -47,7 +47,7 @@ cs224_porject/
 └── README.md
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -58,7 +58,7 @@ cs224_porject/
 
 1. **Clone the repository** (if using git):
    ```bash
-   git clone <repository-url>
+   git clone git@github.com:TinaLand/standford_cs224w_project.git
    cd cs224_porject
    ```
 
@@ -78,7 +78,7 @@ cs224_porject/
 
 Execute the Phase 1 scripts in order:
 
-1. **Data Collection** [[memory:3128469]]:
+1. **Data Collection**:
    ```bash
    cd scripts
    python phase1_data_collection.py
@@ -143,7 +143,7 @@ python scripts/phase6_evaluation.py
 ```
 Generates evaluation metrics and (optionally) plots.
 
-## 📊 Data Description
+## Data Description
 
 ### Stock Selection
 - **Default**: Top 50 holdings from SPY ETF
@@ -176,7 +176,7 @@ Generates evaluation metrics and (optionally) plots.
 - **Fundamental Similarity**: Cosine similarity of fundamental metrics
 - **Sector Connections**: Industry and sector-based relationships
 
-## 🛠️ Configuration
+## Configuration
 
 Modify settings in `scripts/phase1_data_collection.py`:
 
@@ -190,7 +190,7 @@ CONFIG = {
 }
 ```
 
-## 📈 Usage Examples
+## Usage Examples
 
 ### Loading Processed Data
 ```python
@@ -215,7 +215,7 @@ results = validate_ticker_data(
 )
 ```
 
-## 🔮 Phases & Progress
+## Phases & Progress
 
 - **Phase 1**: Data + Features 
 - **Phase 2**: Graph Construction 
@@ -224,11 +224,11 @@ results = validate_ticker_data(
 - **Phase 5**: RL Integration
 - **Phase 6**: Evaluation
 
-## ✅ Open TODOs
+## Open TODOs
 
 - **Phase 2 – Graph Construction**
-  - [ ] Persist ticker list metadata into each `HeteroData` graph for training scripts.
-  - [ ] Add static edge types for `supply_chain` and `competitor` if available; ensure schemas match `('stock', edge_type, 'stock')`.
+  - [x] Persist ticker list metadata into each `HeteroData` graph for training scripts. (graph attribute: `tickers`)
+  - [x] Add static edge types for `supply_chain` and `competitor` if available; ensure schemas match `('stock', edge_type, 'stock')`.
   - [ ] Store and normalize `edge_attr` tensors for dynamic edges (e.g., correlation magnitude, similarity score).
   - [x] Add integrity checker to validate saved graphs (load right after save with `weights_only=False`).
 
