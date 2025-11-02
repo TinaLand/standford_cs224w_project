@@ -181,7 +181,7 @@ def evaluate(model, data, targets):
     y_pred = out.argmax(dim=1).cpu().numpy()
     
     acc = accuracy_score(y_true, y_pred)
-    f1 = f1_score(y_true, y_pred, average='binary')
+    f1 = f1_score(y_true, y_pred, average='binary', zero_division=0)
     
     return acc, f1
 
