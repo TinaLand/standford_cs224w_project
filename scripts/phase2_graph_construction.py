@@ -58,11 +58,24 @@ def load_node_features():
     # Load with Date as index
     node_features = pd.read_csv(node_features_file, index_col='Date', parse_dates=True)
     
-    # Extract ticker list from column names (assuming format like 'LogRet_1d_AAPL')
-    tickers = sorted(list(set([
-        col.split('_')[-1] for col in node_features.columns 
-        if any(prefix in col for prefix in ['LogRet_1d_', '_PE', '_ROE'])
-    ])))
+    # Extract ticker list from column names 
+    # Handle different patterns: 'LogRet_1d_AAPL', 'AAPL_Sentiment', 'AAPL_PE_Log', etc.
+    tickers = set()
+    for col in node_features.columns:
+        if 'LogRet_1d_' in col:
+            # Pattern: LogRet_1d_TICKER
+            ticker = col.split('_')[-1]
+            tickers.add(ticker)
+        elif col.endswith('_Sentiment'):
+            # Pattern: TICKER_Sentiment
+            ticker = col.replace('_Sentiment', '')
+            tickers.add(ticker)
+        elif '_PE_' in col or '_ROE_' in col:
+            # Pattern: TICKER_PE_Log, TICKER_ROE_Log
+            ticker = col.split('_')[0]
+            tickers.add(ticker)
+    
+    tickers = sorted(list(tickers))
     
     print(f"✅ Loaded node features: {node_features.shape}")
     print(f"   - Date range: {node_features.index.min()} to {node_features.index.max()}")
