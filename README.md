@@ -123,6 +123,19 @@ Notes for PyTorch >= 2.6:
 - The script already sets `torch.serialization.add_safe_globals([...])` to allowlist PyG storages.
 - Uses `torch.load(..., weights_only=False)` when loading graphs.
 
+**Class Imbalance Handling:**
+The script supports three loss function options to handle imbalanced datasets:
+1. **Standard Cross-Entropy** (`LOSS_TYPE = 'standard'`): No class balancing
+2. **Weighted Cross-Entropy** (`LOSS_TYPE = 'weighted'`): Automatically computes class weights
+   - Formula: `w_i = n_total / (n_classes * n_i)`
+   - Minority class receives higher weight, balancing the loss contribution
+3. **Focal Loss** (`LOSS_TYPE = 'focal'`): Focuses on hard-to-classify examples
+   - Formula: `FL(p_t) = -α_t * (1 - p_t)^γ * log(p_t)`
+   - Automatically down-weights well-classified examples
+   - Configure with `FOCAL_ALPHA` (default: 0.25) and `FOCAL_GAMMA` (default: 2.0)
+
+To change the loss type, edit `LOSS_TYPE` in `phase3_baseline_training.py` (line 33).
+
 ### Running Phase 4: Core Transformer Training
 ```bash
 python scripts/phase4_core_training.py
@@ -229,12 +242,12 @@ results = validate_ticker_data(
 - **Phase 2 – Graph Construction**
   - [x] Persist ticker list metadata into each `HeteroData` graph for training scripts. (graph attribute: `tickers`)
   - [x] Add static edge types for `supply_chain` and `competitor` if available; ensure schemas match `('stock', edge_type, 'stock')`.
-  - [x] Store and normalize `edge_attr` tensors for dynamic edges (e.g., correlation magnitude, similarity score).
+  - [ ] Store and normalize `edge_attr` tensors for dynamic edges (e.g., correlation magnitude, similarity score).
   - [x] Add integrity checker to validate saved graphs (load right after save with `weights_only=False`).
 
 - **Phase 3 – Baseline Training**
   - [x] Temporal time-based split (70/15/15) to avoid leakage.
-  - [ ] Handle class imbalance (class weights or focal loss).
+  - [x] Handle class imbalance (class weights or focal loss).
   - [ ] Save full checkpoints (model, optimizer, epoch, metrics) and resume support.
   - [ ] Add early stopping and learning rate scheduler.
   - [ ] Log metrics to TensorBoard and add ROC-AUC, confusion matrix reporting.
@@ -272,7 +285,7 @@ results = validate_ticker_data(
   - `torch-scatter` / `torch-sparse` warnings are optional; PyG falls back to pure PyTorch.
   - For PyTorch ≥ 2.6, ensure `torch.serialization.add_safe_globals([...])` and `weights_only=False` when loading graphs/models.
 
-## 📌 Proposal-Aligned TODOs (From CS224W Project Proposal)
+## Proposal-Aligned TODOs (From CS224W Project Proposal)
 
 - **Datasets & Scope**
   - Expand beyond SPY top holdings: include QQQ or sector-specific subsets for robustness.
@@ -323,7 +336,7 @@ results = validate_ticker_data(
   - Scripts to fully reproduce figures and tables in the report.
   - Document compute costs and runtime; include a small “quickstart” subset.
 
-## 📋 Mathematical Foundation
+## Mathematical Foundation
 
 ### Technical Indicators
 - **RSI**: $RSI = 100 - \frac{100}{1 + RS}$ where $RS = \frac{\text{Average Gain}}{\text{Average Loss}}$
@@ -334,20 +347,20 @@ results = validate_ticker_data(
 - **Correlation**: $\rho_{ij}(t) = \frac{Cov(r_{i,t}, r_{j,t})}{\sigma_{i,t} \sigma_{j,t}}$
 - **Cosine Similarity**: $cos(\theta) = \frac{\mathbf{f_i} \cdot \mathbf{f_j}}{|\mathbf{f_i}||\mathbf{f_j}|}$
 
-## 🤝 Contributing
+## Contributing
 
-1. Follow the established code structure and documentation standards [[memory:3128464]]
+1. Follow the established code structure and documentation standards
 2. Add comprehensive comments explaining mathematical concepts
 3. Include unit tests for new functions
 4. Update this README when adding new phases
 
 ## 📝 Notes
 
-- All functions requiring implementation are marked with 'start code' and 'end code' comments [[memory:3128462]]
-- Comments and documentation are in English [[memory:3128459]] [[memory:2522995]]
-- Mathematical explanations are provided for educational purposes [[memory:3128464]]
+- All functions requiring implementation are marked with 'start code' and 'end code' comments
+- Comments and documentation are in English
+- Mathematical explanations are provided for educational purposes
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 

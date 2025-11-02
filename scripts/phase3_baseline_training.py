@@ -28,6 +28,12 @@ NUM_EPOCHS = 20
 LEARNING_RATE = 0.001
 LOOKAHEAD_DAYS = 5 # 预测 5-day-ahead stock return sign [cite: 29]
 
+# Class Imbalance Handling Configuration
+# Options: 'standard' (no weighting), 'weighted' (class weights), 'focal' (focal loss)
+LOSS_TYPE = 'weighted'  # Change to 'weighted' or 'focal' to handle imbalance
+FOCAL_ALPHA = 0.25      # Weight for positive class in focal loss (range: 0-1)
+FOCAL_GAMMA = 2.0       # Focusing parameter for focal loss (typically 2.0)
+
 # Ensure model directory exists
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -58,7 +64,168 @@ class BaselineGNN(torch.nn.Module):
         x = self.lin2(x)
         return x # Output: [N, 2] (logits for Up/Down)
 
-# --- 2. Data Preparation ---
+# --- 2. Loss Functions for Class Imbalance ---
+
+class FocalLoss(torch.nn.Module):
+    """
+    Focal Loss for addressing class imbalance in classification tasks.
+    
+    Mathematical Formulation:
+    FL(p_t) = -α_t * (1 - p_t)^γ * log(p_t)
+    
+    where:
+    - p_t is the model's estimated probability for the true class
+    - α_t is a weighting factor for class t (balances class frequencies)
+    - γ (gamma) is the focusing parameter (reduces loss for well-classified examples)
+    
+    Intuition:
+    - When γ = 0, focal loss is equivalent to cross-entropy
+    - When γ > 0, the loss focuses more on hard-to-classify examples
+    - The (1 - p_t)^γ term down-weights easy examples (where p_t is high)
+    - This helps the model focus on minority class and hard examples
+    
+    Reference: Lin et al. "Focal Loss for Dense Object Detection" (2017)
+    Paper: https://arxiv.org/abs/1708.02002
+    """
+    def __init__(self, alpha=0.25, gamma=2.0, reduction='mean'):
+        """
+        Args:
+            alpha (float): Weighting factor for positive class (0-1).
+                          For binary classification, alpha balances pos/neg classes.
+                          Default 0.25 means negative class gets 0.75 weight.
+            gamma (float): Focusing parameter. Higher values give more focus to hard examples.
+                          Typical values: 2.0 (default), range [0, 5]
+            reduction (str): Specifies reduction to apply: 'none' | 'mean' | 'sum'
+        """
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
+    
+    def forward(self, inputs, targets):
+        """
+        Args:
+            inputs: Model predictions (logits), shape [N, num_classes]
+            targets: Ground truth class labels, shape [N]
+        
+        Returns:
+            Focal loss value (scalar if reduction='mean', tensor if reduction='none')
+        """
+        # Step 1: Convert logits to probabilities using softmax
+        # Softmax: p_i = exp(logit_i) / sum(exp(logit_j))
+        p = F.softmax(inputs, dim=1)
+        
+        # Step 2: Create one-hot encoding of targets
+        # Example: if target=1, one_hot = [0, 1] for binary classification
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none')
+        
+        # Step 3: Get the probability of the true class for each example
+        # p_t = p[i, true_class_i] for each example i
+        p_t = p.gather(1, targets.view(-1, 1)).squeeze(1)
+        
+        # Step 4: Calculate focal loss components
+        # (1 - p_t)^gamma: modulating factor that reduces loss for well-classified examples
+        # When p_t is high (confident correct prediction), (1-p_t) is small -> loss is down-weighted
+        # When p_t is low (uncertain/wrong prediction), (1-p_t) is large -> loss is emphasized
+        focal_weight = (1 - p_t) ** self.gamma
+        
+        # Step 5: Apply alpha weighting for class balance
+        # For binary: alpha for class 1, (1-alpha) for class 0
+        alpha_t = torch.where(targets == 1, 
+                             torch.tensor(self.alpha, device=inputs.device),
+                             torch.tensor(1 - self.alpha, device=inputs.device))
+        
+        # Step 6: Combine all components
+        # Final focal loss = alpha_t * (1-p_t)^gamma * CE_loss
+        focal_loss = alpha_t * focal_weight * ce_loss
+        
+        # Step 7: Apply reduction
+        if self.reduction == 'mean':
+            return focal_loss.mean()
+        elif self.reduction == 'sum':
+            return focal_loss.sum()
+        else:  # 'none'
+            return focal_loss
+
+def compute_class_weights(targets_dict, train_dates):
+    """
+    Computes class weights for handling imbalanced datasets.
+    
+    Mathematical Formula:
+    w_i = n_total / (n_classes * n_i)
+    
+    where:
+    - n_total is the total number of samples
+    - n_classes is the number of classes (2 for binary)
+    - n_i is the number of samples in class i
+    
+    Intuition:
+    - Minority class gets higher weight -> more penalty when misclassified
+    - Majority class gets lower weight -> less penalty when misclassified
+    - This balances the contribution of each class to the loss
+    
+    Example:
+    If we have 1000 negative samples (class 0) and 200 positive samples (class 1):
+    - w_0 = 1200 / (2 * 1000) = 0.6  (majority class: lower weight)
+    - w_1 = 1200 / (2 * 200) = 3.0   (minority class: higher weight)
+    
+    Args:
+        targets_dict: Dictionary mapping dates to target tensors
+        train_dates: List of training dates
+    
+    Returns:
+        class_weights: Tensor of shape [num_classes] with weights for each class
+        class_counts: Dictionary with count of each class
+    """
+    print("\n⚖️  Computing class weights for imbalanced data...")
+    
+    # Step 1: Collect all training labels
+    all_train_labels = []
+    for date in train_dates:
+        target = targets_dict.get(date)
+        if target is not None:
+            all_train_labels.append(target.numpy())
+    
+    # Concatenate all labels into a single array
+    all_train_labels = np.concatenate(all_train_labels)
+    
+    # Step 2: Count samples per class
+    unique_classes, class_counts = np.unique(all_train_labels, return_counts=True)
+    class_count_dict = dict(zip(unique_classes.astype(int), class_counts))
+    
+    # Step 3: Calculate total samples and number of classes
+    n_total = len(all_train_labels)
+    n_classes = len(unique_classes)
+    
+    # Step 4: Compute weights using the formula: n_total / (n_classes * n_i)
+    class_weights = torch.zeros(OUT_DIM, dtype=torch.float32)
+    for cls_idx in range(OUT_DIM):
+        if cls_idx in class_count_dict:
+            # Standard sklearn-style class weight formula
+            class_weights[cls_idx] = n_total / (n_classes * class_count_dict[cls_idx])
+        else:
+            # If class doesn't appear in training data, assign weight of 1.0
+            class_weights[cls_idx] = 1.0
+    
+    # Step 5: Print class distribution statistics
+    print(f"   📊 Training Set Class Distribution:")
+    for cls_idx in range(OUT_DIM):
+        count = class_count_dict.get(cls_idx, 0)
+        percentage = (count / n_total) * 100
+        weight = class_weights[cls_idx].item()
+        class_name = "Positive (Up)" if cls_idx == 1 else "Negative (Down/Flat)"
+        print(f"      Class {cls_idx} ({class_name}): {count:6d} samples ({percentage:5.2f}%) | Weight: {weight:.4f}")
+    
+    # Step 6: Calculate imbalance ratio for reporting
+    if len(class_count_dict) == 2:
+        imbalance_ratio = max(class_counts) / min(class_counts)
+        print(f"   ⚠️  Imbalance Ratio: {imbalance_ratio:.2f}:1")
+        if imbalance_ratio > 2.0:
+            print(f"   💡 Significant imbalance detected. Using {LOSS_TYPE} loss is recommended.")
+    
+    return class_weights, class_count_dict
+
+# --- 3. Data Preparation ---
 
 def load_graph_data(date):
     """Loads a single graph snapshot for the given date."""
@@ -120,8 +287,21 @@ def create_target_labels(tickers, dates, lookahead_days):
 
 # --- 3. Training and Evaluation ---
 
-def train(model, optimizer, data, target):
-    """Single training step for the baseline GNN."""
+def train(model, optimizer, data, target, criterion):
+    """
+    Single training step for the baseline GNN.
+    
+    Args:
+        model: The GNN model to train
+        optimizer: PyTorch optimizer
+        data: Graph data (HeteroData object)
+        target: Ground truth labels
+        criterion: Loss function (can be standard CE, weighted CE, or focal loss)
+    
+    Returns:
+        loss_value: Scalar loss value for logging
+        predictions: Predicted class labels
+    """
     model.train()
     optimizer.zero_grad()
     
@@ -154,7 +334,10 @@ def train(model, optimizer, data, target):
         return 0, 0
         
     out = model(x.to(DEVICE), edge_index.to(DEVICE))
-    loss = F.cross_entropy(out, target.to(DEVICE))
+    
+    # Use the provided criterion (loss function) instead of hardcoded cross_entropy
+    # This allows us to switch between standard CE, weighted CE, and focal loss
+    loss = criterion(out, target.to(DEVICE))
     
     loss.backward()
     optimizer.step()
@@ -238,11 +421,37 @@ def run_training_pipeline():
     print(f"   - Val:   {len(val_dates)} days (End: {VAL_END_DATE.date()})")
     print(f"   - Test:  {len(test_dates)} days")
     
-    # 4. Model Setup
+    # 4. Setup Loss Function (with class imbalance handling)
+    print(f"\n🎯 Loss Function Configuration: {LOSS_TYPE}")
+    
+    if LOSS_TYPE == 'weighted':
+        # Compute class weights from training data
+        class_weights, class_counts = compute_class_weights(targets_dict, train_dates)
+        class_weights = class_weights.to(DEVICE)
+        
+        # Create weighted cross-entropy loss
+        # The weight parameter assigns a manual rescaling weight to each class
+        # loss = -w[class] * log(p[class])
+        criterion = lambda pred, target: F.cross_entropy(pred, target, weight=class_weights)
+        print(f"   ✅ Using Weighted Cross-Entropy with computed class weights")
+        
+    elif LOSS_TYPE == 'focal':
+        # Use Focal Loss to handle class imbalance
+        criterion = FocalLoss(alpha=FOCAL_ALPHA, gamma=FOCAL_GAMMA)
+        print(f"   ✅ Using Focal Loss (alpha={FOCAL_ALPHA}, gamma={FOCAL_GAMMA})")
+        print(f"   💡 Focal loss automatically focuses on hard-to-classify examples")
+        
+    else:  # 'standard'
+        # Standard cross-entropy without any class balancing
+        criterion = lambda pred, target: F.cross_entropy(pred, target)
+        print(f"   ⚠️  Using Standard Cross-Entropy (no class balancing)")
+        print(f"   💡 Consider using 'weighted' or 'focal' if classes are imbalanced")
+    
+    # 5. Model Setup
     model = BaselineGNN(INPUT_DIM, HIDDEN_DIM, OUT_DIM).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     
-    # 5. Training Loop (Transductive/Sequential)
+    # 6. Training Loop (Transductive/Sequential)
     print("\n🔨 Starting Sequential Training...")
     best_val_f1 = 0.0
     
@@ -254,7 +463,7 @@ def run_training_pipeline():
             data = load_graph_data(date)
             target = targets_dict.get(date)
             if data and target is not None:
-                loss, _ = train(model, optimizer, data, target)
+                loss, _ = train(model, optimizer, data, target, criterion)
                 total_loss += loss
         
         avg_loss = total_loss / len(train_dates)
@@ -280,7 +489,7 @@ def run_training_pipeline():
             torch.save(model.state_dict(), MODELS_DIR / 'baseline_gcn_model.pt')
             print(f"  --> Model Saved (New Best F1: {best_val_f1:.4f})")
     
-    # 6. Testing (Final Evaluation)
+    # 7. Testing (Final Evaluation)
     model.load_state_dict(torch.load(MODELS_DIR / 'baseline_gcn_model.pt', weights_only=False))
     test_accs, test_f1s = [], []
     
