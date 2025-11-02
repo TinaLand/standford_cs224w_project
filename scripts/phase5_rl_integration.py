@@ -8,6 +8,11 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.logger import configure
 import sys
 
+# Fix PyTorch serialization for pandas timestamps (PyTorch 2.6+)
+import torch.serialization
+if hasattr(torch.serialization, 'add_safe_globals'):
+    torch.serialization.add_safe_globals([pd._libs.tslibs.timestamps._unpickle_timestamp])
+
 # Add necessary paths for local imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT / 'scripts')) # To import rl_environment
@@ -24,7 +29,7 @@ RL_LOG_PATH = PROJECT_ROOT / "logs" / "rl_logs"
 RL_SAVE_PATH = MODELS_DIR / "rl_ppo_agent_model"
 
 # RL Hyperparameters
-TOTAL_TIMESTEPS = 1000000  # Total steps for the agent to learn (High value for finance)
+TOTAL_TIMESTEPS = 10000  # Total steps for the agent to learn (High value for finance)
 PPO_LEARNING_RATE = 1e-5
 NUM_ENVS = 1              # Number of parallel environments
 
@@ -47,7 +52,7 @@ def load_gnn_model_for_rl():
     
     # 1. Determine Input Dimension: Load a sample graph to get feature size
     sample_graph_path = list(DATA_GRAPHS_DIR.glob('graph_t_*.pt'))[0]
-    temp_data = torch.load(sample_graph_path)
+    temp_data = torch.load(sample_graph_path, weights_only=False)
     INPUT_DIM = temp_data['stock'].x.shape[1]
 
     # 2. Initialize GNN model structure (Must match Phase 4)
@@ -59,7 +64,7 @@ def load_gnn_model_for_rl():
     if not CORE_GNN_MODEL_PATH.exists():
         raise FileNotFoundError(f"Trained GNN model not found at: {CORE_GNN_MODEL_PATH}")
         
-    gnn_model.load_state_dict(torch.load(CORE_GNN_MODEL_PATH, map_location=DEVICE))
+    gnn_model.load_state_dict(torch.load(CORE_GNN_MODEL_PATH, map_location=DEVICE, weights_only=False))
     
     # 4. Freeze GNN parameters
     for param in gnn_model.parameters():
@@ -102,12 +107,13 @@ def run_rl_pipeline():
     print(f"\n--- 2. Setting up PPO Agent (Total Timesteps: {TOTAL_TIMESTEPS}) ---")
     
     # We use MlpPolicy, which is standard for Gym's discrete action space
+    # PPO with MlpPolicy performs better on CPU according to stable-baselines3
     model = PPO(
         "MlpPolicy", 
         vec_env, 
         verbose=1, 
         learning_rate=PPO_LEARNING_RATE, 
-        device=DEVICE,
+        device='cpu',  # Use CPU for better MLP performance
         tensorboard_log=RL_LOG_PATH
     )
     

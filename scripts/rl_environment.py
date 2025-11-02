@@ -6,6 +6,11 @@ import pandas as pd
 import torch
 from pathlib import Path
 
+# Fix PyTorch serialization for pandas timestamps (PyTorch 2.6+)
+import torch.serialization
+if hasattr(torch.serialization, 'add_safe_globals'):
+    torch.serialization.add_safe_globals([pd._libs.tslibs.timestamps._unpickle_timestamp])
+
 # --- Configuration (Must match training script) ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_GRAPHS_DIR = PROJECT_ROOT / "data" / "graphs"
@@ -34,8 +39,11 @@ class StockTradingEnv(gym.Env):
              raise ValueError("Failed to load environment data.")
 
         # State Space: [Portfolio Holdings (N)] + [GNN Node Embeddings (N * H)]
-        self.NUM_STOCKS = self.data_loader['tickers'].shape[0]
-        self.EMBEDDING_DIM = self.gnn_model.lin_out[0].in_features # Output of GNN before classifier
+        self.NUM_STOCKS = len(self.data_loader['tickers'])
+        
+        # Get actual embedding dimension from a sample graph
+        sample_graph = torch.load(list(DATA_GRAPHS_DIR.glob('graph_t_*.pt'))[0], weights_only=False)
+        self.EMBEDDING_DIM = sample_graph['stock'].x.shape[1]  # Actual input feature dimension
 
         state_dim = self.NUM_STOCKS + (self.NUM_STOCKS * self.EMBEDDING_DIM)
         
@@ -57,7 +65,7 @@ class StockTradingEnv(gym.Env):
         # for the entire backtesting period and map them to dates.
         
         # Example data structure for demonstration
-        sample_graph = torch.load(list(DATA_GRAPHS_DIR.glob('graph_t_*.pt'))[0])
+        sample_graph = torch.load(list(DATA_GRAPHS_DIR.glob('graph_t_*.pt'))[0], weights_only=False)
         
         # We need actual prices for calculating returns
         ohlcv_df = pd.read_csv(PROJECT_ROOT / "data" / "raw" / "stock_prices_ohlcv_raw.csv", index_col='Date', parse_dates=True)
@@ -66,10 +74,13 @@ class StockTradingEnv(gym.Env):
         # Filter dates for backtesting period
         backtest_dates = [d for d in trading_dates if start_date <= d <= end_date]
         
+        # Get all available tickers (don't limit here, will be limited later)
+        all_tickers = [col.split('_')[-1] for col in ohlcv_df.columns if col.startswith('Close_')]
+        
         return {
             'dates': backtest_dates,
             'prices': ohlcv_df,
-            'tickers': [col.split('_')[-1] for col in ohlcv_df.columns if col.startswith('Close_')][:self.NUM_STOCKS]
+            'tickers': all_tickers
             # 'graphs': Dictionary of all loaded graphs
         }
 
@@ -93,7 +104,7 @@ class StockTradingEnv(gym.Env):
         date_t = self.data_loader['dates'][self.current_step]
         
         # 1. Load GNN Data (G_t)
-        data_t = torch.load(DATA_GRAPHS_DIR / f"graph_t_{date_t.strftime('%Y%m%d')}.pt")
+        data_t = torch.load(DATA_GRAPHS_DIR / f"graph_t_{date_t.strftime('%Y%m%d')}.pt", weights_only=False)
 
         # 2. Generate GNN Embeddings (E_t) using the trained model
         with torch.no_grad():
@@ -215,7 +226,7 @@ RL_LOG_PATH.mkdir(parents=True, exist_ok=True)
 def load_gnn_model_for_rl():
     """Loads the trained GNN model and exposes the embedding layer."""
     # Temporarily load features to determine INPUT_DIM
-    temp_data = torch.load(list(DATA_GRAPHS_DIR.glob('graph_t_*.pt'))[0])
+    temp_data = torch.load(list(DATA_GRAPHS_DIR.glob('graph_t_*.pt'))[0], weights_only=False)
     INPUT_DIM = temp_data['stock'].x.shape[1]
     
     # Initialize the GNN model structure
@@ -224,7 +235,7 @@ def load_gnn_model_for_rl():
     )
     
     # Load trained weights
-    gnn_model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
+    gnn_model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE, weights_only=False))
     
     # Freeze GNN parameters (we only use it for feature extraction)
     for param in gnn_model.parameters():

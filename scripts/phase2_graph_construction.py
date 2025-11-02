@@ -479,7 +479,7 @@ def main():
             print(f"\n📋 Sample graph files:")
             for file in sample_files:
                 try:
-                    sample_graph = torch.load(file)
+                    sample_graph = torch.load(file, weights_only=False)
                     print(f"   - {file.name}: {sample_graph.num_nodes} nodes, "
                           f"{sample_graph.num_edges} edges")
                 except:
