@@ -242,7 +242,7 @@ results = validate_ticker_data(
 - **Phase 2 – Graph Construction**
   - [x] Persist ticker list metadata into each `HeteroData` graph for training scripts. (graph attribute: `tickers`)
   - [x] Add static edge types for `supply_chain` and `competitor` if available; ensure schemas match `('stock', edge_type, 'stock')`.
-  - [ ] Store and normalize `edge_attr` tensors for dynamic edges (e.g., correlation magnitude, similarity score).
+  - [x] Store and normalize `edge_attr` tensors for dynamic edges (e.g., correlation magnitude, similarity score).
   - [x] Add integrity checker to validate saved graphs (load right after save with `weights_only=False`).
 
 - **Phase 3 – Baseline Training**
