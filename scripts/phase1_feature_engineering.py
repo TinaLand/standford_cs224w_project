@@ -1,7 +1,7 @@
 # phase1_feature_engineering.py
 import pandas as pd
 import numpy as np
-import talib
+import ta
 import os
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler
@@ -97,25 +97,28 @@ def calculate_technical_indicators(aligned_data, tickers):
             # --- TA-Lib Indicators ---
             
             # RSI (14 day)
-            technical_features[f'RSI_14_{ticker}'] = talib.RSI(close_prices.values, timeperiod=14)
+            technical_features[f'RSI_14_{ticker}'] = ta.momentum.RSIIndicator(close_prices, window=14).rsi()
             
             # MACD (MACD, MACD Signal, MACD Hist)
-            macd, macd_signal, macd_hist = talib.MACD(close_prices.values)
-            technical_features[f'MACD_{ticker}'] = macd
-            technical_features[f'MACD_Sig_{ticker}'] = macd_signal
-            technical_features[f'MACD_Hist_{ticker}'] = macd_hist
+            macd_indicator = ta.trend.MACD(close_prices)
+            technical_features[f'MACD_{ticker}'] = macd_indicator.macd()
+            technical_features[f'MACD_Sig_{ticker}'] = macd_indicator.macd_signal()
+            technical_features[f'MACD_Hist_{ticker}'] = macd_indicator.macd_diff()
             
             # Bollinger Bands Width (Normalized: (Upper-Lower) / Middle)
-            bb_upper, bb_middle, bb_lower = talib.BBANDS(close_prices.values)
+            bb_indicator = ta.volatility.BollingerBands(close_prices)
+            bb_upper = bb_indicator.bollinger_hband()
+            bb_middle = bb_indicator.bollinger_mavg()
+            bb_lower = bb_indicator.bollinger_lband()
             bb_width = (bb_upper - bb_lower) / bb_middle
             technical_features[f'BB_Width_{ticker}'] = bb_width
             
             # Moving Averages Ratio (MA50 relative to price)
-            sma_50 = talib.SMA(close_prices.values, timeperiod=50)
-            technical_features[f'Price_to_SMA50_{ticker}'] = close_prices.values / sma_50 - 1.0
+            sma_50 = ta.trend.SMAIndicator(close_prices, window=50).sma_indicator()
+            technical_features[f'Price_to_SMA50_{ticker}'] = close_prices / sma_50 - 1.0
 
             # ATR (14 day)
-            technical_features[f'ATR_14_{ticker}'] = talib.ATR(high_prices.values, low_prices.values, close_prices.values, timeperiod=14)
+            technical_features[f'ATR_14_{ticker}'] = ta.volatility.AverageTrueRange(high_prices, low_prices, close_prices, window=14).average_true_range()
             
         except Exception as e:
             print(f"❌ Error calculating technical indicators for {ticker}: {e}. Skipping.")
@@ -476,5 +479,5 @@ def main():
         print(f"❌ Error in feature engineering pipeline: {e}")
 
 if __name__ == "__main__":
-    # Dependencies: pip install pandas numpy ta-lib scikit-learn scipy
+    # Dependencies: pip install pandas numpy ta scikit-learn scipy
     main()

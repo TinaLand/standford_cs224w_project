@@ -10,8 +10,7 @@ pathlib
 # Phase 1: Feature Engineering
 # pip install --upgrade pip
 # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-# brew install ta-lib
-#talib                  # For technical indicators (RSI, MACD, etc.)
+ta                      # Technical analysis library
 scikit-learn           # For StandardScaler and MinMaxScaler
 scipy                  # For cosine similarity calculation (if needed)
 
