@@ -351,9 +351,9 @@ def main():
         
         # Extract fundamental features from consolidated data
         if 'consolidated_data' in locals() and consolidated_data is not None:
-            # Extract fundamental columns (PE, ROE ratios)
-            pe_cols = [col for col in consolidated_data.columns if '_PE' in col and not '_PE_Log' in col]
-            roe_cols = [col for col in consolidated_data.columns if '_ROE' in col and not '_ROE_Log' in col]
+            # Extract fundamental columns (PE, ROE ratios) - exclude technical indicators  
+            pe_cols = [col for col in consolidated_data.columns if col.endswith('_PE') and not '_PE_Log' in col]
+            roe_cols = [col for col in consolidated_data.columns if col.endswith('_ROE') and not '_ROE_Log' in col]
             
             if pe_cols or roe_cols:
                 # Transform wide format to long format for fundamental similarity calculation
@@ -377,7 +377,7 @@ def main():
                     if pe_col in latest_fundamentals.index:
                         row_data['pe_ratio'] = latest_fundamentals[pe_col]
                     
-                    # Add ROE if available
+                    # Add ROE if available  
                     roe_col = f'{ticker}_ROE'
                     if roe_col in latest_fundamentals.index:
                         row_data['roe'] = latest_fundamentals[roe_col]
