@@ -39,8 +39,11 @@ def calculate_financial_metrics(portfolio_values: List[float], trading_days: int
     if len(portfolio_values) < 2:
         return {'Cumulative_Return': 0, 'Sharpe_Ratio': 0, 'Max_Drawdown': 0}
 
+    # Convert to pandas Series for easier calculations
+    portfolio_series = pd.Series(portfolio_values)
+    
     # Convert to daily returns
-    returns = pd.Series(portfolio_values).pct_change().dropna()
+    returns = portfolio_series.pct_change().dropna()
     
     # Cumulative Return
     cumulative_return = (portfolio_values[-1] / portfolio_values[0]) - 1
@@ -51,8 +54,8 @@ def calculate_financial_metrics(portfolio_values: List[float], trading_days: int
     sharpe_ratio = returns.mean() / returns.std() * annualization_factor if returns.std() != 0 else 0
 
     # Max Drawdown
-    cumulative_max = portfolio_values.cummax()
-    drawdown = (cumulative_max - portfolio_values) / cumulative_max
+    cumulative_max = portfolio_series.cummax()
+    drawdown = (cumulative_max - portfolio_series) / cumulative_max
     max_drawdown = drawdown.max()
     
     return {
@@ -82,7 +85,7 @@ def run_final_backtest(gnn_model, rl_agent_path: Path) -> Dict[str, Any]:
     if not rl_agent_path.exists():
         raise FileNotFoundError(f"RL Agent not found at: {rl_agent_path}. Ensure Phase 5 finished.")
         
-    model = PPO.load(rl_agent_path, env=env, device=DEVICE)
+    model = PPO.load(rl_agent_path, env=env, device='cpu')  # Use CPU for better MLP performance
 
     # Initialize environment and run simulation
     obs, info = env.reset()
