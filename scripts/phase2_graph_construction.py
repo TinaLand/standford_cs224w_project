@@ -38,11 +38,106 @@ FUNDAMENTAL_SIMILARITY_THRESHOLD = 0.8  # Fundamental similarity threshold
 MIN_EDGE_WEIGHT = 0.1  # Minimum edge weight to include
 BATCH_SIZE_DAYS = 30  # Process graphs in batches to manage memory
 
+# Edge attribute normalization parameters
+NORMALIZE_EDGE_ATTRS = True  # Enable edge attribute normalization
+EDGE_NORMALIZATION_METHOD = 'min_max'  # Options: 'min_max', 'standard', 'robust'
+
 # Ensure output directory exists
 DATA_GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
 
 print("🚀 Starting Phase 2: Graph Construction")
 print("=" * 50)
+
+# --- Edge Attribute Normalization Functions ---
+
+def normalize_edge_attributes(edge_weights, method='min_max', edge_type='unknown'):
+    """
+    Normalize edge attributes to improve GNN training.
+    
+    Args:
+        edge_weights (torch.Tensor): Edge weights to normalize
+        method (str): Normalization method ('min_max', 'standard', 'robust')
+        edge_type (str): Type of edges for logging
+    
+    Returns:
+        torch.Tensor: Normalized edge weights
+    """
+    if not NORMALIZE_EDGE_ATTRS or len(edge_weights) == 0:
+        return edge_weights
+    
+    original_min, original_max = edge_weights.min().item(), edge_weights.max().item()
+    
+    if method == 'min_max':
+        # Min-Max normalization: scale to [0, 1]
+        if original_max > original_min:
+            normalized = (edge_weights - original_min) / (original_max - original_min)
+        else:
+            normalized = torch.zeros_like(edge_weights)
+    
+    elif method == 'standard':
+        # Standard normalization: mean=0, std=1
+        mean = edge_weights.mean()
+        std = edge_weights.std()
+        if std > 0:
+            normalized = (edge_weights - mean) / std
+        else:
+            normalized = edge_weights - mean
+    
+    elif method == 'robust':
+        # Robust normalization using median and IQR
+        median = edge_weights.median()
+        q75, q25 = torch.quantile(edge_weights, 0.75), torch.quantile(edge_weights, 0.25)
+        iqr = q75 - q25
+        if iqr > 0:
+            normalized = (edge_weights - median) / iqr
+        else:
+            normalized = edge_weights - median
+    
+    else:
+        normalized = edge_weights
+    
+    new_min, new_max = normalized.min().item(), normalized.max().item()
+    print(f"    {edge_type}: [{original_min:.4f}, {original_max:.4f}] → [{new_min:.4f}, {new_max:.4f}] ({method})")
+    
+    return normalized
+
+def get_edge_normalization_stats():
+    """Pre-compute normalization statistics for all edge types."""
+    print("📊 Computing edge normalization statistics...")
+    
+    stats = {}
+    
+    # 1. Correlation edges
+    try:
+        corr_file = DATA_EDGES_DIR / "edges_dynamic_corr_params.csv"
+        if corr_file.exists():
+            corr_df = pd.read_csv(corr_file)
+            corr_values = corr_df['abs_correlation'].values
+            stats['correlation'] = {
+                'min': float(np.min(corr_values)),
+                'max': float(np.max(corr_values)),
+                'mean': float(np.mean(corr_values)),
+                'std': float(np.std(corr_values))
+            }
+    except Exception as e:
+        print(f"  ⚠️ Could not load correlation stats: {e}")
+    
+    # 2. Fundamental similarity edges
+    try:
+        fund_file = DATA_EDGES_DIR / "edges_dynamic_fund_sim_params.csv"
+        if fund_file.exists():
+            fund_df = pd.read_csv(fund_file)
+            fund_values = fund_df['fundamental_similarity'].values
+            stats['fundamental'] = {
+                'min': float(np.min(fund_values)),
+                'max': float(np.max(fund_values)),
+                'mean': float(np.mean(fund_values)),
+                'std': float(np.std(fund_values))
+            }
+    except Exception as e:
+        print(f"  ⚠️ Could not load fundamental stats: {e}")
+    
+    return stats
 
 # --- Data Loading Functions ---
 
@@ -284,7 +379,9 @@ def construct_graph_for_date(date, node_features_df, correlations_df, similariti
     # 2. Static Edges (Pre-calculated, just add to HeteroData)
     for edge_type, (edge_index, edge_weight) in static_edge_dict.items():
         graph['stock', edge_type, 'stock'].edge_index = edge_index
-        graph['stock', edge_type, 'stock'].edge_attr = edge_weight
+        # Apply normalization to static edge attributes
+        normalized_edge_weight = normalize_edge_attributes(edge_weight, EDGE_NORMALIZATION_METHOD, edge_type)
+        graph['stock', edge_type, 'stock'].edge_attr = normalized_edge_weight
     
     # 3. Dynamic Edges (Correlations)
     dynamic_edges = filter_dynamic_edges(correlations_df, date)
@@ -304,9 +401,12 @@ def construct_graph_for_date(date, node_features_df, correlations_df, similariti
         corr_edge_index = torch.tensor(corr_edges, dtype=torch.long).t().contiguous()
         corr_edge_weight = torch.tensor(corr_weights, dtype=torch.float32).unsqueeze(1)
         
+        # Apply normalization to correlation edge attributes
+        normalized_corr_weight = normalize_edge_attributes(corr_edge_weight, EDGE_NORMALIZATION_METHOD, 'rolling_correlation')
+        
         # Add to HeteroData with explicit type
         graph['stock', 'rolling_correlation', 'stock'].edge_index = corr_edge_index
-        graph['stock', 'rolling_correlation', 'stock'].edge_attr = corr_edge_weight
+        graph['stock', 'rolling_correlation', 'stock'].edge_attr = normalized_corr_weight
     
     # 4. Dynamic Edges (Fundamental Similarity - quasi-static)
     fund_sim_edges = []
@@ -325,9 +425,12 @@ def construct_graph_for_date(date, node_features_df, correlations_df, similariti
         fund_sim_edge_index = torch.tensor(fund_sim_edges, dtype=torch.long).t().contiguous()
         fund_sim_edge_weight = torch.tensor(fund_sim_weights, dtype=torch.float32).unsqueeze(1)
         
+        # Apply normalization to fundamental similarity edge attributes
+        normalized_fund_sim_weight = normalize_edge_attributes(fund_sim_edge_weight, EDGE_NORMALIZATION_METHOD, 'fund_similarity')
+        
         # Add to HeteroData
         graph['stock', 'fund_similarity', 'stock'].edge_index = fund_sim_edge_index
-        graph['stock', 'fund_similarity', 'stock'].edge_attr = fund_sim_edge_weight
+        graph['stock', 'fund_similarity', 'stock'].edge_attr = normalized_fund_sim_weight
     
     # Add metadata
     graph.date = date
