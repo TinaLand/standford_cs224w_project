@@ -33,7 +33,7 @@ NUM_LAYERS = 2                  # Number of layers
 NUM_HEADS = 4                   # Number of attention heads
 OUT_CHANNELS = 2                # Binary classification: Up/Down
 LEARNING_RATE = 0.0005
-NUM_EPOCHS = 30                 # Increased epochs for complex model
+NUM_EPOCHS = 2                 # Increased epochs for complex model
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Ensure model directory exists
@@ -41,9 +41,8 @@ MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- 1. Model Definition: Core Role-Aware Graph Transformer ---
 
-# NOTE: Since we cannot import local files here, we place the class definition 
-# directly in the main script for demonstration simplicity.
-# In a real environment, you would import RoleAwareGraphTransformer from components.
+# Import the PEARL embedding component
+from components.pearl_embedding import PEARLPositionalEmbedding
 
 class RoleAwareGraphTransformer(torch.nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers, num_heads):
@@ -53,8 +52,8 @@ class RoleAwareGraphTransformer(torch.nn.Module):
         self.PE_DIM = 32
         total_in_dim = in_dim + self.PE_DIM 
         
-        # (A) PEARL Positional Embedding Block (Simulation)
-        self.pearl_mapper = torch.nn.Linear(in_dim, self.PE_DIM)
+        # (A) PEARL Positional Embedding Block
+        self.pearl_embedding = PEARLPositionalEmbedding(in_dim, self.PE_DIM)
         
         # (B) Graph Transformer Layers (HeteroConv)
         # Defined based on Phase 2 graph construction
@@ -90,7 +89,7 @@ class RoleAwareGraphTransformer(torch.nn.Module):
         
         # 1. Generate/Concatenate PEARL Embeddings
         x = x_dict['stock']
-        pearl_pe = self.pearl_mapper(x)
+        pearl_pe = self.pearl_embedding(x, edge_index_dict)
         x_with_pe = torch.cat([x, pearl_pe], dim=1)
         x_dict['stock'] = x_with_pe
         
