@@ -55,8 +55,17 @@ class PEARLPositionalEmbedding(nn.Module):
             nn.Tanh()
         )
         
-        # Attention mechanism to combine structural and feature-based embeddings
-        self.attention = nn.MultiheadAttention(pe_dim, num_heads=4, batch_first=True)
+        # Relation-aware attention mechanism
+        self.relation_attention = nn.ModuleDict()
+        self.relation_weights = nn.Parameter(torch.ones(5))  # 5 edge types
+        
+        # Create separate attention for each relation type
+        self.edge_type_names = ['sector_industry', 'competitor', 'supply_chain', 'rolling_correlation', 'fund_similarity']
+        for edge_type in self.edge_type_names:
+            self.relation_attention[edge_type] = nn.MultiheadAttention(pe_dim, num_heads=2, batch_first=True)
+        
+        # Global attention for combining all relations
+        self.global_attention = nn.MultiheadAttention(pe_dim, num_heads=4, batch_first=True)
         self.layer_norm = nn.LayerNorm(pe_dim)
 
         self._initialize_weights()
@@ -210,20 +219,75 @@ class PEARLPositionalEmbedding(nn.Module):
         # Transform node features to embeddings
         feature_pe = self.feature_mapper(x)
         
-        # Combine using attention mechanism
-        # Reshape for attention: [batch_size=1, seq_len=num_nodes, embed_dim]
-        structural_pe_reshaped = structural_pe.unsqueeze(0)
-        feature_pe_reshaped = feature_pe.unsqueeze(0)
+        # Relation-aware attention processing
+        if edge_index_dict is not None:
+            relation_embeddings = []
+            active_relations = []
+            
+            # Process each relation type separately
+            for i, edge_type_name in enumerate(self.edge_type_names):
+                # Find matching edge type in the dictionary
+                matching_edge_type = None
+                for edge_type in edge_index_dict.keys():
+                    if isinstance(edge_type, tuple) and len(edge_type) == 3:
+                        if edge_type[1] == edge_type_name:  # Match middle element (relation name)
+                            matching_edge_type = edge_type
+                            break
+                
+                if matching_edge_type is not None and edge_index_dict[matching_edge_type].size(1) > 0:
+                    # Apply relation-specific attention
+                    structural_pe_reshaped = structural_pe.unsqueeze(0)
+                    feature_pe_reshaped = feature_pe.unsqueeze(0)
+                    
+                    relation_pe, _ = self.relation_attention[edge_type_name](
+                        query=structural_pe_reshaped,
+                        key=feature_pe_reshaped,
+                        value=feature_pe_reshaped
+                    )
+                    
+                    relation_embeddings.append(relation_pe.squeeze(0))
+                    active_relations.append(i)
+            
+            # Aggregate relation-specific embeddings
+            if relation_embeddings:
+                # Weight each relation by learned importance
+                relation_weights = torch.softmax(self.relation_weights[active_relations], dim=0)
+                weighted_relations = sum(w * emb for w, emb in zip(relation_weights, relation_embeddings))
+                
+                # Global attention to combine with structural features
+                structural_pe_reshaped = structural_pe.unsqueeze(0)
+                weighted_relations_reshaped = weighted_relations.unsqueeze(0)
+                
+                final_pe, _ = self.global_attention(
+                    query=structural_pe_reshaped,
+                    key=weighted_relations_reshaped,
+                    value=weighted_relations_reshaped
+                )
+                final_pe = final_pe.squeeze(0)
+            else:
+                # Fallback to simple combination if no relations are active
+                structural_pe_reshaped = structural_pe.unsqueeze(0)
+                feature_pe_reshaped = feature_pe.unsqueeze(0)
+                
+                final_pe, _ = self.global_attention(
+                    query=structural_pe_reshaped,
+                    key=feature_pe_reshaped,
+                    value=feature_pe_reshaped
+                )
+                final_pe = final_pe.squeeze(0)
+        else:
+            # Fallback when no edge information is available
+            structural_pe_reshaped = structural_pe.unsqueeze(0)
+            feature_pe_reshaped = feature_pe.unsqueeze(0)
+            
+            final_pe, _ = self.global_attention(
+                query=structural_pe_reshaped,
+                key=feature_pe_reshaped,
+                value=feature_pe_reshaped
+            )
+            final_pe = final_pe.squeeze(0)
         
-        # Use structural as query, feature as key/value
-        attended_pe, _ = self.attention(
-            query=structural_pe_reshaped,
-            key=feature_pe_reshaped,
-            value=feature_pe_reshaped
-        )
-        
-        # Reshape back and apply layer norm
-        attended_pe = attended_pe.squeeze(0)
-        final_pe = self.layer_norm(attended_pe + structural_pe)
+        # Apply layer norm with residual connection
+        final_pe = self.layer_norm(final_pe + structural_pe)
         
         return final_pe

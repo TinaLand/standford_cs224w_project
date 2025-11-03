@@ -1,7 +1,7 @@
 # phase4_core_training.py
 import torch
 import torch.nn.functional as F
-from torch_geometric.nn import GATv2Conv, HeteroConv
+from torch_geometric.nn import HeteroConv
 from torch_geometric.data import HeteroData
 import pandas as pd
 import numpy as np
@@ -33,7 +33,7 @@ NUM_LAYERS = 2                  # Number of layers
 NUM_HEADS = 4                   # Number of attention heads
 OUT_CHANNELS = 2                # Binary classification: Up/Down
 LEARNING_RATE = 0.0005
-NUM_EPOCHS = 2                 # Increased epochs for complex model
+NUM_EPOCHS = 1                 # Increased epochs for complex model
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Ensure model directory exists
@@ -41,8 +41,9 @@ MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- 1. Model Definition: Core Role-Aware Graph Transformer ---
 
-# Import the PEARL embedding component
+# Import the enhanced components
 from components.pearl_embedding import PEARLPositionalEmbedding
+from components.transformer_layer import RelationAwareGATv2Conv, RelationAwareAggregator
 
 class RoleAwareGraphTransformer(torch.nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers, num_heads):
@@ -65,16 +66,30 @@ class RoleAwareGraphTransformer(torch.nn.Module):
             ('stock', 'fund_similarity', 'stock')
         ]
         
+        # Relation-aware convolution layers
         self.convs = torch.nn.ModuleList()
+        self.relation_aggregators = torch.nn.ModuleList()
+        
         for i in range(num_layers):
             in_d = total_in_dim if i == 0 else hidden_dim
             
+            # Create relation-aware convolutions for each edge type
             conv = HeteroConv({
-                edge_type: GATv2Conv(in_d, hidden_dim // num_heads, heads=num_heads, dropout=0.3)
+                edge_type: RelationAwareGATv2Conv(
+                    in_d, 
+                    hidden_dim // num_heads, 
+                    heads=num_heads, 
+                    dropout=0.3,
+                    edge_type=edge_type
+                )
                 for edge_type in metadata
             }, aggr='sum')
             
+            # Add relation-aware aggregator
+            aggregator = RelationAwareAggregator(hidden_dim, metadata)
+            
             self.convs.append(conv)
+            self.relation_aggregators.append(aggregator)
             
         # (C) Output Classifier
         self.lin_out = torch.nn.Sequential(
@@ -93,9 +108,24 @@ class RoleAwareGraphTransformer(torch.nn.Module):
         x_with_pe = torch.cat([x, pearl_pe], dim=1)
         x_dict['stock'] = x_with_pe
         
-        # 2. Heterogeneous Graph Transformer Layers
-        for i, conv in enumerate(self.convs):
-            x_dict = conv(x_dict, edge_index_dict)
+        # 2. Relation-aware Graph Transformer Layers
+        for layer_idx, (conv, aggregator) in enumerate(zip(self.convs, self.relation_aggregators)):
+            # Apply convolution to get outputs for each relation
+            conv_output = conv(x_dict, edge_index_dict)
+            
+            # Collect outputs from different relations for aggregation
+            relation_outputs = {}
+            for edge_type in edge_index_dict.keys():
+                if 'stock' in conv_output:
+                    relation_outputs[edge_type] = conv_output['stock']
+            
+            # Apply relation-aware aggregation if we have relation outputs
+            if relation_outputs and len(relation_outputs) > 1:
+                x_dict['stock'] = aggregator(relation_outputs)
+            else:
+                x_dict = conv_output
+            
+            # Apply activations and dropout
             x_dict['stock'] = x_dict['stock'].relu()
             x_dict['stock'] = F.dropout(x_dict['stock'], p=0.4, training=self.training)
         
