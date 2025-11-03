@@ -158,6 +158,26 @@ The checkpoint includes:
 - Current epoch number
 - Training metrics history (loss, accuracy, F1 scores)
 
+**Early Stopping & Learning Rate Scheduler:**
+Automatically prevents overfitting and optimizes learning rate:
+- **Early Stopping**: Stops training if validation F1 doesn't improve for N epochs
+  - Default patience: 5 epochs
+  - Prevents wasted computation on plateau
+- **Learning Rate Scheduler**: Reduces LR when validation metric plateaus
+  - Default: ReduceLROnPlateau (reduces LR by 0.5 after 3 epochs without improvement)
+  - Options: 'plateau', 'step', 'exponential'
+  
+Configure in `phase3_baseline_training.py`:
+```python
+# Early Stopping (lines 45-48)
+ENABLE_EARLY_STOPPING = True
+EARLY_STOP_PATIENCE = 5         # Wait N epochs before stopping
+
+# Learning Rate Scheduler (lines 50-55)
+ENABLE_LR_SCHEDULER = True
+LR_SCHEDULER_TYPE = 'plateau'   # 'plateau', 'step', or 'exponential'
+```
+
 ### Running Phase 4: Core Transformer Training
 ```bash
 python scripts/phase4_core_training.py
@@ -271,7 +291,7 @@ results = validate_ticker_data(
   - [x] Temporal time-based split (70/15/15) to avoid leakage.
   - [x] Handle class imbalance (class weights or focal loss).
   - [x] Save full checkpoints (model, optimizer, epoch, metrics) and resume support.
-  - [ ] Add early stopping and learning rate scheduler.
+  - [x] Add early stopping and learning rate scheduler.
   - [ ] Log metrics to TensorBoard and add ROC-AUC, confusion matrix reporting.
 
 - **Phase 4 – Core Transformer**

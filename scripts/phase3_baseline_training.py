@@ -42,6 +42,18 @@ RESUME_FROM_CHECKPOINT = False  # Resume training from last checkpoint
 CHECKPOINT_DIR = MODELS_DIR / "checkpoints"
 SAVE_CHECKPOINT_EVERY = 5       # Save checkpoint every N epochs (in addition to best)
 
+# Early Stopping Configuration
+ENABLE_EARLY_STOPPING = True    # Stop training if validation F1 doesn't improve
+EARLY_STOP_PATIENCE = 5         # Number of epochs to wait before stopping
+EARLY_STOP_MIN_DELTA = 0.0001   # Minimum improvement to be considered as improvement
+
+# Learning Rate Scheduler Configuration
+ENABLE_LR_SCHEDULER = True      # Enable learning rate scheduling
+LR_SCHEDULER_TYPE = 'plateau'   # Options: 'plateau', 'step', 'exponential'
+LR_SCHEDULER_PATIENCE = 3       # Epochs to wait before reducing LR (for plateau)
+LR_SCHEDULER_FACTOR = 0.5       # Multiply LR by this factor when reducing
+LR_SCHEDULER_MIN_LR = 1e-6      # Minimum learning rate
+
 # Ensure directories exist
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
@@ -637,9 +649,55 @@ def run_training_pipeline():
         print(f"   ⚠️  Using Standard Cross-Entropy (no class balancing)")
         print(f"   💡 Consider using 'weighted' or 'focal' if classes are imbalanced")
     
-    # 5. Model Setup
+    # 5. Model and Optimizer Setup
     model = BaselineGNN(INPUT_DIM, HIDDEN_DIM, OUT_DIM).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    
+    # 5b. Learning Rate Scheduler Setup
+    scheduler = None
+    if ENABLE_LR_SCHEDULER:
+        if LR_SCHEDULER_TYPE == 'plateau':
+            # ReduceLROnPlateau: Reduce LR when validation metric plateaus
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, 
+                mode='max',  # Maximize validation F1
+                factor=LR_SCHEDULER_FACTOR,
+                patience=LR_SCHEDULER_PATIENCE,
+                min_lr=LR_SCHEDULER_MIN_LR,
+                verbose=True
+            )
+            print(f"\n📉 Learning Rate Scheduler: ReduceLROnPlateau")
+            print(f"   - Patience: {LR_SCHEDULER_PATIENCE} epochs")
+            print(f"   - Factor: {LR_SCHEDULER_FACTOR}")
+            print(f"   - Min LR: {LR_SCHEDULER_MIN_LR}")
+        
+        elif LR_SCHEDULER_TYPE == 'step':
+            # StepLR: Reduce LR every N epochs
+            scheduler = torch.optim.lr_scheduler.StepLR(
+                optimizer,
+                step_size=LR_SCHEDULER_PATIENCE,
+                gamma=LR_SCHEDULER_FACTOR
+            )
+            print(f"\n📉 Learning Rate Scheduler: StepLR")
+            print(f"   - Step size: {LR_SCHEDULER_PATIENCE} epochs")
+            print(f"   - Gamma: {LR_SCHEDULER_FACTOR}")
+        
+        elif LR_SCHEDULER_TYPE == 'exponential':
+            # ExponentialLR: Exponentially decay LR
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(
+                optimizer,
+                gamma=LR_SCHEDULER_FACTOR
+            )
+            print(f"\n📉 Learning Rate Scheduler: ExponentialLR")
+            print(f"   - Gamma: {LR_SCHEDULER_FACTOR}")
+    
+    # 5c. Early Stopping Setup
+    early_stop_counter = 0
+    early_stop_triggered = False
+    if ENABLE_EARLY_STOPPING:
+        print(f"\n⏱️ Early Stopping Enabled:")
+        print(f"   - Patience: {EARLY_STOP_PATIENCE} epochs")
+        print(f"   - Min delta: {EARLY_STOP_MIN_DELTA}")
     
     # 6. Initialize Training Metrics and State
     # Metrics dictionary stores the entire training history
@@ -708,10 +766,13 @@ def run_training_pipeline():
         metrics['val_f1'].append(avg_val_f1)
         metrics['epoch_times'].append(epoch_duration)
 
-        print(f"Epoch {epoch:02d} | Train Loss: {avg_loss:.4f} | Val Acc: {avg_val_acc:.4f} | Val F1: {avg_val_f1:.4f} | Time: {epoch_duration:.1f}s")
+        # Get current learning rate for display
+        current_lr = optimizer.param_groups[0]['lr']
+        print(f"Epoch {epoch:02d} | Train Loss: {avg_loss:.4f} | Val Acc: {avg_val_acc:.4f} | Val F1: {avg_val_f1:.4f} | Time: {epoch_duration:.1f}s | LR: {current_lr:.2e}")
 
-        # Determine if this is the best model so far
-        is_best = avg_val_f1 > best_val_f1
+        # Determine if this is the best model so far (with min_delta threshold)
+        improvement = avg_val_f1 - best_val_f1
+        is_best = improvement > EARLY_STOP_MIN_DELTA if ENABLE_EARLY_STOPPING else avg_val_f1 > best_val_f1
         
         # Save best model based on F1 score (important metric for imbalanced finance data)
         if is_best:
@@ -737,10 +798,38 @@ def run_training_pipeline():
             # Periodically clean up old checkpoints to save disk space
             if epoch % (SAVE_CHECKPOINT_EVERY * 2) == 0:
                 cleanup_old_checkpoints(CHECKPOINT_DIR, keep_last_n=5)
+        
+        # Update Learning Rate Scheduler
+        if ENABLE_LR_SCHEDULER and scheduler is not None:
+            if LR_SCHEDULER_TYPE == 'plateau':
+                # ReduceLROnPlateau needs the validation metric
+                scheduler.step(avg_val_f1)
+            else:
+                # Other schedulers just step
+                scheduler.step()
+        
+        # Early Stopping Check
+        if ENABLE_EARLY_STOPPING:
+            if is_best:
+                # Reset counter if we found a better model
+                early_stop_counter = 0
+            else:
+                # Increment counter if no improvement
+                early_stop_counter += 1
+                print(f"  ⏱️ No improvement for {early_stop_counter}/{EARLY_STOP_PATIENCE} epochs")
+                
+                if early_stop_counter >= EARLY_STOP_PATIENCE:
+                    print(f"\n🛑 Early stopping triggered after {epoch} epochs")
+                    print(f"   Best validation F1: {best_val_f1:.4f}")
+                    early_stop_triggered = True
+                    break  # Exit training loop
     
     # 9. Training Complete - Save Final Summary
     print("\n" + "=" * 60)
-    print("✅ Training Complete!")
+    if early_stop_triggered:
+        print("🛑 Training Stopped Early!")
+    else:
+        print("✅ Training Complete!")
     print("=" * 60)
     
     if ENABLE_CHECKPOINTING:
