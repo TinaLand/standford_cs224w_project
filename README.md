@@ -320,9 +320,9 @@ results = validate_ticker_data(
   - [x] Log metrics to TensorBoard and add ROC-AUC, confusion matrix reporting.
 
 - **Phase 4 – Core Transformer**
-  - [ ] Replace simulated PEARL with the component in `scripts/components/pearl_embedding.py`.
-  - [ ] Support edge-type–specific attention parameters and relation-aware aggregation.
-  - [ ] Enable neighbor sampling / mini-batch training for large graphs.
+  - [x] Replace simulated PEARL with the component in `scripts/components/pearl_embedding.py`.
+  - [x] Support edge-type–specific attention parameters and relation-aware aggregation.
+  - [x] Enable neighbor sampling / mini-batch training for large graphs.
   - [ ] Add mixed precision (AMP) and gradient clipping for stability.
   - [ ] Provide hyperparameter sweep script (grid or Optuna).
 
