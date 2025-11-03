@@ -36,6 +36,12 @@ LEARNING_RATE = 0.0005
 NUM_EPOCHS = 1                 # Increased epochs for complex model
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+# Mini-batch training settings
+ENABLE_MINI_BATCH = False      # Enable neighbor sampling for large graphs (requires torch-sparse, pyg-lib)
+BATCH_SIZE = 128               # Number of target nodes per batch
+NUM_NEIGHBORS = [15, 10]       # Neighbors to sample per layer
+ENABLE_AMP = torch.cuda.is_available()  # Enable automatic mixed precision if CUDA available
+
 # Ensure model directory exists
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -44,6 +50,14 @@ MODELS_DIR.mkdir(parents=True, exist_ok=True)
 # Import the enhanced components
 from components.pearl_embedding import PEARLPositionalEmbedding
 from components.transformer_layer import RelationAwareGATv2Conv, RelationAwareAggregator
+
+# Import PyTorch Geometric's neighbor sampling (requires sparse libraries)
+try:
+    from torch_geometric.loader import NeighborLoader
+    MINI_BATCH_AVAILABLE = True
+except ImportError:
+    MINI_BATCH_AVAILABLE = False
+    NeighborLoader = None
 
 class RoleAwareGraphTransformer(torch.nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers, num_heads):
@@ -214,6 +228,95 @@ def evaluate(model, data, targets):
     
     return acc, f1
 
+def train_with_sampling(model, optimizer, data, targets, loader):
+    """Training step with neighbor sampling for large graphs."""
+    model.train()
+    total_loss = 0
+    num_batches = 0
+    
+    for batch in loader:
+        optimizer.zero_grad()
+        batch = batch.to(DEVICE)
+        
+        # Get batch size for target nodes
+        batch_size = batch['stock'].batch_size if hasattr(batch['stock'], 'batch_size') else batch['stock'].x.size(0)
+        
+        # Forward pass
+        out = model(batch)
+        
+        # Extract predictions for target nodes (first batch_size nodes)
+        batch_out = out[:batch_size]
+        batch_targets = batch['stock'].y[:batch_size] if hasattr(batch['stock'], 'y') else targets[:batch_size]
+        
+        loss = F.cross_entropy(batch_out, batch_targets)
+        loss.backward()
+        optimizer.step()
+        
+        total_loss += loss.item()
+        num_batches += 1
+    
+    return total_loss / max(num_batches, 1), 0.0
+
+def evaluate_with_sampling(model, data, targets, loader):
+    """Evaluation step with neighbor sampling for large graphs."""
+    model.eval()
+    all_preds = []
+    all_targets = []
+    
+    with torch.no_grad():
+        for batch in loader:
+            batch = batch.to(DEVICE)
+            
+            # Get batch size for target nodes
+            batch_size = batch['stock'].batch_size if hasattr(batch['stock'], 'batch_size') else batch['stock'].x.size(0)
+            
+            # Forward pass
+            out = model(batch)
+            
+            # Extract predictions for target nodes
+            batch_out = out[:batch_size]
+            batch_targets = batch['stock'].y[:batch_size] if hasattr(batch['stock'], 'y') else targets[:batch_size]
+            
+            preds = batch_out.argmax(dim=1)
+            all_preds.append(preds.cpu())
+            all_targets.append(batch_targets.cpu())
+    
+    if not all_preds:
+        return 0.0, 0.0
+    
+    all_preds = torch.cat(all_preds)
+    all_targets = torch.cat(all_targets)
+    
+    acc = (all_preds == all_targets).float().mean().item()
+    
+    from sklearn.metrics import f1_score
+    f1 = f1_score(all_targets.numpy(), all_preds.numpy(), average='binary', zero_division=0)
+    
+    return acc, f1
+
+def create_neighbor_loader(data, targets, batch_size, num_neighbors, shuffle=True):
+    """Create NeighborLoader for mini-batch training."""
+    if 'stock' not in data.x_dict:
+        raise ValueError("No 'stock' nodes found in data")
+    
+    num_nodes = data['stock'].x.size(0)
+    target_nodes = torch.arange(num_nodes)
+    
+    # Add targets to data
+    data['stock'].y = targets
+    
+    loader = NeighborLoader(
+        data,
+        num_neighbors=num_neighbors,
+        batch_size=batch_size,
+        input_nodes=('stock', target_nodes),
+        num_workers=0,
+        shuffle=shuffle,
+        drop_last=False
+    )
+    
+    return loader
+
 def run_training_pipeline():
     """Main function to run the time-series training loop."""
     print("🚀 Starting Phase 4: Core GNN Training")
@@ -276,6 +379,16 @@ def run_training_pipeline():
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     model_path = MODELS_DIR / 'core_transformer_model.pt'
     
+    # 4.1. Mini-batch Training Setup (if enabled and available)
+    use_mini_batch = ENABLE_MINI_BATCH and MINI_BATCH_AVAILABLE
+    if use_mini_batch:
+        print(f"🚀 Mini-batch training enabled: batch_size={BATCH_SIZE}, neighbors={NUM_NEIGHBORS}")
+    else:
+        if ENABLE_MINI_BATCH and not MINI_BATCH_AVAILABLE:
+            print("⚠️  Mini-batch training requested but sparse libraries not available")
+            print("   Install: pip install torch-sparse pyg-lib")
+        print("🚀 Full-batch training enabled")
+    
     # 5. Training Loop
     print("\n🔨 Starting Sequential Training...")
     best_val_f1 = 0.0
@@ -288,7 +401,11 @@ def run_training_pipeline():
             data = load_graph_data(date)
             target = targets_dict.get(date)
             if data and target is not None:
-                loss, _ = train(model, optimizer, data, target)
+                if use_mini_batch:
+                    loader = create_neighbor_loader(data, target, BATCH_SIZE, NUM_NEIGHBORS, shuffle=True)
+                    loss, _ = train_with_sampling(model, optimizer, data, target, loader)
+                else:
+                    loss, _ = train(model, optimizer, data, target)
                 total_loss += loss
         
         avg_loss = total_loss / len(train_dates)
@@ -299,7 +416,11 @@ def run_training_pipeline():
             data = load_graph_data(date)
             target = targets_dict.get(date)
             if data and target is not None:
-                _, f1 = evaluate(model, data, target)
+                if use_mini_batch:
+                    loader = create_neighbor_loader(data, target, BATCH_SIZE * 2, NUM_NEIGHBORS, shuffle=False)
+                    _, f1 = evaluate_with_sampling(model, data, target, loader)
+                else:
+                    _, f1 = evaluate(model, data, target)
                 val_f1s.append(f1)
         
         avg_val_f1 = np.mean(val_f1s)
@@ -320,7 +441,11 @@ def run_training_pipeline():
         data = load_graph_data(date)
         target = targets_dict.get(date)
         if data and target is not None:
-            acc, f1 = evaluate(model, data, target)
+            if use_mini_batch:
+                loader = create_neighbor_loader(data, target, BATCH_SIZE * 2, NUM_NEIGHBORS, shuffle=False)
+                acc, f1 = evaluate_with_sampling(model, data, target, loader)
+            else:
+                acc, f1 = evaluate(model, data, target)
             test_accs.append(acc)
             test_f1s.append(f1)
             

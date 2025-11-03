@@ -18,5 +18,10 @@ scipy                  # For cosine similarity calculation (if needed)
 # Phase 2 onwards (Anticipated)
 torch                  # PyTorch base
 torch-geometric        # PyG for Graph Neural Networks
+torch-sparse           # Sparse tensor operations for neighbor sampling
+pyg-lib                # PyG extensions for faster sampling operations
 networkx               # For basic graph analysis/manipulation
 stable-baselines3      # For Reinforcement Learning Agent (if using common RL libraries)
+
+# Additional dependencies for mini-batch training
+tqdm                   # Progress bars for training loops

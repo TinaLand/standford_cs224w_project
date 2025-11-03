@@ -181,11 +181,69 @@ class PEARLPositionalEmbedding(nn.Module):
             
         return features
 
-    def forward(self, x: torch.Tensor, edge_index_dict: Optional[Dict] = None) -> torch.Tensor:
+    def _compute_simplified_structural_features(self, edge_index_dict: Dict, num_nodes: int, device: torch.device) -> torch.Tensor:
+        """
+        Compute simplified structural features for large graphs/mini-batches.
+        Uses only local connectivity information without expensive global computations.
+        """
+        features = torch.zeros(num_nodes, self.structural_feature_dim, device=device)
+        
+        # Create degree dictionary for all nodes
+        degree_count = torch.zeros(num_nodes, device=device)
+        neighbor_degrees = torch.zeros(num_nodes, device=device)
+        triangle_count = torch.zeros(num_nodes, device=device)
+        
+        # Count edges and neighbors for each relation type
+        relation_weights = [1.0, 0.8, 0.9, 0.7, 0.6]  # Different importance for different relations
+        
+        for i, (edge_type, edge_index) in enumerate(edge_index_dict.items()):
+            if edge_index.size(1) == 0:
+                continue
+                
+            weight = relation_weights[i % len(relation_weights)]
+            
+            # Filter out self-loops and invalid indices
+            valid_edges = (edge_index[0] != edge_index[1]) & (edge_index[0] < num_nodes) & (edge_index[1] < num_nodes)
+            if not valid_edges.any():
+                continue
+                
+            valid_edge_index = edge_index[:, valid_edges]
+            
+            # Compute degree centrality (weighted by relation type)
+            unique, counts = torch.unique(valid_edge_index.flatten(), return_counts=True)
+            valid_mask = unique < num_nodes
+            degree_count[unique[valid_mask]] += counts[valid_mask].float() * weight
+            
+            # Compute average neighbor degree (simplified)
+            src, dst = valid_edge_index[0], valid_edge_index[1]
+            for j in range(len(src)):
+                if src[j] < num_nodes and dst[j] < num_nodes:
+                    neighbor_degrees[src[j]] += degree_count[dst[j]] * weight
+                    neighbor_degrees[dst[j]] += degree_count[src[j]] * weight
+        
+        # Normalize features
+        max_degree = degree_count.max() if degree_count.max() > 0 else 1
+        max_neighbor_deg = neighbor_degrees.max() if neighbor_degrees.max() > 0 else 1
+        
+        # Fill simplified structural features
+        features[:, 0] = degree_count / (num_nodes * len(edge_index_dict))  # Normalized degree (proxy for PageRank)
+        features[:, 1] = degree_count / max_degree  # Degree centrality
+        features[:, 2] = (degree_count > degree_count.median()).float()  # Simplified betweenness (high degree nodes)
+        features[:, 3] = 1.0 / (1.0 + degree_count)  # Inverse degree (proxy for closeness)
+        features[:, 4] = torch.clamp(degree_count / 10.0, 0, 1)  # Proxy for clustering
+        features[:, 5] = torch.clamp(degree_count / max_degree, 0, 1)  # Simplified core number
+        features[:, 6] = neighbor_degrees / max_neighbor_deg  # Average neighbor degree
+        features[:, 7] = torch.clamp(triangle_count / max_degree, 0, 1)  # Simplified triangle count
+        
+        return features
+
+    def forward(self, x: torch.Tensor, edge_index_dict: Optional[Dict] = None, 
+                batch_size: Optional[int] = None) -> torch.Tensor:
         """
         Args:
             x: Node features [N, F].
             edge_index_dict: Dictionary of edge indices for different edge types.
+            batch_size: For mini-batch training, size of the current batch
             
         Returns:
             Positional Embedding [N, PE_DIM].
@@ -193,9 +251,12 @@ class PEARLPositionalEmbedding(nn.Module):
         num_nodes = x.size(0)
         device = x.device
         
+        # For mini-batch training, limit structural computation to reasonable size
+        use_full_structural = num_nodes <= 1000  # Only compute full structural features for small graphs
+        
         # Compute structural features
-        if edge_index_dict is not None:
-            # Check cache
+        if edge_index_dict is not None and use_full_structural:
+            # Check cache for full graph structural computation
             graph_hash = self._compute_graph_hash(edge_index_dict)
             
             if self.cache_structural_features and graph_hash == self._graph_hash_cache and hasattr(self, '_cached_structural_features'):
@@ -209,6 +270,9 @@ class PEARLPositionalEmbedding(nn.Module):
                 if self.cache_structural_features:
                     self._cached_structural_features = structural_features.cpu()
                     self._graph_hash_cache = graph_hash
+        elif edge_index_dict is not None:
+            # For large graphs/mini-batches, use simplified structural features
+            structural_features = self._compute_simplified_structural_features(edge_index_dict, num_nodes, device)
         else:
             # Fallback: use small random structural features
             structural_features = torch.randn(num_nodes, self.structural_feature_dim, device=device) * 0.1
