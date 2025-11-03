@@ -178,6 +178,31 @@ ENABLE_LR_SCHEDULER = True
 LR_SCHEDULER_TYPE = 'plateau'   # 'plateau', 'step', or 'exponential'
 ```
 
+**TensorBoard & Advanced Metrics:**
+Real-time training visualization and comprehensive evaluation metrics:
+- **TensorBoard Logging**: Automatic logging of loss, accuracy, F1, ROC-AUC, learning rate
+- **ROC-AUC Score**: Measures model's ability to distinguish between classes (0.5 = random, 1.0 = perfect)
+- **Confusion Matrix**: Visual breakdown of TP, TN, FP, FN with detailed plots
+- **Classification Report**: Per-class precision, recall, F1-score
+
+View TensorBoard:
+```bash
+tensorboard --logdir=runs
+# Then open http://localhost:6006 in browser
+```
+
+Generated files:
+- `runs/`: TensorBoard logs (per training run)
+- `models/plots/`: Confusion matrix plots (PNG format)
+
+Configure in `phase3_baseline_training.py`:
+```python
+# TensorBoard & Metrics (lines 67-72)
+ENABLE_TENSORBOARD = True       # TensorBoard logging
+ENABLE_ROC_AUC = True          # Calculate ROC-AUC
+ENABLE_CONFUSION_MATRIX = True  # Generate confusion matrix
+```
+
 ### Running Phase 4: Core Transformer Training
 ```bash
 python scripts/phase4_core_training.py
@@ -292,7 +317,7 @@ results = validate_ticker_data(
   - [x] Handle class imbalance (class weights or focal loss).
   - [x] Save full checkpoints (model, optimizer, epoch, metrics) and resume support.
   - [x] Add early stopping and learning rate scheduler.
-  - [ ] Log metrics to TensorBoard and add ROC-AUC, confusion matrix reporting.
+  - [x] Log metrics to TensorBoard and add ROC-AUC, confusion matrix reporting.
 
 - **Phase 4 – Core Transformer**
   - [ ] Replace simulated PEARL with the component in `scripts/components/pearl_embedding.py`.

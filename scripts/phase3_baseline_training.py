@@ -7,15 +7,25 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from tqdm import tqdm
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, confusion_matrix, classification_report
 from datetime import datetime
 import time
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # FIX: Allow PyTorch to safely load torch-geometric objects (PyTorch >= 2.6)
 import torch.serialization
 from torch_geometric.data.storage import BaseStorage, NodeStorage, EdgeStorage, GlobalStorage
 if hasattr(torch.serialization, 'add_safe_globals'):
     torch.serialization.add_safe_globals([BaseStorage, NodeStorage, EdgeStorage, GlobalStorage])
+
+# TensorBoard support
+try:
+    from torch.utils.tensorboard import SummaryWriter
+    TENSORBOARD_AVAILABLE = True
+except ImportError:
+    TENSORBOARD_AVAILABLE = False
+    print("⚠️ TensorBoard not available. Install with: pip install tensorboard")
 
 # --- Configuration ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -54,9 +64,18 @@ LR_SCHEDULER_PATIENCE = 3       # Epochs to wait before reducing LR (for plateau
 LR_SCHEDULER_FACTOR = 0.5       # Multiply LR by this factor when reducing
 LR_SCHEDULER_MIN_LR = 1e-6      # Minimum learning rate
 
+# TensorBoard & Metrics Logging Configuration
+ENABLE_TENSORBOARD = True       # Enable TensorBoard logging
+TENSORBOARD_DIR = PROJECT_ROOT / "runs"
+ENABLE_ROC_AUC = True          # Calculate ROC-AUC score
+ENABLE_CONFUSION_MATRIX = True  # Generate confusion matrix plots
+PLOTS_DIR = MODELS_DIR / "plots"
+
 # Ensure directories exist
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+TENSORBOARD_DIR.mkdir(parents=True, exist_ok=True)
+PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # --- 1. Model Definition (Simple GAT Baseline) ---
@@ -427,6 +446,99 @@ def cleanup_old_checkpoints(checkpoint_dir, keep_last_n=5, keep_best=True):
             except Exception as e:
                 print(f"  ⚠️ Could not delete {checkpoint_file.name}: {e}")
 
+def plot_confusion_matrix(y_true, y_pred, epoch, split='test', save_dir=None):
+    """
+    Generate and save confusion matrix plot.
+    
+    A confusion matrix shows the performance of a classification model by comparing:
+    - True Positives (TP): Correctly predicted positive class
+    - True Negatives (TN): Correctly predicted negative class  
+    - False Positives (FP): Incorrectly predicted positive (Type I error)
+    - False Negatives (FN): Incorrectly predicted negative (Type II error)
+    
+    Matrix layout:
+                    Predicted
+                    Neg   Pos
+    Actual  Neg  [  TN    FP ]
+            Pos  [  FN    TP ]
+    
+    Args:
+        y_true: Ground truth labels
+        y_pred: Predicted labels
+        epoch: Current epoch number (for filename)
+        split: Dataset split name ('train', 'val', 'test')
+        save_dir: Directory to save plot
+    """
+    if save_dir is None:
+        save_dir = PLOTS_DIR
+    
+    # Calculate confusion matrix
+    cm = confusion_matrix(y_true, y_pred)
+    
+    # Create figure
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=['Down/Flat (0)', 'Up (1)'],
+                yticklabels=['Down/Flat (0)', 'Up (1)'])
+    plt.title(f'Confusion Matrix - {split.capitalize()} Set (Epoch {epoch})')
+    plt.ylabel('True Label')
+    plt.xlabel('Predicted Label')
+    
+    # Add performance metrics as text
+    tn, fp, fn, tp = cm.ravel()
+    accuracy = (tp + tn) / (tp + tn + fp + fn)
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    
+    metrics_text = f'Accuracy: {accuracy:.3f}\nPrecision: {precision:.3f}\nRecall: {recall:.3f}\nF1-Score: {f1:.3f}'
+    plt.text(2.5, 0.5, metrics_text, fontsize=10, bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    
+    # Save plot
+    save_path = save_dir / f'confusion_matrix_{split}_epoch_{epoch:03d}.png'
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    plt.close()
+    
+    return cm, save_path
+
+def calculate_roc_auc(y_true, y_prob):
+    """
+    Calculate ROC-AUC score.
+    
+    ROC-AUC (Receiver Operating Characteristic - Area Under Curve) measures:
+    - The model's ability to distinguish between classes
+    - Range: 0 to 1 (higher is better)
+    - 0.5 = random guessing
+    - 1.0 = perfect classification
+    
+    Mathematical Definition:
+    ROC curve plots True Positive Rate (TPR) vs False Positive Rate (FPR)
+    TPR = TP / (TP + FN)  [Also called Recall or Sensitivity]
+    FPR = FP / (FP + TN)  [1 - Specificity]
+    
+    AUC = ∫ TPR(FPR) d(FPR)  [Area under the ROC curve]
+    
+    Args:
+        y_true: Ground truth labels (0 or 1)
+        y_prob: Predicted probabilities for positive class
+    
+    Returns:
+        roc_auc: ROC-AUC score (float)
+    """
+    try:
+        # Check if we have both classes in y_true
+        if len(np.unique(y_true)) < 2:
+            print("  ⚠️ Only one class present in y_true. ROC-AUC not defined.")
+            return None
+        
+        # Calculate ROC-AUC
+        roc_auc = roc_auc_score(y_true, y_prob)
+        return roc_auc
+    except Exception as e:
+        print(f"  ⚠️ Could not calculate ROC-AUC: {e}")
+        return None
+
 # --- 3. Data Preparation ---
 
 def load_graph_data(date):
@@ -547,8 +659,22 @@ def train(model, optimizer, data, target, criterion):
     # Return loss and predicted labels (for evaluation)
     return loss.item(), out.argmax(dim=1)
 
-def evaluate(model, data, target):
-    """Single evaluation step."""
+def evaluate(model, data, target, return_probs=False):
+    """
+    Single evaluation step.
+    
+    Args:
+        model: The neural network model
+        data: Graph data (HeteroData)
+        target: Ground truth labels
+        return_probs: If True, also return probabilities for ROC-AUC
+    
+    Returns:
+        acc: Accuracy score
+        f1: F1 score
+        out: Model output logits
+        probs: (Optional) Probabilities for positive class
+    """
     model.eval()
     
     # Same data extraction logic as in train()
@@ -556,10 +682,10 @@ def evaluate(model, data, target):
         x = data['stock'].x
         edge_index_list = [data[metadata].edge_index for metadata in data.edge_index_dict.keys()]
         if not edge_index_list:
-             return 0, 0, 0
+             return (0, 0, 0, None) if return_probs else (0, 0, 0)
         edge_index = torch.cat(edge_index_list, dim=1)
     except (AttributeError, KeyError):
-        return 0, 0, 0
+        return (0, 0, 0, None) if return_probs else (0, 0, 0)
         
     with torch.no_grad():
         out = model(x.to(DEVICE), edge_index.to(DEVICE))
@@ -571,6 +697,11 @@ def evaluate(model, data, target):
     # Compute metrics
     acc = accuracy_score(y_true, y_pred)
     f1 = f1_score(y_true, y_pred, average='binary')
+    
+    if return_probs:
+        # Get probabilities for ROC-AUC calculation
+        probs = F.softmax(out, dim=1)[:, 1].cpu().numpy()  # Probability of positive class
+        return acc, f1, out, probs
     
     return acc, f1, out
 
@@ -705,11 +836,31 @@ def run_training_pipeline():
         'train_loss': [],      # Training loss per epoch
         'val_acc': [],         # Validation accuracy per epoch
         'val_f1': [],          # Validation F1-score per epoch
+        'val_roc_auc': [],     # Validation ROC-AUC per epoch (if enabled)
         'epoch_times': [],     # Time taken per epoch (seconds)
     }
     
     start_epoch = 1  # Default: start from epoch 1
     best_val_f1 = 0.0
+    
+    # 6b. Initialize TensorBoard Writer
+    writer = None
+    if ENABLE_TENSORBOARD and TENSORBOARD_AVAILABLE:
+        # Create unique run name with timestamp
+        run_name = f"baseline_{LOSS_TYPE}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        writer = SummaryWriter(log_dir=TENSORBOARD_DIR / run_name)
+        print(f"\n📊 TensorBoard initialized: {run_name}")
+        print(f"   Run: tensorboard --logdir={TENSORBOARD_DIR}")
+        
+        # Log hyperparameters
+        hparams = {
+            'hidden_dim': HIDDEN_DIM,
+            'learning_rate': LEARNING_RATE,
+            'loss_type': LOSS_TYPE,
+            'early_stopping': ENABLE_EARLY_STOPPING,
+            'lr_scheduler': ENABLE_LR_SCHEDULER,
+        }
+        writer.add_text('Hyperparameters', str(hparams), 0)
     
     # 7. Resume from Checkpoint (if enabled)
     if RESUME_FROM_CHECKPOINT and ENABLE_CHECKPOINTING:
@@ -746,16 +897,33 @@ def run_training_pipeline():
 
         # --- Validation Phase ---
         val_accs, val_f1s = [], []
+        all_val_true, all_val_pred, all_val_probs = [], [], []
+        
         for date in val_dates:
             data = load_graph_data(date)
             target = targets_dict.get(date)
             if data and target is not None:
-                acc, f1, _ = evaluate(model, data, target)
+                # Get predictions and probabilities
+                acc, f1, _, probs = evaluate(model, data, target, return_probs=True)
                 val_accs.append(acc)
                 val_f1s.append(f1)
+                
+                # Collect for ROC-AUC and confusion matrix
+                if probs is not None:
+                    all_val_true.extend(target.cpu().numpy())
+                    all_val_pred.extend(np.argmax(F.softmax(_, dim=1).cpu().numpy(), axis=1))
+                    all_val_probs.extend(probs)
         
         avg_val_acc = np.mean(val_accs)
         avg_val_f1 = np.mean(val_f1s)
+        
+        # Calculate ROC-AUC if enabled
+        avg_val_roc_auc = None
+        if ENABLE_ROC_AUC and len(all_val_true) > 0:
+            avg_val_roc_auc = calculate_roc_auc(
+                np.array(all_val_true),
+                np.array(all_val_probs)
+            )
         
         # Calculate epoch duration
         epoch_duration = time.time() - epoch_start_time
@@ -764,11 +932,27 @@ def run_training_pipeline():
         metrics['train_loss'].append(avg_loss)
         metrics['val_acc'].append(avg_val_acc)
         metrics['val_f1'].append(avg_val_f1)
+        metrics['val_roc_auc'].append(avg_val_roc_auc if avg_val_roc_auc else 0.0)
         metrics['epoch_times'].append(epoch_duration)
 
         # Get current learning rate for display
         current_lr = optimizer.param_groups[0]['lr']
-        print(f"Epoch {epoch:02d} | Train Loss: {avg_loss:.4f} | Val Acc: {avg_val_acc:.4f} | Val F1: {avg_val_f1:.4f} | Time: {epoch_duration:.1f}s | LR: {current_lr:.2e}")
+        
+        # Print epoch summary
+        print_str = f"Epoch {epoch:02d} | Train Loss: {avg_loss:.4f} | Val Acc: {avg_val_acc:.4f} | Val F1: {avg_val_f1:.4f}"
+        if avg_val_roc_auc is not None:
+            print_str += f" | ROC-AUC: {avg_val_roc_auc:.4f}"
+        print_str += f" | Time: {epoch_duration:.1f}s | LR: {current_lr:.2e}"
+        print(print_str)
+        
+        # Log to TensorBoard
+        if writer is not None:
+            writer.add_scalar('Loss/train', avg_loss, epoch)
+            writer.add_scalar('Accuracy/val', avg_val_acc, epoch)
+            writer.add_scalar('F1/val', avg_val_f1, epoch)
+            if avg_val_roc_auc is not None:
+                writer.add_scalar('ROC-AUC/val', avg_val_roc_auc, epoch)
+            writer.add_scalar('Learning_Rate', current_lr, epoch)
 
         # Determine if this is the best model so far (with min_delta threshold)
         improvement = avg_val_f1 - best_val_f1
@@ -850,22 +1034,90 @@ def run_training_pipeline():
         print(f"   - Latest state: checkpoint_latest.pt")
     
     # 10. Testing (Final Evaluation)
+    print("\n" + "=" * 60)
+    print("📊 Final Testing Phase")
+    print("=" * 60)
+    
     model.load_state_dict(torch.load(MODELS_DIR / 'baseline_gcn_model.pt', weights_only=False))
     test_accs, test_f1s = [], []
+    all_test_true, all_test_pred, all_test_probs = [], [], []
     
     for date in test_dates:
         data = load_graph_data(date)
         target = targets_dict.get(date)
         if data and target is not None:
-            acc, f1, _ = evaluate(model, data, target)
+            acc, f1, out, probs = evaluate(model, data, target, return_probs=True)
             test_accs.append(acc)
             test_f1s.append(f1)
             
-    print("\n" + "=" * 50)
+            # Collect for final metrics
+            if probs is not None:
+                all_test_true.extend(target.cpu().numpy())
+                all_test_pred.extend(np.argmax(F.softmax(out, dim=1).cpu().numpy(), axis=1))
+                all_test_probs.extend(probs)
+    
+    # Calculate final test metrics
+    avg_test_acc = np.mean(test_accs)
+    avg_test_f1 = np.mean(test_f1s)
+    
+    print("\n" + "=" * 60)
     print(f"🚀 Final Test Results (Averaged over {len(test_dates)} days):")
-    print(f"   - Test Accuracy: {np.mean(test_accs):.4f}")
-    print(f"   - Test F1 Score: {np.mean(test_f1s):.4f}")
-    print("=" * 50)
+    print(f"   - Test Accuracy: {avg_test_acc:.4f}")
+    print(f"   - Test F1 Score: {avg_test_f1:.4f}")
+    
+    # Calculate and display ROC-AUC
+    if ENABLE_ROC_AUC and len(all_test_true) > 0:
+        test_roc_auc = calculate_roc_auc(
+            np.array(all_test_true),
+            np.array(all_test_probs)
+        )
+        if test_roc_auc is not None:
+            print(f"   - Test ROC-AUC: {test_roc_auc:.4f}")
+            
+            # Log to TensorBoard
+            if writer is not None:
+                writer.add_scalar('ROC-AUC/test', test_roc_auc, 0)
+    
+    # Generate confusion matrix
+    if ENABLE_CONFUSION_MATRIX and len(all_test_true) > 0:
+        print(f"\n📈 Generating confusion matrix...")
+        cm, cm_path = plot_confusion_matrix(
+            np.array(all_test_true),
+            np.array(all_test_pred),
+            epoch=len(metrics['train_loss']),
+            split='test',
+            save_dir=PLOTS_DIR
+        )
+        print(f"   ✅ Confusion matrix saved: {cm_path.name}")
+        
+        # Log confusion matrix to TensorBoard
+        if writer is not None:
+            fig = plt.figure(figsize=(8, 6))
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                       xticklabels=['Down/Flat (0)', 'Up (1)'],
+                       yticklabels=['Down/Flat (0)', 'Up (1)'])
+            plt.title('Confusion Matrix - Test Set')
+            plt.ylabel('True Label')
+            plt.xlabel('Predicted Label')
+            writer.add_figure('Confusion_Matrix/test', fig, 0)
+            plt.close(fig)
+        
+        # Print classification report
+        print(f"\n📋 Classification Report:")
+        print(classification_report(
+            all_test_true,
+            all_test_pred,
+            target_names=['Down/Flat (0)', 'Up (1)'],
+            digits=4
+        ))
+    
+    print("=" * 60)
+    
+    # Close TensorBoard writer
+    if writer is not None:
+        writer.close()
+        print(f"\n📊 TensorBoard logs saved to: {TENSORBOARD_DIR}")
+        print(f"   View with: tensorboard --logdir={TENSORBOARD_DIR}")
 
 
 if __name__ == '__main__':
