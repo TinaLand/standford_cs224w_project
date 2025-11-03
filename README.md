@@ -136,6 +136,28 @@ The script supports three loss function options to handle imbalanced datasets:
 
 To change the loss type, edit `LOSS_TYPE` in `phase3_baseline_training.py` (line 33).
 
+**Checkpoint Management:**
+The script automatically saves full training checkpoints (model, optimizer, epoch, metrics):
+- **Automatic Saving**: Checkpoints saved every 5 epochs and when a new best model is found
+- **Resume Training**: Set `RESUME_FROM_CHECKPOINT = True` to continue from last checkpoint
+- **Checkpoint Files**:
+  - `checkpoint_best.pt`: Best model (highest validation F1)
+  - `checkpoint_latest.pt`: Most recent training state
+  - `checkpoint_epoch_XXX.pt`: Regular epoch checkpoints
+- **Storage Location**: `models/checkpoints/`
+
+To resume interrupted training:
+```python
+# In phase3_baseline_training.py (line 39)
+RESUME_FROM_CHECKPOINT = True
+```
+
+The checkpoint includes:
+- Model weights (state_dict)
+- Optimizer state (Adam momentum, learning rates)
+- Current epoch number
+- Training metrics history (loss, accuracy, F1 scores)
+
 ### Running Phase 4: Core Transformer Training
 ```bash
 python scripts/phase4_core_training.py
@@ -248,7 +270,7 @@ results = validate_ticker_data(
 - **Phase 3 – Baseline Training**
   - [x] Temporal time-based split (70/15/15) to avoid leakage.
   - [x] Handle class imbalance (class weights or focal loss).
-  - [ ] Save full checkpoints (model, optimizer, epoch, metrics) and resume support.
+  - [x] Save full checkpoints (model, optimizer, epoch, metrics) and resume support.
   - [ ] Add early stopping and learning rate scheduler.
   - [ ] Log metrics to TensorBoard and add ROC-AUC, confusion matrix reporting.
 

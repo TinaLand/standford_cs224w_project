@@ -8,6 +8,8 @@ import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from datetime import datetime
+import time
 
 # FIX: Allow PyTorch to safely load torch-geometric objects (PyTorch >= 2.6)
 import torch.serialization
@@ -34,8 +36,15 @@ LOSS_TYPE = 'weighted'  # Change to 'weighted' or 'focal' to handle imbalance
 FOCAL_ALPHA = 0.25      # Weight for positive class in focal loss (range: 0-1)
 FOCAL_GAMMA = 2.0       # Focusing parameter for focal loss (typically 2.0)
 
-# Ensure model directory exists
+# Checkpoint Configuration
+ENABLE_CHECKPOINTING = True     # Save full checkpoints (model, optimizer, epoch, metrics)
+RESUME_FROM_CHECKPOINT = False  # Resume training from last checkpoint
+CHECKPOINT_DIR = MODELS_DIR / "checkpoints"
+SAVE_CHECKPOINT_EVERY = 5       # Save checkpoint every N epochs (in addition to best)
+
+# Ensure directories exist
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
+CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # --- 1. Model Definition (Simple GAT Baseline) ---
@@ -224,6 +233,187 @@ def compute_class_weights(targets_dict, train_dates):
             print(f"   💡 Significant imbalance detected. Using {LOSS_TYPE} loss is recommended.")
     
     return class_weights, class_count_dict
+
+def save_checkpoint(epoch, model, optimizer, metrics, checkpoint_dir, is_best=False):
+    """
+    Save a complete training checkpoint.
+    
+    A checkpoint includes all information needed to resume training:
+    - Model weights (state_dict): Learned parameters of the neural network
+    - Optimizer state (state_dict): Momentum, learning rates, etc.
+    - Current epoch: Which training iteration we're on
+    - Training metrics: Loss history, accuracy, F1 scores over time
+    
+    This allows you to:
+    1. Resume training if interrupted
+    2. Roll back to earlier epochs if overfitting occurs
+    3. Compare different training runs
+    4. Debug training issues by examining saved metrics
+    
+    Args:
+        epoch (int): Current training epoch number
+        model (nn.Module): The neural network model
+        optimizer (Optimizer): PyTorch optimizer (Adam, SGD, etc.)
+        metrics (dict): Dictionary containing training history
+            Expected keys: 'train_loss', 'val_acc', 'val_f1', 'epoch_times'
+        checkpoint_dir (Path): Directory to save checkpoints
+        is_best (bool): Whether this is the best model so far
+    
+    Saved Files:
+        - checkpoint_epoch_N.pt: Regular checkpoint at epoch N
+        - checkpoint_best.pt: Best model (highest validation F1)
+        - checkpoint_latest.pt: Most recent checkpoint (for easy resuming)
+    """
+    checkpoint = {
+        # Model architecture weights
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        
+        # Optimizer state (important for momentum-based optimizers like Adam)
+        'optimizer_state_dict': optimizer.state_dict(),
+        
+        # Training metrics history
+        'metrics': metrics,
+        
+        # Configuration for verification when loading
+        'config': {
+            'hidden_dim': HIDDEN_DIM,
+            'out_dim': OUT_DIM,
+            'learning_rate': LEARNING_RATE,
+            'loss_type': LOSS_TYPE,
+        },
+        
+        # Timestamp for tracking
+        'timestamp': datetime.now().isoformat(),
+    }
+    
+    # Save regular epoch checkpoint
+    checkpoint_path = checkpoint_dir / f'checkpoint_epoch_{epoch:03d}.pt'
+    torch.save(checkpoint, checkpoint_path)
+    
+    # Save as latest checkpoint (for easy resuming)
+    latest_path = checkpoint_dir / 'checkpoint_latest.pt'
+    torch.save(checkpoint, latest_path)
+    
+    # Save as best checkpoint if this is the best model
+    if is_best:
+        best_path = checkpoint_dir / 'checkpoint_best.pt'
+        torch.save(checkpoint, best_path)
+        print(f"  💾 Saved BEST checkpoint: {best_path.name}")
+    
+    print(f"  💾 Saved checkpoint: {checkpoint_path.name}")
+
+def load_checkpoint(checkpoint_path, model, optimizer=None):
+    """
+    Load a checkpoint and restore training state.
+    
+    This function restores:
+    - Model weights to the saved state
+    - Optimizer state (learning rates, momentum, etc.)
+    - Epoch number to resume from
+    - Training metrics history
+    
+    Mathematical Note:
+    When using optimizers with momentum (like Adam), it's crucial to restore
+    the optimizer state. Adam maintains two moving averages:
+    - m_t: First moment (mean) of gradients
+    - v_t: Second moment (variance) of gradients
+    
+    Without restoring these, training may be unstable after resuming.
+    
+    Args:
+        checkpoint_path (Path): Path to checkpoint file
+        model (nn.Module): Model to load weights into
+        optimizer (Optimizer, optional): Optimizer to restore state
+    
+    Returns:
+        tuple: (start_epoch, metrics_dict)
+            - start_epoch: Epoch to resume training from (checkpoint_epoch + 1)
+            - metrics_dict: Dictionary of training history
+    """
+    if not checkpoint_path.exists():
+        print(f"⚠️ Checkpoint not found: {checkpoint_path}")
+        return 0, {
+            'train_loss': [],
+            'val_acc': [],
+            'val_f1': [],
+            'epoch_times': []
+        }
+    
+    print(f"📂 Loading checkpoint from: {checkpoint_path.name}")
+    
+    # Load checkpoint
+    checkpoint = torch.load(checkpoint_path, weights_only=False)
+    
+    # Restore model weights
+    model.load_state_dict(checkpoint['model_state_dict'])
+    print(f"  ✅ Model weights restored")
+    
+    # Restore optimizer state (if optimizer provided)
+    if optimizer is not None and 'optimizer_state_dict' in checkpoint:
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        print(f"  ✅ Optimizer state restored")
+    
+    # Get training state
+    start_epoch = checkpoint['epoch'] + 1  # Resume from next epoch
+    metrics = checkpoint.get('metrics', {
+        'train_loss': [],
+        'val_acc': [],
+        'val_f1': [],
+        'epoch_times': []
+    })
+    
+    # Display checkpoint info
+    print(f"  📊 Checkpoint Info:")
+    print(f"     - Saved at epoch: {checkpoint['epoch']}")
+    print(f"     - Resuming from epoch: {start_epoch}")
+    print(f"     - Training history: {len(metrics.get('train_loss', []))} epochs")
+    
+    if 'config' in checkpoint:
+        config = checkpoint['config']
+        print(f"     - Loss type: {config.get('loss_type', 'unknown')}")
+    
+    if 'timestamp' in checkpoint:
+        print(f"     - Saved at: {checkpoint['timestamp']}")
+    
+    # Check for best metrics
+    if metrics.get('val_f1'):
+        best_f1 = max(metrics['val_f1'])
+        print(f"     - Best validation F1 so far: {best_f1:.4f}")
+    
+    return start_epoch, metrics
+
+def cleanup_old_checkpoints(checkpoint_dir, keep_last_n=5, keep_best=True):
+    """
+    Clean up old checkpoints to save disk space.
+    
+    Strategy:
+    - Always keep the best checkpoint (highest validation F1)
+    - Always keep the latest checkpoint (for resuming)
+    - Keep only the last N regular checkpoints
+    - Delete older checkpoints to save space
+    
+    Args:
+        checkpoint_dir (Path): Directory containing checkpoints
+        keep_last_n (int): Number of recent checkpoints to keep
+        keep_best (bool): Whether to preserve the best checkpoint
+    """
+    # Get all epoch checkpoints (excluding best and latest)
+    checkpoint_files = sorted(
+        checkpoint_dir.glob('checkpoint_epoch_*.pt'),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True
+    )
+    
+    # Keep only the last N checkpoints
+    if len(checkpoint_files) > keep_last_n:
+        to_delete = checkpoint_files[keep_last_n:]
+        for checkpoint_file in to_delete:
+            try:
+                checkpoint_file.unlink()
+                print(f"  🗑️ Deleted old checkpoint: {checkpoint_file.name}")
+            except Exception as e:
+                print(f"  ⚠️ Could not delete {checkpoint_file.name}: {e}")
 
 # --- 3. Data Preparation ---
 
@@ -451,11 +641,39 @@ def run_training_pipeline():
     model = BaselineGNN(INPUT_DIM, HIDDEN_DIM, OUT_DIM).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     
-    # 6. Training Loop (Transductive/Sequential)
-    print("\n🔨 Starting Sequential Training...")
+    # 6. Initialize Training Metrics and State
+    # Metrics dictionary stores the entire training history
+    metrics = {
+        'train_loss': [],      # Training loss per epoch
+        'val_acc': [],         # Validation accuracy per epoch
+        'val_f1': [],          # Validation F1-score per epoch
+        'epoch_times': [],     # Time taken per epoch (seconds)
+    }
+    
+    start_epoch = 1  # Default: start from epoch 1
     best_val_f1 = 0.0
     
-    for epoch in range(1, NUM_EPOCHS + 1):
+    # 7. Resume from Checkpoint (if enabled)
+    if RESUME_FROM_CHECKPOINT and ENABLE_CHECKPOINTING:
+        checkpoint_path = CHECKPOINT_DIR / 'checkpoint_latest.pt'
+        if checkpoint_path.exists():
+            print("\n🔄 Resuming from checkpoint...")
+            start_epoch, metrics = load_checkpoint(checkpoint_path, model, optimizer)
+            
+            # Restore best validation F1 from metrics history
+            if metrics.get('val_f1'):
+                best_val_f1 = max(metrics['val_f1'])
+                print(f"  📊 Restored best validation F1: {best_val_f1:.4f}")
+        else:
+            print(f"\n⚠️ No checkpoint found at {checkpoint_path}")
+            print("  Starting training from scratch...")
+    
+    # 8. Training Loop (Transductive/Sequential)
+    print("\n🔨 Starting Sequential Training...")
+    print(f"   Training from epoch {start_epoch} to {NUM_EPOCHS}")
+    
+    for epoch in range(start_epoch, NUM_EPOCHS + 1):
+        epoch_start_time = time.time()  # Track epoch duration
         total_loss = 0
         
         # --- Train Phase ---
@@ -480,16 +698,69 @@ def run_training_pipeline():
         
         avg_val_acc = np.mean(val_accs)
         avg_val_f1 = np.mean(val_f1s)
+        
+        # Calculate epoch duration
+        epoch_duration = time.time() - epoch_start_time
+        
+        # Store metrics for this epoch
+        metrics['train_loss'].append(avg_loss)
+        metrics['val_acc'].append(avg_val_acc)
+        metrics['val_f1'].append(avg_val_f1)
+        metrics['epoch_times'].append(epoch_duration)
 
-        print(f"Epoch {epoch:02d} | Train Loss: {avg_loss:.4f} | Val Acc: {avg_val_acc:.4f} | Val F1: {avg_val_f1:.4f}")
+        print(f"Epoch {epoch:02d} | Train Loss: {avg_loss:.4f} | Val Acc: {avg_val_acc:.4f} | Val F1: {avg_val_f1:.4f} | Time: {epoch_duration:.1f}s")
 
+        # Determine if this is the best model so far
+        is_best = avg_val_f1 > best_val_f1
+        
         # Save best model based on F1 score (important metric for imbalanced finance data)
-        if avg_val_f1 > best_val_f1:
+        if is_best:
             best_val_f1 = avg_val_f1
             torch.save(model.state_dict(), MODELS_DIR / 'baseline_gcn_model.pt')
-            print(f"  --> Model Saved (New Best F1: {best_val_f1:.4f})")
+            print(f"  ⭐ New Best Model! F1: {best_val_f1:.4f}")
+        
+        # Save checkpoint (full training state)
+        if ENABLE_CHECKPOINTING:
+            # Save checkpoint at regular intervals or if it's the best model
+            should_save = is_best or (epoch % SAVE_CHECKPOINT_EVERY == 0)
+            
+            if should_save:
+                save_checkpoint(
+                    epoch=epoch,
+                    model=model,
+                    optimizer=optimizer,
+                    metrics=metrics,
+                    checkpoint_dir=CHECKPOINT_DIR,
+                    is_best=is_best
+                )
+            
+            # Periodically clean up old checkpoints to save disk space
+            if epoch % (SAVE_CHECKPOINT_EVERY * 2) == 0:
+                cleanup_old_checkpoints(CHECKPOINT_DIR, keep_last_n=5)
     
-    # 7. Testing (Final Evaluation)
+    # 9. Training Complete - Save Final Summary
+    print("\n" + "=" * 60)
+    print("✅ Training Complete!")
+    print("=" * 60)
+    
+    if ENABLE_CHECKPOINTING:
+        print(f"\n📊 Training Summary:")
+        print(f"   Total epochs trained: {len(metrics['train_loss'])}")
+        print(f"   Best validation F1: {best_val_f1:.4f}")
+        print(f"   Total training time: {sum(metrics['epoch_times']):.1f}s ({sum(metrics['epoch_times'])/60:.1f}min)")
+        print(f"   Average time per epoch: {np.mean(metrics['epoch_times']):.1f}s")
+        
+        # Display training curve summary
+        if len(metrics['train_loss']) > 0:
+            print(f"\n   Training Loss: {metrics['train_loss'][0]:.4f} → {metrics['train_loss'][-1]:.4f}")
+            print(f"   Validation Acc: {metrics['val_acc'][0]:.4f} → {metrics['val_acc'][-1]:.4f}")
+            print(f"   Validation F1:  {metrics['val_f1'][0]:.4f} → {metrics['val_f1'][-1]:.4f}")
+        
+        print(f"\n💾 Checkpoints saved in: {CHECKPOINT_DIR}")
+        print(f"   - Best model: checkpoint_best.pt")
+        print(f"   - Latest state: checkpoint_latest.pt")
+    
+    # 10. Testing (Final Evaluation)
     model.load_state_dict(torch.load(MODELS_DIR / 'baseline_gcn_model.pt', weights_only=False))
     test_accs, test_f1s = [], []
     
