@@ -42,6 +42,11 @@ BATCH_SIZE_DAYS = 30  # Process graphs in batches to manage memory
 NORMALIZE_EDGE_ATTRS = True  # Enable edge attribute normalization
 EDGE_NORMALIZATION_METHOD = 'min_max'  # Options: 'min_max', 'standard', 'robust'
 
+# Graph sparsification parameters (CRITICAL: Prevents over-smoothing)
+# Limit each node to connect to at most TOP_K neighbors per edge type
+MAX_EDGES_PER_NODE_CORRELATION = 5   # Top-5 most correlated stocks
+MAX_EDGES_PER_NODE_FUNDAMENTAL = 5   # Top-5 most similar fundamentals
+
 # Ensure output directory exists
 DATA_GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -309,6 +314,55 @@ def filter_dynamic_edges(correlations_df, date, threshold=CORRELATION_THRESHOLD)
     
     return strong_correlations
 
+def apply_topk_per_node(edge_index, edge_attr, k, num_nodes):
+    """
+    Apply Top-K sparsification: keep only the K strongest edges per node.
+    
+    This prevents over-smoothing by limiting connectivity.
+    
+    Args:
+        edge_index: [2, E] tensor of edges
+        edge_attr: [E, 1] tensor of edge weights (must be positive)
+        k: Maximum number of edges per node
+        num_nodes: Total number of nodes
+        
+    Returns:
+        Filtered edge_index and edge_attr
+    """
+    if edge_index.size(1) == 0 or k <= 0:
+        return edge_index, edge_attr
+    
+    # For undirected graphs, we only filter outgoing edges (source nodes)
+    device = edge_index.device
+    edge_weights_flat = edge_attr.squeeze(-1)
+    
+    selected_edges = []
+    
+    for node_id in range(num_nodes):
+        # Find all outgoing edges from this node
+        mask = (edge_index[0] == node_id)
+        if mask.sum() == 0:
+            continue
+        
+        node_edges_idx = torch.where(mask)[0]
+        node_edge_weights = edge_weights_flat[node_edges_idx]
+        
+        # Select top-K by weight (largest weights = strongest connections)
+        if node_edges_idx.size(0) <= k:
+            selected_edges.extend(node_edges_idx.tolist())
+        else:
+            topk_values, topk_indices = torch.topk(node_edge_weights, k, largest=True)
+            selected_edges.extend(node_edges_idx[topk_indices].tolist())
+    
+    if len(selected_edges) == 0:
+        return torch.empty((2, 0), dtype=torch.long), torch.empty((0, 1), dtype=torch.float32)
+    
+    selected_edges = torch.tensor(selected_edges, dtype=torch.long, device=device)
+    filtered_edge_index = edge_index[:, selected_edges]
+    filtered_edge_attr = edge_attr[selected_edges]
+    
+    return filtered_edge_index, filtered_edge_attr
+
 def extract_node_features_for_date(node_features_df, date, tickers):
     """
     Extract node feature matrix X_t for a specific date, ensuring consistent dimension.
@@ -438,6 +492,12 @@ def construct_graph_for_date(date, node_features_df, correlations_df, similariti
         # Apply normalization to correlation edge attributes
         normalized_corr_weight = normalize_edge_attributes(corr_edge_weight, EDGE_NORMALIZATION_METHOD, 'rolling_correlation')
         
+        # Apply Top-K sparsification to prevent over-smoothing
+        corr_edge_index, normalized_corr_weight = apply_topk_per_node(
+            corr_edge_index, normalized_corr_weight, 
+            MAX_EDGES_PER_NODE_CORRELATION, len(tickers)
+        )
+        
         # Add to HeteroData with explicit type
         graph['stock', 'rolling_correlation', 'stock'].edge_index = corr_edge_index
         graph['stock', 'rolling_correlation', 'stock'].edge_attr = normalized_corr_weight
@@ -461,6 +521,12 @@ def construct_graph_for_date(date, node_features_df, correlations_df, similariti
         
         # Apply normalization to fundamental similarity edge attributes
         normalized_fund_sim_weight = normalize_edge_attributes(fund_sim_edge_weight, EDGE_NORMALIZATION_METHOD, 'fund_similarity')
+        
+        # Apply Top-K sparsification to prevent over-smoothing
+        fund_sim_edge_index, normalized_fund_sim_weight = apply_topk_per_node(
+            fund_sim_edge_index, normalized_fund_sim_weight,
+            MAX_EDGES_PER_NODE_FUNDAMENTAL, len(tickers)
+        )
         
         # Add to HeteroData
         graph['stock', 'fund_similarity', 'stock'].edge_index = fund_sim_edge_index
