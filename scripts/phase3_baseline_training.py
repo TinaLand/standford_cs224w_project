@@ -794,8 +794,7 @@ def run_training_pipeline():
                 mode='max',  # Maximize validation F1
                 factor=LR_SCHEDULER_FACTOR,
                 patience=LR_SCHEDULER_PATIENCE,
-                min_lr=LR_SCHEDULER_MIN_LR,
-                verbose=True
+                min_lr=LR_SCHEDULER_MIN_LR
             )
             print(f"\n📉 Learning Rate Scheduler: ReduceLROnPlateau")
             print(f"   - Patience: {LR_SCHEDULER_PATIENCE} epochs")
@@ -985,12 +984,19 @@ def run_training_pipeline():
         
         # Update Learning Rate Scheduler
         if ENABLE_LR_SCHEDULER and scheduler is not None:
+            old_lr = optimizer.param_groups[0]['lr']
+            
             if LR_SCHEDULER_TYPE == 'plateau':
                 # ReduceLROnPlateau needs the validation metric
                 scheduler.step(avg_val_f1)
             else:
                 # Other schedulers just step
                 scheduler.step()
+            
+            # Check if LR was reduced
+            new_lr = optimizer.param_groups[0]['lr']
+            if new_lr < old_lr:
+                print(f"  📉 Learning rate reduced: {old_lr:.2e} → {new_lr:.2e}")
         
         # Early Stopping Check
         if ENABLE_EARLY_STOPPING:
