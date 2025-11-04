@@ -25,3 +25,8 @@ stable-baselines3      # For Reinforcement Learning Agent (if using common RL li
 
 # Additional dependencies for mini-batch training
 tqdm                   # Progress bars for training loops
+
+# Phase 3: Visualization and Metrics
+matplotlib            # Plotting library for confusion matrix and training curves
+seaborn               # Statistical visualization (heatmaps, confusion matrix)
+tensorboard           # TensorBoard logging for training monitoring
