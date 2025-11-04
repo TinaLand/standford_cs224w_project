@@ -330,7 +330,15 @@ def extract_node_features_for_date(node_features_df, date, tickers):
     
     # 1. Determine the feature dimension (F) based on the first ticker (assuming all are uniform)
     first_ticker = tickers[0]
-    feature_columns_for_first_ticker = [col for col in node_features_df.columns if col.endswith(f'_{first_ticker}')]
+    
+    # Handle two naming conventions:
+    # Pattern 1: Feature_TICKER (e.g., LogRet_1d_AAPL)
+    # Pattern 2: TICKER_Feature (e.g., AAPL_PE)
+    feature_columns_pattern1 = [col for col in node_features_df.columns if col.endswith(f'_{first_ticker}')]
+    feature_columns_pattern2 = [col for col in node_features_df.columns if col.startswith(f'{first_ticker}_')]
+    
+    # Combine both patterns
+    feature_columns_for_first_ticker = feature_columns_pattern1 + feature_columns_pattern2
     
     if not feature_columns_for_first_ticker:
         # Fallback if the feature naming convention is inconsistent
@@ -342,15 +350,24 @@ def extract_node_features_for_date(node_features_df, date, tickers):
         
         # Iterate through the standardized feature columns using the first ticker's template
         for col_template in feature_columns_for_first_ticker:
-            # Reconstruct the column name for the current ticker
-            feature_prefix = col_template.replace(f'_{first_ticker}', '')
-            current_ticker_col = f'{feature_prefix}_{ticker}'
+            # Reconstruct the column name for the current ticker based on pattern
+            if col_template.endswith(f'_{first_ticker}'):
+                # Pattern 1: Feature_TICKER
+                feature_prefix = col_template.replace(f'_{first_ticker}', '')
+                current_ticker_col = f'{feature_prefix}_{ticker}'
+            elif col_template.startswith(f'{first_ticker}_'):
+                # Pattern 2: TICKER_Feature
+                feature_suffix = col_template.replace(f'{first_ticker}_', '')
+                current_ticker_col = f'{ticker}_{feature_suffix}'
+            else:
+                # Fallback: try as-is
+                current_ticker_col = col_template
             
             # Check if the column exists in the daily data
             if current_ticker_col in day_features_series.index:
                 ticker_features_vector.append(day_features_series[current_ticker_col])
             else:
-                # Should not happen if phase 1 was correct, but as a safety measure:
+                # Safety fallback
                 ticker_features_vector.append(0.0) 
         
         feature_matrix.append(ticker_features_vector)
