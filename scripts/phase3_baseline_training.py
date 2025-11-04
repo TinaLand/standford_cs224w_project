@@ -584,14 +584,15 @@ def create_target_labels(tickers, dates, lookahead_days):
     # 4. Map targets to the graph index (Trading Days)
     targets_dict = {}
     for date in dates:
-        date_str = date.strftime('%Y-%m-%d')
-        if date_str in target_labels.index:
+        # Convert datetime to pd.Timestamp for proper comparison with DatetimeIndex
+        date_ts = pd.Timestamp(date)
+        if date_ts in target_labels.index:
             # Extract target vector for the trading date
             target_vector = []
             for ticker in tickers:
                 col_name = f'Close_{ticker}'
                 if col_name in target_labels.columns:
-                    target_vector.append(target_labels.loc[date_str, col_name])
+                    target_vector.append(target_labels.loc[date_ts, col_name])
                 else:
                     target_vector.append(0) # Safety zero if ticker data is missing
             targets_dict[date] = torch.tensor(target_vector, dtype=torch.long)
