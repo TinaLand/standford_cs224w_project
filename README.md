@@ -421,6 +421,25 @@ results = validate_ticker_data(
 3. Include unit tests for new functions
 4. Update this README when adding new phases
 
+## 📝 Documentation
+
+### Project Documentation
+- **[PROJECT_MILESTONE.md](PROJECT_MILESTONE.md)** - Complete milestone report for CS224W
+- **[TECHNICAL_DEEP_DIVE.md](TECHNICAL_DEEP_DIVE.md)** ⭐ - In-depth mathematical analysis (1,450 lines)
+  - Why GNN over traditional ML (message passing framework)
+  - Why Graph Transformer over standard GNN (heterogeneous aggregation)
+  - All design decisions with mathematical justifications
+  - Phase-by-phase technical rationale
+
+### Implementation Guides
+- **[docs/README_IMPLEMENTATION_DOCS.md](docs/README_IMPLEMENTATION_DOCS.md)** - Index of 12 implementation guides
+- Each major script has comprehensive documentation (12,500+ total lines)
+- Mathematical foundations, design patterns, best practices
+
+### Feature-Specific Guides
+- **[CLASS_IMBALANCE_IMPLEMENTATION.md](CLASS_IMBALANCE_IMPLEMENTATION.md)** - Focal Loss & Weighted CE
+- **[CHECKPOINT_GUIDE.md](CHECKPOINT_GUIDE.md)** - Complete checkpointing system guide
+
 ## 📝 Notes
 
 - All functions requiring implementation are marked with 'start code' and 'end code' comments

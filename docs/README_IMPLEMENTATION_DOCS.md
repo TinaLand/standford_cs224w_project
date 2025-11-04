@@ -407,15 +407,19 @@ Phase 3 → baseline_gcn_model.pt
 
 ## Additional Documentation Files
 
+### Project Reports
+- `../PROJECT_MILESTONE.md` - CS224W milestone report (complete progress summary)
+- `../TECHNICAL_DEEP_DIVE.md` - ⭐ Mathematical deep dive (1,450 lines) - Design rationale and formulas
+
 ### Configuration & Setup
-- `README.md` - Main project README (quick start)
+- `../README.md` - Main project README (quick start)
 - `environment.yml` - Conda environment setup
 
 ### Implementation Summaries
-- `CLASS_IMBALANCE_IMPLEMENTATION.md` - Focal loss deep dive
-- `CHECKPOINT_GUIDE.md` - Checkpointing system
-- `CHECKPOINT_IMPLEMENTATION_SUMMARY.md` - Quick reference
-- `IMPLEMENTATION_SUMMARY.md` - Phase 3 summary
+- `../CLASS_IMBALANCE_IMPLEMENTATION.md` - Focal loss deep dive
+- `../CHECKPOINT_GUIDE.md` - Checkpointing system
+- `../CHECKPOINT_IMPLEMENTATION_SUMMARY.md` - Quick reference
+- `../IMPLEMENTATION_SUMMARY.md` - Phase 3 summary
 
 ### This Directory
 - `README_IMPLEMENTATION_DOCS.md` - This file (index)

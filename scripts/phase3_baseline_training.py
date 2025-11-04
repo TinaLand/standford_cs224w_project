@@ -34,17 +34,17 @@ MODELS_DIR = PROJECT_ROOT / "models"
 OHLCV_RAW_FILE = PROJECT_ROOT / "data" / "raw" / "stock_prices_ohlcv_raw.csv"
 
 # Hyperparameters
-HIDDEN_DIM = 64
+HIDDEN_DIM = 128  # Increased from 64 (more capacity for 15 features)
 OUT_DIM = 2  # Binary classification: Up (1) or Down/Flat (0)
-NUM_EPOCHS = 20
-LEARNING_RATE = 0.001
+NUM_EPOCHS = 40  # Increased for better convergence
+LEARNING_RATE = 0.0005  # Balanced (not too high, not too low)
 LOOKAHEAD_DAYS = 5 # 预测 5-day-ahead stock return sign [cite: 29]
 
 # Class Imbalance Handling Configuration
 # Options: 'standard' (no weighting), 'weighted' (class weights), 'focal' (focal loss)
-LOSS_TYPE = 'weighted'  # Change to 'weighted' or 'focal' to handle imbalance
-FOCAL_ALPHA = 0.25      # Weight for positive class in focal loss (range: 0-1)
-FOCAL_GAMMA = 2.0       # Focusing parameter for focal loss (typically 2.0)
+LOSS_TYPE = 'focal'  # Using focal loss for imbalance handling
+FOCAL_ALPHA = 0.50    # Balanced weight (0.5 for binary)
+FOCAL_GAMMA = 2.0      # Standard focusing parameter
 
 # Checkpoint Configuration
 ENABLE_CHECKPOINTING = True     # Save full checkpoints (model, optimizer, epoch, metrics)

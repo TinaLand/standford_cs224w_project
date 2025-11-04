@@ -374,7 +374,24 @@ def extract_node_features_for_date(node_features_df, date, tickers):
     
     # Convert the final list of lists into a PyTorch Tensor (N x F)
     # Use float32 for consistency with model training
-    return torch.tensor(feature_matrix, dtype=torch.float32)
+    features_tensor = torch.tensor(feature_matrix, dtype=torch.float32)
+    
+    # ===== CRITICAL: Normalize node features to prevent gradient issues =====
+    # Features can have vastly different scales (e.g., LogRet ~0.01, Price ~50)
+    # This leads to gradient explosion/vanishing and prevents learning
+    # Apply z-score normalization: (x - mean) / std for each feature dimension
+    mean = features_tensor.mean(dim=0, keepdim=True)  # [1, F]
+    std = features_tensor.std(dim=0, keepdim=True)    # [1, F]
+    
+    # Avoid division by zero for constant features
+    std = torch.where(std == 0, torch.ones_like(std), std)
+    
+    features_tensor = (features_tensor - mean) / std
+    
+    # Replace any resulting NaN/Inf with zeros (safety fallback)
+    features_tensor = torch.nan_to_num(features_tensor, nan=0.0, posinf=0.0, neginf=0.0)
+    
+    return features_tensor
 
 def construct_graph_for_date(date, node_features_df, correlations_df, similarities_df, 
                            static_edge_dict, tickers, ticker_to_idx):

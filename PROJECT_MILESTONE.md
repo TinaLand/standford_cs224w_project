@@ -4,6 +4,10 @@
 **Date**: November 2, 2025  
 **Status**: Milestone Deliverable (6.67% of project grade)
 
+**📚 Companion Documents**:
+- 📖 **[TECHNICAL_DEEP_DIVE.md](TECHNICAL_DEEP_DIVE.md)** - In-depth mathematical analysis and design rationale
+- 📁 **[docs/README_IMPLEMENTATION_DOCS.md](docs/README_IMPLEMENTATION_DOCS.md)** - Complete implementation guide index (12 documents, 12,500+ lines)
+
 ---
 
 ## Executive Summary
@@ -70,6 +74,13 @@ Benefit: Captures network effects
 - Novel application of PEARL to financial graphs
 - Heterogeneous edge types for multi-relationship modeling
 - GNN + RL integration for portfolio management
+
+**📖 For Detailed Technical Analysis**: See [TECHNICAL_DEEP_DIVE.md](TECHNICAL_DEEP_DIVE.md) for:
+- Mathematical derivation of GNN message passing framework
+- Why Graph Transformer over standard GNN (heterogeneous aggregation problem)
+- Focal Loss mathematics and class imbalance handling
+- PEARL integration and structural feature computations
+- All design decisions with mathematical justifications
 
 ---
 
@@ -391,6 +402,8 @@ Imbalance Ratio: 1.3:1 (moderate)
 ---
 
 ## 3. Model Design
+
+**📖 Technical Deep Dive**: For mathematical foundations, design rationale, and detailed architectural explanations, see [TECHNICAL_DEEP_DIVE.md](TECHNICAL_DEEP_DIVE.md) - Sections 1.2, 4, and 5.
 
 ### 3.1 Baseline Model (Phase 3)
 
