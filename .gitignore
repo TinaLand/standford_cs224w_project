@@ -3,7 +3,9 @@
 # ----------------------------------------------------------------------
 /venv/              # Exclude Python Virtual Environment
 /data/              # Exclude all raw inputs, processed features, and large graph snapshots
-
+data/
+venv/
+runs/
 # ----------------------------------------------------------------------
 # Standard Python/System Exclusions
 # ----------------------------------------------------------------------
