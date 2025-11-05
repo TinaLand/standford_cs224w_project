@@ -5,7 +5,7 @@
 
 ---
 
-## 🎯 Top-Level Results (What TA Will Ask)
+## 🎯 Top-Level Results
 
 | Metric | Value | What It Means | Good/Bad? |
 |--------|-------|---------------|-----------|
