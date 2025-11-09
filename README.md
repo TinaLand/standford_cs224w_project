@@ -334,8 +334,9 @@ results = validate_ticker_data(
   - [x] Replace simulated PEARL with the component in `scripts/components/pearl_embedding.py`.
   - [x] Support edge-type–specific attention parameters and relation-aware aggregation.
   - [x] Enable neighbor sampling / mini-batch training for large graphs.
-  - [ ] Add mixed precision (AMP) and gradient clipping for stability.
-  - [ ] Provide hyperparameter sweep script (grid or Optuna).
+  - [x] Add mixed precision (AMP) and gradient clipping for stability.
+  - [x] Provide hyperparameter sweep script (grid or Optuna).
+  - Note: Run `python scripts/phase4_hyperparameter_sweep.py` to reproduce the grid search baseline.
 
 - **Phase 5 – RL Integration**
   - [ ] Finalize `rl_environment.py` reward shaping; include transaction costs and risk penalties.

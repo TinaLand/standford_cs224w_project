@@ -10,6 +10,7 @@ from tqdm import tqdm
 from sklearn.metrics import accuracy_score, f1_score
 import os
 import sys
+from torch.nn.utils import clip_grad_norm_
 
 # FIX: Allow PyTorch to safely load torch-geometric objects (PyTorch >= 2.6)
 import torch.serialization
@@ -41,6 +42,8 @@ ENABLE_MINI_BATCH = False      # Enable neighbor sampling for large graphs (requ
 BATCH_SIZE = 128               # Number of target nodes per batch
 NUM_NEIGHBORS = [15, 10]       # Neighbors to sample per layer
 ENABLE_AMP = torch.cuda.is_available()  # Enable automatic mixed precision if CUDA available
+GRAD_CLIP_MAX_NORM = 1.0       # Gradient clipping to stabilize training
+MODEL_SAVE_NAME = 'core_transformer_model.pt'
 
 # Ensure model directory exists
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
@@ -196,7 +199,23 @@ def create_target_labels(tickers, dates, lookahead_days):
 
 # --- 3. Training and Evaluation Functions ---
 
-def train(model, optimizer, data, targets):
+def _backward_step(loss, model, optimizer, scaler=None, max_grad_norm=None):
+    """Handles backward pass with optional AMP scaler and gradient clipping."""
+    if scaler is not None and scaler.is_enabled():
+        scaler.scale(loss).backward()
+        if max_grad_norm and max_grad_norm > 0:
+            scaler.unscale_(optimizer)
+            clip_grad_norm_(model.parameters(), max_grad_norm)
+        scaler.step(optimizer)
+        scaler.update()
+    else:
+        loss.backward()
+        if max_grad_norm and max_grad_norm > 0:
+            clip_grad_norm_(model.parameters(), max_grad_norm)
+        optimizer.step()
+
+
+def train(model, optimizer, data, targets, scaler=None, amp_enabled=False, max_grad_norm=None):
     """Single training step for the Core GNN (HeteroData input)."""
     model.train()
     optimizer.zero_grad()
@@ -205,20 +224,22 @@ def train(model, optimizer, data, targets):
     for metadata in data.edge_index_dict.keys():
         data[metadata].edge_index = data[metadata].edge_index.to(torch.long)
         
-    out = model(data.to(DEVICE))
-    loss = F.cross_entropy(out, targets.to(DEVICE))
+    with torch.cuda.amp.autocast(enabled=amp_enabled):
+        out = model(data.to(DEVICE))
+        loss = F.cross_entropy(out, targets.to(DEVICE))
     
-    loss.backward()
-    optimizer.step()
+    _backward_step(loss, model, optimizer, scaler=scaler, max_grad_norm=max_grad_norm)
     
-    return loss.item(), out.argmax(dim=1)
+    return loss.item(), out.detach().argmax(dim=1)
+
 
 def evaluate(model, data, targets):
     """Single evaluation step."""
     model.eval()
     
     with torch.no_grad():
-        out = model(data.to(DEVICE))
+        with torch.cuda.amp.autocast(enabled=ENABLE_AMP):
+            out = model(data.to(DEVICE))
     
     y_true = targets.cpu().numpy()
     y_pred = out.argmax(dim=1).cpu().numpy()
@@ -228,7 +249,8 @@ def evaluate(model, data, targets):
     
     return acc, f1
 
-def train_with_sampling(model, optimizer, data, targets, loader):
+
+def train_with_sampling(model, optimizer, data, targets, loader, scaler=None, amp_enabled=False, max_grad_norm=None):
     """Training step with neighbor sampling for large graphs."""
     model.train()
     total_loss = 0
@@ -242,20 +264,21 @@ def train_with_sampling(model, optimizer, data, targets, loader):
         batch_size = batch['stock'].batch_size if hasattr(batch['stock'], 'batch_size') else batch['stock'].x.size(0)
         
         # Forward pass
-        out = model(batch)
+        with torch.cuda.amp.autocast(enabled=amp_enabled):
+            out = model(batch)
         
         # Extract predictions for target nodes (first batch_size nodes)
         batch_out = out[:batch_size]
         batch_targets = batch['stock'].y[:batch_size] if hasattr(batch['stock'], 'y') else targets[:batch_size]
         
         loss = F.cross_entropy(batch_out, batch_targets)
-        loss.backward()
-        optimizer.step()
+        _backward_step(loss, model, optimizer, scaler=scaler, max_grad_norm=max_grad_norm)
         
         total_loss += loss.item()
         num_batches += 1
     
     return total_loss / max(num_batches, 1), 0.0
+
 
 def evaluate_with_sampling(model, data, targets, loader):
     """Evaluation step with neighbor sampling for large graphs."""
@@ -271,7 +294,8 @@ def evaluate_with_sampling(model, data, targets, loader):
             batch_size = batch['stock'].batch_size if hasattr(batch['stock'], 'batch_size') else batch['stock'].x.size(0)
             
             # Forward pass
-            out = model(batch)
+            with torch.cuda.amp.autocast(enabled=ENABLE_AMP):
+                out = model(batch)
             
             # Extract predictions for target nodes
             batch_out = out[:batch_size]
@@ -377,7 +401,8 @@ def run_training_pipeline():
     # 4. Model Setup
     model = RoleAwareGraphTransformer(INPUT_DIM, HIDDEN_CHANNELS, OUT_CHANNELS, NUM_LAYERS, NUM_HEADS).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    model_path = MODELS_DIR / 'core_transformer_model.pt'
+    scaler = torch.cuda.amp.GradScaler(enabled=ENABLE_AMP)
+    model_path = MODELS_DIR / MODEL_SAVE_NAME
     
     # 4.1. Mini-batch Training Setup (if enabled and available)
     use_mini_batch = ENABLE_MINI_BATCH and MINI_BATCH_AVAILABLE
@@ -388,6 +413,16 @@ def run_training_pipeline():
             print("⚠️  Mini-batch training requested but sparse libraries not available")
             print("   Install: pip install torch-sparse pyg-lib")
         print("🚀 Full-batch training enabled")
+    
+    if scaler.is_enabled():
+        print("⚡ AMP Enabled: Using torch.cuda.amp for mixed precision training")
+    else:
+        print("ℹ️ AMP Disabled: Running in float32")
+    
+    if GRAD_CLIP_MAX_NORM and GRAD_CLIP_MAX_NORM > 0:
+        print(f"✂️ Gradient clipping active (max norm = {GRAD_CLIP_MAX_NORM})")
+    else:
+        print("ℹ️ Gradient clipping disabled")
     
     # 5. Training Loop
     print("\n🔨 Starting Sequential Training...")
@@ -403,12 +438,29 @@ def run_training_pipeline():
             if data and target is not None:
                 if use_mini_batch:
                     loader = create_neighbor_loader(data, target, BATCH_SIZE, NUM_NEIGHBORS, shuffle=True)
-                    loss, _ = train_with_sampling(model, optimizer, data, target, loader)
+                    loss, _ = train_with_sampling(
+                        model,
+                        optimizer,
+                        data,
+                        target,
+                        loader,
+                        scaler=scaler,
+                        amp_enabled=scaler.is_enabled(),
+                        max_grad_norm=GRAD_CLIP_MAX_NORM
+                    )
                 else:
-                    loss, _ = train(model, optimizer, data, target)
+                    loss, _ = train(
+                        model,
+                        optimizer,
+                        data,
+                        target,
+                        scaler=scaler,
+                        amp_enabled=scaler.is_enabled(),
+                        max_grad_norm=GRAD_CLIP_MAX_NORM
+                    )
                 total_loss += loss
         
-        avg_loss = total_loss / len(train_dates)
+        avg_loss = total_loss / max(len(train_dates), 1)
 
         # --- Validation Phase ---
         val_f1s = []
@@ -423,7 +475,7 @@ def run_training_pipeline():
                     _, f1 = evaluate(model, data, target)
                 val_f1s.append(f1)
         
-        avg_val_f1 = np.mean(val_f1s)
+        avg_val_f1 = float(np.mean(val_f1s)) if val_f1s else 0.0
 
         print(f"Epoch {epoch:02d} | Train Loss: {avg_loss:.4f} | Val F1: {avg_val_f1:.4f}")
 
@@ -434,7 +486,10 @@ def run_training_pipeline():
             print(f"  --> Model Saved (New Best F1: {best_val_f1:.4f})")
     
     # 6. Testing (Final Evaluation)
-    model.load_state_dict(torch.load(model_path, weights_only=False))
+    if model_path.exists():
+        model.load_state_dict(torch.load(model_path, weights_only=False))
+    else:
+        print("⚠️  Warning: Best model checkpoint not found. Using final weights.")
     test_accs, test_f1s = [], []
     
     for date in test_dates:
@@ -449,15 +504,25 @@ def run_training_pipeline():
             test_accs.append(acc)
             test_f1s.append(f1)
             
+    mean_test_acc = float(np.mean(test_accs)) if test_accs else 0.0
+    mean_test_f1 = float(np.mean(test_f1s)) if test_f1s else 0.0
+
     print("\n" + "=" * 50)
     print(f"🚀 Final Test Results (Core GNN, Averaged over {len(test_dates)} days):")
-    print(f"   - Test Accuracy: {np.mean(test_accs):.4f}")
-    print(f"   - Test F1 Score: {np.mean(test_f1s):.4f}")
+    print(f"   - Test Accuracy: {mean_test_acc:.4f}")
+    print(f"   - Test F1 Score: {mean_test_f1:.4f}")
     print(f"   - Baseline F1: 0.6725 (Goal: Exceed Baseline)")
     print("=" * 50)
     
     # Now the Core Model is trained and ready for RL integration
     print("\n🎯 Core Model Trained. Ready for Phase 5: RL Integration.")
+
+    return {
+        "best_val_f1": float(best_val_f1),
+        "test_accuracy": mean_test_acc,
+        "test_f1": mean_test_f1,
+        "model_checkpoint": str(model_path.resolve())
+    }
 
 
 if __name__ == '__main__':
