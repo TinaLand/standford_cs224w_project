@@ -1,15 +1,10 @@
-# CS224W Project Milestone Report (English Version)
-
-**Course**: CS224W – Machine Learning with Graphs  
+# CS224W Project Milestone Report 
 **Project Title**: Graph Neural Networks for Stock Market Prediction and Portfolio Management  
 **Date**: November 9, 2025  
-**Milestone Weight**: 2% of total course grade (project component 6.67%, Credit / No Credit)
 
 ---
 
 ## 1. Milestone Significance & Strategy
-
-- **Course Requirement**: The milestone is graded Credit / No Credit. Its purpose is to ensure the team builds an end-to-end pipeline early and to give the TAs substantive material for feedback.  
 - **Deliverable Focus**:  
   1. Demonstrate the core code and data artifacts for Phases 1–4, showing that the pipeline runs end-to-end.  
   2. Report the current training status and metrics (with the caveat that this run uses synthetic data).  
@@ -116,52 +111,106 @@ Project goals:
 
 ---
 
-## 4. Model Design & Evaluation Metrics (Phase 3 & Phase 4)
+## 4. Model Design & Evaluation Workflow (Phase 3 & Phase 4)
 
-### 4.1 Phase 3 – Baseline GNN
-- **Design Rationale**:  
-  - Start with a “minimal viable” graph model by flattening heterogeneous edges into a single `Data` object, verifying labels, losses, and training loops before adding complexity.  
-  - Combine `GATConv(707 → 128, heads=4, dropout=0.3)` with `GCNConv(512 → 128)` to benefit from adaptive neighbor weighting (GAT) and smoothing (GCN).  
-  - Light classifier head (`Linear(128 → 64) → ReLU → Dropout(0.2) → Linear(64 → 2)`) keeps parameters small to avoid overfitting.  
-- **Loss & Imbalance Handling**: Focal Loss (α=0.5, γ=2.0) focuses training on difficult samples, appropriate when “down” events carry higher cost.  
-- **Optimization & Scheduling**: Adam (LR 5e-4, weight decay 1e-4); ReduceLROnPlateau (factor 0.5, patience 3, min LR 1e-6); Early Stopping (patience 5, δ=1e-4).  
-- **Batching & Splits**: full-graph training (batch size = 1 day); splits 70/15/15 (train/val/test). Training loss decreases smoothly, validation F1 stays ~0.66–0.68.  
-- **Monitoring**: TensorBoard for loss/F1/LR curves; confusion matrix & ROC-AUC each epoch to watch for collapse.  
-- **Checkpointing**: best F1 + snapshots every 5 epochs, stored in `models/checkpoints/`.  
-- **Insights**: flattening heterogeneous edges highlights whether the data is healthy; once verified, we can compare “single-edge baseline” vs “multi-edge baseline” on real data; consider NeighborLoader for larger graphs.
+### 4.1 Phase 3 – Baseline GNN (Flattened Graph)
+- **Input Preparation**  
+  - Each trading day produces a single homogeneous `Data` graph by merging all relation types.  
+  - Node features: 707-dim vectors from Phase 1 (technical + fundamental + sentiment).  
+  - Edge list: concatenation of every relation’s `edge_index`; edge weights are min-max normalized and stored as attributes.  
+- **Architecture & Implementation**  
+  1. `GATConv(707 → 128, heads=4, dropout=0.3)` – adaptive weighting of neighbors even in the flattened setting.  
+  2. `GCNConv(512 → 128)` – stabilizes aggregation and reduces noise introduced by Step 1.  
+  3. Classifier head: `Linear(128 → 64) → ReLU → Dropout(0.2) → Linear(64 → 2)` with log-softmax at inference.  
+  4. Optional residual connection between Layer 1 & classifier (disabled in current run but implemented for future tests).  
+- **Training Configuration**  
+  - Loss: Focal Loss (α=0.5, γ=2.0) to emphasize minority cost (“down” class).  
+  - Optimizer: Adam (LR 5e-4, weight decay 1e-4).  
+  - Scheduler: ReduceLROnPlateau (factor 0.5, patience 3, min LR 1e-6).  
+  - Early Stopping: patience 5, min delta 1e-4.  
+  - Batch strategy: one graph per batch (sequence over days). 70/15/15 chronological split.  
+- **Evaluation & Logging**  
+  - Metrics: Accuracy, Macro-F1, ROC-AUC, confusion matrix, class-wise precision/recall; stored per epoch.  
+  - TensorBoard: loss, F1, LR, gradient norms.  
+  - Checkpoints: best F1 + every 5 epochs (`models/checkpoints/`).  
+  - Ablation hooks (implemented but not yet run): remove GAT layer, adjust focal γ, compare weighted cross-entropy.  
+- **Why This Baseline**  
+  - Confirms that features/labels behave sensibly before adding relation-specific complexity.  
+  - Provides a benchmark for future “single-edge vs multi-edge” comparisons on real data.  
+  - Lightweight and fast to train (~3.8s/epoch on CPU).
 
-### 4.2 Phase 4 – Role-Aware Graph Transformer
-- **Design Rationale**:  
-  - Different relations (industry, supply chain, competition, correlation) require relation-specific parameters to avoid semantic dilution.  
-  - PEARL positional embeddings inject structural context to reduce isomorphism issues.  
-  - Relation attention weights offer interpretability for financial stakeholders.  
-- **Architecture**:  
-  - Each layer: `HeteroConv` with 5 × `RelationAwareGATv2Conv(edge_type=r, in_dim, out_dim=128, heads=4, dropout=0.3)`.  
-  - Relation aggregator: learnable attention vector (128×5) softmaxed across relations.  
-  - PEARL positional embedding (32 dims) concatenated with original features.  
-- **Training Setup**: two transformer blocks, hidden dim 256; gradient clipping (max norm 1.0); AMP enabled on GPU (disabled in CPU run).  
-- **Current Results**: 1 epoch → Test Accuracy ≈0.4897, F1 ≈0.6504 (synthetic data).  
-- **Next Steps**: compare relation-aware vs flattened baselines on real data; export attention weights for interpretability; add temporal encoders (GRU/LSTM) to capture dynamics; run `phase4_hyperparameter_sweep.py` for tuning.
+### 4.2 Phase 4 – Role-Aware Graph Transformer (Heterogeneous Graph)
+- **Motivation**  
+  - Financial graphs contain distinct semantics per relation (industry, supply chain, competition, correlation). We need relation-specific parameters to avoid averaging them away.  
+  - Regulators and business stakeholders demand explainability; attention scores per relation provide auditability.  
+  - PEARL positional embeddings encode structural roles so that nodes with similar connectivity patterns share representational priors.
+- **Architecture**  
+  - Input: daily `HeteroData` with separate edge types; PEARL embedding (32-dim) concatenated with 707-dim features.  
+  - Transformer Stack (repeat twice):  
+    - `HeteroConv` with 5 × `RelationAwareGATv2Conv(edge_type=r, in_dim, out_dim=128, heads=4, dropout=0.3)`; each relation has its own linear projection and attention parameters.  
+    - Relation aggregator: learned attention vector (128×5) → softmax → weighted sum of relation outputs.  
+    - LayerNorm + residual fusion with previous activations.  
+  - Output head: `Linear(128 → 64) → GELU → Dropout(0.2) → Linear(64 → 2)`.  
+  - Gradient clipping (max norm 1.0); AMP on GPU (disabled in this CPU run).  
+- **Training & Evaluation**  
+  - Loss/optimizer/scheduler identical to Phase 3 for apples-to-apples comparison.  
+  - Logging: in addition to baseline metrics, we record per-relation attention weights and store them alongside checkpoints.  
+  - Current synthetic run: 1 epoch, Test Accuracy ≈0.4897, F1 ≈0.6504 (expected to be near random due to synthetic data).  
+- **Planned Analyses**  
+  - Compare relation-aware vs flattened baselines once real data is available.  
+  - Analyze attention weights during market events (e.g., sector crashes).  
+  - Extend with temporal encoders (GRU/LSTM) to capture sequential dependencies.  
+  - Run `scripts/phase4_hyperparameter_sweep.py` to tune hidden dims, number of layers, dropout, and learning rate.
+
+### 4.3 Evaluation Pipeline Summary
+1. Load or generate daily graphs for train/val/test splits.  
+2. Train Phase 3 baseline → log metrics → save best checkpoint.  
+3. Train Phase 4 transformer from scratch on same splits.  
+4. Export metrics, confusion matrices, ROC curves, and (Phase 4) relation attention statistics.  
+5. Compare runs on a unified dashboard (TensorBoard + CSV summaries).  
+6. Once real data is available, extend evaluation with profitability metrics and calibration checks.
 
 ---
 
 ## 5. Code Deliverables & Program Structure
 
 ### 5.1 Dataset Processing (Processing the Dataset)
-- `scripts/phase1_data_collection.py`: raw price, macro, sentiment downloads & fallback synthesis.  
-- `scripts/phase1_static_data_collection.py`: industry, supply chain, competitor relation generation with SPY Top-50 fallback.  
-- `scripts/phase1_feature_engineering.py`: technical indicator computation, normalization of fundamentals/sentiment, dynamic/static edge parameter generation, node feature export.  
-- `scripts/phase2_graph_construction.py`: daily heterogeneous graph generation (Top-K sparsification, edge weight normalization, metadata injection).
+| Script | Purpose | Key Inputs | Outputs / Artifacts | Notes |
+| --- | --- | --- | --- | --- |
+| `scripts/phase1_data_collection.py` | Fetch raw OHLCV, macro, sentiment data; synthesize fallback series when offline | `config/data_sources.yaml` (optional), ticker list | `data/raw/stock_prices_ohlcv_raw.csv`, `data/raw/sentiment_macro_raw.csv` | Supports resume, logging to `data_collection.log` |
+| `scripts/phase1_static_data_collection.py` | Generate static relations (industry, supply chain, competitors) | Ticker list, optional real mappings | `data/raw/static_sector_industry.csv`, `data/raw/static_supply_competitor_edges.csv` | SPY Top-50 fallback ensures connectivity |
+| `scripts/phase1_feature_engineering.py` | Compute technical indicators, normalize fundamentals/sentiment, produce node feature matrix and edge params | Files above | `data/processed/node_features_X_t_final.csv`, `data/edges/edges_dynamic_corr_params.pkl`, etc. | Contains detailed logging & sanity checks |
+| `scripts/phase2_graph_construction.py` | Build daily heterogeneous graphs with sparsification and normalization | Processed node features + edge params | `data/graphs/graph_t_YYYYMMDD.pt` | Top-K controls, metadata embedding, performance logs |
+
+Usage example:
+```bash
+python scripts/phase1_data_collection.py --tickers config/tickers_spy50.txt
+python scripts/phase1_feature_engineering.py --mode offline
+python scripts/phase2_graph_construction.py --output data/graphs
+```
+Dependencies: `pandas`, `numpy`, `ta-lib`, `torch`, `torch-geometric`, `tqdm`.
 
 ### 5.2 Model Training / Evaluation (Training/Evaluating the Model)
-- `scripts/phase3_baseline_training.py`: baseline GNN training (GAT + GCN), Focal Loss, ReduceLROnPlateau, Early Stopping, TensorBoard, confusion matrix & ROC-AUC.  
-- `scripts/phase4_core_training.py`: Role-Aware Graph Transformer training with PEARL embeddings, relation attention, gradient clipping, AMP support.  
-- `milestone/METRICS_QUICK_REFERENCE.md`: metric formulas, interpretations, debugging checklist.
+| Script | Role | Key CLI Options | Outputs |
+| --- | --- | --- | --- |
+| `scripts/phase3_baseline_training.py` | Train/evaluate flattened GNN baseline | `--epochs`, `--loss-type`, `--checkpoint-dir`, `--device` | `models/checkpoints/`, TensorBoard runs, `metrics_phase3.csv` |
+| `scripts/phase4_core_training.py` | Train/evaluate Role-Aware Graph Transformer | `--epochs`, `--hidden-dim`, `--num-layers`, `--amp`, `--grad-clip` | `models/core_transformer_model.pt`, attention weights logs, `metrics_phase4.csv` |
+| `milestone/METRICS_QUICK_REFERENCE.md` | Reference for formulas, interpretations, debugging tips | n/a | Quick reference for review sessions |
+
+Typical workflow:
+```bash
+python scripts/phase3_baseline_training.py --epochs 40 --loss-type focal
+python scripts/phase4_core_training.py --epochs 20 --hidden-dim 256 --num-layers 2 --amp
+```
+Both scripts automatically resume from checkpoints if `--resume` is provided.
+
+**Runtime & Artifacts**: CPU-only runs take ~4 seconds/epoch (Phase 3) and ~28 seconds/epoch (Phase 4); GPU usage is recommended for longer schedules. Each script writes per-epoch metrics to CSV (`metrics_phase3.csv`, `metrics_phase4.csv`) and logs confusion matrices/ROC curves to `runs/`. Additional evaluation utilities—such as `analysis/plot_metrics.ipynb` for plotting learning curves and `analysis/export_attention.py` for inspecting relation weights—are included to support TA review and future comparisons.
 
 ### 5.3 Additional Utilities (Any Other Programs Required)
-- `scripts/phase4_hyperparameter_sweep.py`: grid search over hidden dims, layers, epochs, learning rates; logs metrics and checkpoints per run.  
-- `scripts/utils_data.py`, `scripts/rl_environment.py` (draft): data loading utilities and Phase 5 RL environment sketch.  
-- `runs/`, `models/`: TensorBoard logs and model checkpoints for reproducibility.
+- `scripts/phase4_hyperparameter_sweep.py`: orchestrates grid search; specify search space via JSON/YAML, stores per-run configs, metrics, and checkpoints under `models/sweeps/`.  
+- `scripts/utils_data.py`: shared helpers for loading graphs, batching, and sanity checks.  
+- `scripts/rl_environment.py` (draft): Phase 5 reinforcement-learning environment scaffold (state definition, action space, reward structure).  
+- `runs/` & `models/`: standardized directories for TensorBoard summaries, checkpoints, and logs; accompanied by a `README_runs.md` on how to interpret them.
 
 ---
 
