@@ -30,6 +30,17 @@ def get_ticker_list():
     # Assuming columns follow the pattern 'Feature_TICKER'
     tickers = sorted(list(set(col.split('_')[-1] for col in df.columns if '_' in col)))
     
+    if len(tickers) < 2:
+        fallback_tickers = [
+            'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'BRK-B', 'LLY', 'TSLA', 'V',
+            'JPM', 'XOM', 'JNJ', 'WMT', 'PG', 'MA', 'HD', 'CVX', 'MRK', 'ABBV',
+            'KO', 'PEP', 'AVGO', 'COST', 'PFE', 'ADBE', 'CSCO', 'CMCSA', 'NFLX', 'DIS',
+            'ACN', 'CRM', 'TMO', 'QCOM', 'TXN', 'UNH', 'BAC', 'MCD', 'ORCL', 'INTC',
+            'SBUX', 'CAT', 'GE', 'NKE', 'AXP', 'IBM', 'MMM', 'VZ', 'FDX', 'GOOG'
+        ]
+        print("⚠️  Warning: Unable to infer ticker list from OHLCV data. Falling back to default SPY top-50 list.")
+        tickers = fallback_tickers
+    
     return tickers
 
 

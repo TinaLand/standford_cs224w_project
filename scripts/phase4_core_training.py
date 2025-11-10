@@ -37,6 +37,26 @@ LEARNING_RATE = 0.0005
 NUM_EPOCHS = 1                 # Increased epochs for complex model
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+# --- Helper Utilities ---
+
+def _read_time_series_csv(path: Path) -> pd.DataFrame:
+    """
+    Robust CSV reader that ensures a DatetimeIndex named 'Date'.
+    """
+    df = pd.read_csv(path)
+    if df.empty:
+        raise ValueError(f"Time-series CSV at {path} is empty. Ensure Phase 1 outputs exist.")
+    
+    if 'Date' in df.columns:
+        df['Date'] = pd.to_datetime(df['Date'])
+        df = df.set_index('Date')
+    else:
+        first_col = df.columns[0]
+        df[first_col] = pd.to_datetime(df[first_col])
+        df = df.set_index(first_col)
+        df.index.name = 'Date'
+    return df
+
 # Mini-batch training settings
 ENABLE_MINI_BATCH = False      # Enable neighbor sampling for large graphs (requires torch-sparse, pyg-lib)
 BATCH_SIZE = 128               # Number of target nodes per batch
@@ -172,7 +192,7 @@ def create_target_labels(tickers, dates, lookahead_days):
     """Calculates the 5-day ahead return sign (y_{i, t+5}) for all stocks and dates."""
     print(f"\n🏷️ Calculating {lookahead_days}-day ahead return signs...")
     
-    ohlcv_df = pd.read_csv(OHLCV_RAW_FILE, index_col='Date', parse_dates=True)
+    ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
     
     close_cols = [col for col in ohlcv_df.columns if col.startswith('Close_')]
     close_prices = ohlcv_df[close_cols].copy()

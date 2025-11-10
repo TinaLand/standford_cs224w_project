@@ -78,6 +78,27 @@ TENSORBOARD_DIR.mkdir(parents=True, exist_ok=True)
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+# --- Helper Utilities ---
+
+def _read_time_series_csv(path: Path) -> pd.DataFrame:
+    """
+    Robust CSV reader that accepts files with or without an explicit 'Date' column.
+    Ensures the returned DataFrame has a DatetimeIndex named 'Date'.
+    """
+    df = pd.read_csv(path)
+    if df.empty:
+        raise ValueError(f"Time-series CSV at {path} is empty. Ensure Phase 1 outputs exist.")
+    
+    if 'Date' in df.columns:
+        df['Date'] = pd.to_datetime(df['Date'])
+        df = df.set_index('Date')
+    else:
+        first_col = df.columns[0]
+        df[first_col] = pd.to_datetime(df[first_col])
+        df = df.set_index(first_col)
+        df.index.name = 'Date'
+    return df
+
 # --- 1. Model Definition (Simple GAT Baseline) ---
 
 class BaselineGNN(torch.nn.Module):
@@ -566,7 +587,7 @@ def create_target_labels(tickers, dates, lookahead_days):
     print(f"\n🏷️ Calculating {lookahead_days}-day ahead return signs...")
     
     # 1. Load OHLCV data to calculate forward returns
-    ohlcv_df = pd.read_csv(OHLCV_RAW_FILE, index_col='Date', parse_dates=True)
+    ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
     
     # Extract only Close prices and restructure
     close_cols = [col for col in ohlcv_df.columns if col.startswith('Close_')]
