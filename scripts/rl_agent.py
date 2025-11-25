@@ -76,7 +76,7 @@ class StockTradingAgent:
         self,
         total_timesteps: int,
         callback: Optional[BaseCallback] = None,
-        progress_bar: bool = True
+        progress_bar: bool = False
     ) -> Dict[str, Any]:
         """
         Train the RL agent.
