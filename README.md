@@ -317,6 +317,34 @@ results = validate_ticker_data(
 
 ## Open TODOs
 
+### 🚀 Next Steps (Priority Actions)
+
+- **Phase 1 – Data Collection (CRITICAL: Rerun with Real Data)**
+  - [ ] **Rerun Phase 1 with real data** in a connected environment (current run used synthetic data due to offline constraints)
+  - [ ] Align trading calendars across all tickers (handle different market holidays/exchanges)
+  - [ ] Handle stock suspensions: detect missing trading days and forward-fill or mark as invalid
+  - [ ] Handle stock splits/dividends: adjust historical prices using split ratios
+  - [ ] Handle missing values: implement robust imputation (forward-fill, interpolation, or drop)
+  - [ ] Validate data quality: check for outliers, negative prices, volume anomalies
+  - [ ] Add data validation checks in `phase1_data_collection.py` to catch issues early
+  - [ ] Document data collection date range and any known gaps/limitations
+
+- **Phase 1-4 – Retrain with Real Data**
+  - [ ] After Phase 1 real data collection, **rerun Phase 2** (graph construction) with real data
+  - [ ] **Rerun Phase 3** (baseline GNN) with real data and compare metrics vs. synthetic baseline
+  - [ ] **Rerun Phase 4** (core transformer) with real data and compare metrics vs. synthetic baseline
+  - [ ] Update milestone report with real-data results and analysis
+  - [ ] Compare synthetic vs. real data performance to validate pipeline correctness
+  - [ ] If real-data performance is still low, investigate: feature engineering, graph construction, model capacity, or market efficiency
+
+- **Model Performance Improvement (After Real Data)**
+  - [ ] Analyze why current model has low ROC-AUC (0.51) - investigate feature importance
+  - [ ] Experiment with different lookahead horizons (1, 3, 5, 10 days) to find optimal prediction window
+  - [ ] Add temporal GNN layers (e.g., EvolveGCN, TemporalGCN) to capture time-series patterns
+  - [ ] Experiment with different graph sparsification strategies (Top-K thresholds, correlation cutoffs)
+  - [ ] Add more sophisticated features: order flow, market microstructure, alternative data sources
+  - [ ] Implement ensemble methods: combine multiple models or graph views
+
 - **Phase 2 – Graph Construction**
   - [x] Persist ticker list metadata into each `HeteroData` graph for training scripts. (graph attribute: `tickers`)
   - [x] Add static edge types for `supply_chain` and `competitor` if available; ensure schemas match `('stock', edge_type, 'stock')`.
@@ -338,18 +366,27 @@ results = validate_ticker_data(
   - [x] Provide hyperparameter sweep script (grid or Optuna).
   - Note: Run `python scripts/phase4_hyperparameter_sweep.py` to reproduce the grid search baseline.
 
-- **Phase 5 – RL Integration**
+- **Phase 5 – RL Integration** (Blocked until real-data models are trained)
   - [ ] Finalize `rl_environment.py` reward shaping; include transaction costs and risk penalties.
   - [ ] Integrate SB3 (PPO/A2C) training loop using model embeddings as state.
   - [ ] Add portfolio constraints, position sizing, and risk metrics (max drawdown, Sharpe).
   - [ ] Implement backtesting with slippage and latency modeling.
+  - [ ] Use trained Phase 4 model embeddings as state representation for RL agent
+  - [ ] Design action space: discrete (buy/sell/hold) or continuous (position weights)
+  - [ ] Implement reward function: Sharpe ratio, risk-adjusted returns, or custom objective
 
-- **Phase 6 – Evaluation**
+- **Phase 6 – Evaluation** (Blocked until Phase 5 is complete)
   - [ ] Produce plots: equity curve, drawdown, rolling Sharpe, turnover, exposure.
   - [ ] Run ablations for edge types and feature groups.
   - [ ] Compare against baselines (buy-and-hold, sector ETF, equal-weight).
+  - [ ] Generate comprehensive evaluation report with financial metrics
+  - [ ] Visualize attention weights and graph structure for interpretability
+  - [ ] Analyze failure cases: when does the model perform poorly?
 
 - **Data & Infrastructure**
+  - [ ] **Real Data Pipeline**: Create robust data collection script that handles network failures gracefully
+  - [ ] **Data Validation**: Add comprehensive data quality checks (price sanity, volume checks, date alignment)
+  - [ ] **Data Versioning**: Track which data version was used for each training run
   - [ ] Centralize configuration in YAML (paths, tickers, thresholds, seeds); load in all scripts.
   - [ ] Add robust logging (structured logs) and progress bars across phases.
   - [ ] Unit tests for data loaders, feature builders, and graph constructors; add CI workflow.
@@ -358,6 +395,7 @@ results = validate_ticker_data(
   - [ ] Determinism: set global seeds and PyTorch deterministic flags; document reproducibility.
   - [ ] Caching for downloads and intermediate features to speed up reruns.
   - [ ] Document hardware requirements and runtime expectations per phase.
+  - [ ] Create data collection log: record download dates, missing tickers, data gaps for transparency
 
 - **Known Issues / Notes**
   - macOS OpenMP shared memory errors: set `export OMP_NUM_THREADS=1` if needed.
