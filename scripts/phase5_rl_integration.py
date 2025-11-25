@@ -46,7 +46,8 @@ RL_LOG_PATH.mkdir(parents=True, exist_ok=True)
 # NOTE: The GNN model definition and the environment definition 
 # must be imported from their respective files.
 from phase4_core_training import RoleAwareGraphTransformer 
-from rl_environment import StockTradingEnv 
+from rl_environment import StockTradingEnv
+from rl_agent import StockTradingAgent 
 
 
 def load_gnn_model_for_rl():
@@ -113,8 +114,7 @@ def run_rl_pipeline():
     print(f"   (Graph files available: {graph_start.date()} to {graph_end.date()})")
     print(f"   (Using last {int((date_range_days - start_offset_days) / date_range_days * 100)}% of graph data)")
     
-    # 3. Setup Environment
-    # stable-baselines3 requires a function to create the environment
+    # 3. Setup Environment Factory
     def make_env():
         return StockTradingEnv(
             start_date=START_DATE, 
@@ -122,50 +122,43 @@ def run_rl_pipeline():
             gnn_model=gnn_model, 
             device=DEVICE
         )
-
-    # SB3 requires vectorized environments
-    vec_env = make_vec_env(make_env, n_envs=NUM_ENVS)
     
-    # 4. RL Agent Setup (PPO)
-    print(f"\n--- 2. Setting up PPO Agent (Total Timesteps: {TOTAL_TIMESTEPS}) ---")
+    # 4. Create RL Agent
+    print(f"\n--- 2. Creating RL Agent (Total Timesteps: {TOTAL_TIMESTEPS}) ---")
     
     # Configure tensorboard logging (optional)
+    tensorboard_log_path = RL_LOG_PATH if TENSORBOARD_AVAILABLE else None
     if TENSORBOARD_AVAILABLE:
         print("✅ TensorBoard logging enabled")
-        tensorboard_log_path = RL_LOG_PATH
     else:
         print("⚠️  TensorBoard not available, logging disabled")
-        print("   Install with: pip install tensorboard")
-        tensorboard_log_path = None
     
-    # We use MlpPolicy, which is standard for Gym's discrete action space
-    # PPO with MlpPolicy performs better on CPU according to stable-baselines3
-    ppo_kwargs = {
-        "policy": "MlpPolicy",
-        "env": vec_env,
-        "verbose": 1,
-        "learning_rate": PPO_LEARNING_RATE,
-        "device": "cpu",  # Use CPU for better MLP performance
-    }
+    # Create agent using the wrapper class
+    agent = StockTradingAgent(
+        gnn_model=gnn_model,
+        env_factory=make_env,
+        device=DEVICE,
+        learning_rate=PPO_LEARNING_RATE,
+        tensorboard_log=tensorboard_log_path,
+        policy="MlpPolicy",
+        verbose=1
+    )
     
-    # Only add tensorboard_log if tensorboard is available
-    if tensorboard_log_path:
-        ppo_kwargs["tensorboard_log"] = tensorboard_log_path
-    
-    model = PPO(**ppo_kwargs)
-    
-    # 5. Training
-    print("\n🔨 Starting PPO RL Training (GNN-driven features)...")
-    
+    # 5. Train Agent
     try:
-        model.learn(total_timesteps=TOTAL_TIMESTEPS)
+        training_stats = agent.train(total_timesteps=TOTAL_TIMESTEPS)
+        print(f"\n📊 Training Statistics: {training_stats}")
     except Exception as e:
         print(f"❌ RL Training failed: {e}")
+        import traceback
+        traceback.print_exc()
         return
     
     # 6. Save Agent
-    model.save(RL_SAVE_PATH / "ppo_stock_agent")
+    agent.save(RL_SAVE_PATH / "ppo_stock_agent")
     print(f"\n✅ RL Agent trained and saved to: {RL_SAVE_PATH / 'ppo_stock_agent.zip'}")
+    
+    return agent
 
     print("\n🎯 Phase 5: RL Integration and Training Complete! Ready for Phase 6: Evaluation.")
 

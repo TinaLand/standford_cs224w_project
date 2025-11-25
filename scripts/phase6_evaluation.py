@@ -13,7 +13,8 @@ from typing import Dict, Any, List
 # Import necessary modules from previous phases
 from phase4_core_training import RoleAwareGraphTransformer 
 from phase5_rl_integration import load_gnn_model_for_rl 
-from rl_environment import StockTradingEnv 
+from rl_environment import StockTradingEnv
+from rl_agent import StockTradingAgent 
 
 # --- Configuration & Setup ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -73,43 +74,63 @@ def run_final_backtest(gnn_model, rl_agent_path: Path) -> Dict[str, Any]:
     """
     print("\n--- 2. Final Backtesting on Test Set ---")
     
-    # Setup environment for the evaluation period
-    env = StockTradingEnv(
-        start_date=START_DATE_TEST,
-        end_date=END_DATE_TEST,
+    # Setup environment factory for the evaluation period
+    def make_test_env():
+        return StockTradingEnv(
+            start_date=START_DATE_TEST,
+            end_date=END_DATE_TEST,
+            gnn_model=gnn_model,
+            device=DEVICE
+        )
+    
+    # Load the trained RL agent using Agent class
+    agent_path = rl_agent_path
+    if not agent_path.exists():
+        # Try with .zip extension
+        agent_path = Path(str(rl_agent_path) + ".zip")
+        if not agent_path.exists():
+            raise FileNotFoundError(f"RL Agent not found at: {rl_agent_path}. Ensure Phase 5 finished.")
+    
+    # Create agent wrapper and load trained weights
+    agent = StockTradingAgent(
         gnn_model=gnn_model,
-        device=DEVICE
+        env_factory=make_test_env,
+        device=DEVICE,
+        learning_rate=1e-5,  # Not used for inference
+        tensorboard_log=None,
+        policy="MlpPolicy",
+        verbose=0
     )
     
-    # Load the trained RL agent
-    if not rl_agent_path.exists():
-        raise FileNotFoundError(f"RL Agent not found at: {rl_agent_path}. Ensure Phase 5 finished.")
-        
-    model = PPO.load(rl_agent_path, env=env, device='cpu')  # Use CPU for better MLP performance
+    # Load trained agent
+    agent.load(agent_path)
+    
+    # Create test environment
+    test_env = make_test_env()
 
     # Initialize environment and run simulation
-    obs, info = env.reset()
-    portfolio_values = [env.initial_cash]
+    obs, info = test_env.reset()
+    portfolio_values = [test_env.initial_cash]
     done = False
     
-    print(f"Starting value: ${env.initial_cash:.2f}")
+    print(f"Starting value: ${test_env.initial_cash:.2f}")
 
     while not done:
         # RL agent determines action
-        action, _ = model.predict(obs, deterministic=True) 
+        action, _ = agent.predict(obs, deterministic=True) 
         
         # Step environment
-        obs, reward, terminated, truncated, info = env.step(action)
+        obs, reward, terminated, truncated, info = test_env.step(action)
         done = terminated or truncated
 
         portfolio_values.append(info['portfolio_value'])
         
         # Progress check
-        if env.current_step % 100 == 0:
-            print(f"  Step {env.current_step}: Value ${info['portfolio_value']:.2f}")
+        if test_env.current_step % 100 == 0:
+            print(f"  Step {test_env.current_step}: Value ${info['portfolio_value']:.2f}")
 
     # Calculate final metrics
-    metrics = calculate_financial_metrics(portfolio_values, env.current_step)
+    metrics = calculate_financial_metrics(portfolio_values, test_env.current_step)
     
     print("\n✅ Backtest Complete.")
     print(f"Final Value: ${portfolio_values[-1]:.2f}")
@@ -117,7 +138,7 @@ def run_final_backtest(gnn_model, rl_agent_path: Path) -> Dict[str, Any]:
     return {
         'strategy': 'Core_GNN_RL',
         'final_value': portfolio_values[-1],
-        'total_days': env.current_step,
+        'total_days': test_env.current_step,
         **metrics
     }
 

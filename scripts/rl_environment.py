@@ -127,12 +127,10 @@ class StockTradingEnv(gym.Env):
         # 2. Generate GNN Embeddings (E_t) using the trained model
         with torch.no_grad():
             self.gnn_model.eval()
-            # Pass data through the GNN model's layers *before* the final classifier
-            # (Requires exposing an intermediate embedding layer in the GNN model)
-            
-            # Placeholder: In a real setting, you'd call a .get_embedding() method
-            # For simplicity, we use the input features as placeholder embeddings
-            embeddings_t = data_t['stock'].x.cpu().numpy()
+            # Use the get_embeddings() method to extract embeddings before final classifier
+            data_t_tensor = data_t.to(self.device)
+            embeddings_t = self.gnn_model.get_embeddings(data_t_tensor)
+            embeddings_t = embeddings_t.cpu().numpy()
             
             # Flatten embeddings: [N * H]
             flat_embeddings = embeddings_t.flatten()
