@@ -366,24 +366,27 @@ results = validate_ticker_data(
   - [x] Provide hyperparameter sweep script (grid or Optuna).
   - Note: Run `python scripts/phase4_hyperparameter_sweep.py` to reproduce the grid search baseline.
 
-- **Phase 5 – RL Integration** ✅ Core Features Implemented
-  - [x] Finalize `rl_environment.py` reward shaping; include transaction costs and risk penalties. ✅ Enhanced environment created
-  - [x] Integrate SB3 (PPO/A2C) training loop using model embeddings as state. ✅ Updated integration script
-  - [x] Add portfolio constraints, position sizing, and risk metrics (max drawdown, Sharpe). ✅ All implemented
-  - [x] Implement backtesting with slippage and latency modeling. ✅ Slippage and costs added
-  - [x] Use trained Phase 4 model embeddings as state representation for RL agent ✅ `get_embeddings()` method added
-  - [x] Design action space: discrete (buy/sell/hold) or continuous (position weights) ✅ Discrete MultiDiscrete action space
-  - [x] Implement reward function: Sharpe ratio, risk-adjusted returns, or custom objective ✅ Risk-adjusted reward implemented
-  - [ ] **Testing & Tuning**: Run training and tune hyperparameters
-  - [ ] **Evaluation**: Compare RL agent performance vs baselines (Phase 6)
+- **Phase 5 – RL Integration** ✅ Core Framework Implemented
+  - [x] Finalize `rl_environment.py` reward shaping; include transaction costs and risk penalties. ✅ Transaction costs (0.1%) implemented in `rl_environment.py`
+  - [x] Integrate SB3 (PPO/A2C) training loop using model embeddings as state. ✅ PPO integration in `phase5_rl_integration.py`
+  - [x] Add portfolio constraints, position sizing, and risk metrics (max drawdown, Sharpe). ✅ Basic portfolio management in `rl_environment.py`
+  - [x] Implement backtesting with slippage and latency modeling. ✅ Backtesting framework in environment step function
+  - [x] Use trained Phase 4 model embeddings as state representation for RL agent ✅ GNN model integrated (uses model forward pass)
+  - [x] Design action space: discrete (buy/sell/hold) or continuous (position weights) ✅ Discrete MultiDiscrete([3] * N) action space
+  - [x] Implement reward function: Sharpe ratio, risk-adjusted returns, or custom objective ✅ Basic return-based reward (can be enhanced)
+  - [ ] **Enhancement**: Add `get_embeddings()` method to Phase 4 model for cleaner embedding extraction
+  - [ ] **Enhancement**: Improve reward function with Sharpe ratio and risk-adjusted metrics
+  - [ ] **Enhancement**: Add more sophisticated portfolio constraints and position sizing
+  - [ ] **Testing**: Run Phase 5 training and validate RL agent performance
 
-- **Phase 6 – Evaluation** (Blocked until Phase 5 is complete)
-  - [ ] Produce plots: equity curve, drawdown, rolling Sharpe, turnover, exposure.
-  - [ ] Run ablations for edge types and feature groups.
-  - [ ] Compare against baselines (buy-and-hold, sector ETF, equal-weight).
-  - [ ] Generate comprehensive evaluation report with financial metrics
-  - [ ] Visualize attention weights and graph structure for interpretability
-  - [ ] Analyze failure cases: when does the model perform poorly?
+- **Phase 6 – Evaluation** ✅ Basic Framework Implemented
+  - [x] Generate comprehensive evaluation report with financial metrics ✅ `calculate_financial_metrics()` implemented (Sharpe, Max Drawdown, Cumulative Return)
+  - [x] Run ablations for edge types and feature groups. ✅ `run_ablation_studies()` framework implemented
+  - [x] Final backtesting with RL agent ✅ `run_final_backtest()` implemented
+  - [ ] **Visualization**: Produce plots: equity curve, drawdown, rolling Sharpe, turnover, exposure (needs matplotlib/seaborn integration)
+  - [ ] **Baseline Comparison**: Compare against baselines (buy-and-hold, sector ETF, equal-weight) (framework exists, needs implementation)
+  - [ ] **Interpretability**: Visualize attention weights and graph structure for interpretability
+  - [ ] **Analysis**: Analyze failure cases: when does the model perform poorly?
 
 - **Data & Infrastructure**
   - [x] **Real Data Pipeline**: Create robust data collection script that handles network failures gracefully ✅ Enhanced `phase1_data_collection.py`
@@ -397,7 +400,7 @@ results = validate_ticker_data(
   - [x] Determinism: set global seeds and PyTorch deterministic flags; document reproducibility. ✅ `utils_config.setup_reproducibility()` function
   - [ ] Caching for downloads and intermediate features to speed up reruns.
   - [ ] Document hardware requirements and runtime expectations per phase.
-  - [ ] Create data collection log: record download dates, missing tickers, data gaps for transparency
+  - [x] Create data collection log: record download dates, missing tickers, data gaps for transparency ✅ `utils_data_validation.create_data_collection_log()` implemented
 
 - **Known Issues / Notes**
   - macOS OpenMP shared memory errors: set `export OMP_NUM_THREADS=1` if needed.
@@ -476,21 +479,15 @@ results = validate_ticker_data(
 ## 📝 Documentation
 
 ### Project Documentation
-- **[PROJECT_MILESTONE.md](PROJECT_MILESTONE.md)** - Complete milestone report for CS224W
-- **[TECHNICAL_DEEP_DIVE.md](TECHNICAL_DEEP_DIVE.md)** ⭐ - In-depth mathematical analysis (1,450 lines)
-  - Why GNN over traditional ML (message passing framework)
-  - Why Graph Transformer over standard GNN (heterogeneous aggregation)
-  - All design decisions with mathematical justifications
-  - Phase-by-phase technical rationale
+- **[milestone/MILESTONE_REPORT.md](milestone/MILESTONE_REPORT.md)** - Complete milestone report for CS224W (consolidated from previous docs)
+- **[milestone/MILESTONE_CREDIT_REPORT_CN.md](milestone/MILESTONE_CREDIT_REPORT_CN.md)** - Chinese milestone report
+- **[milestone/METRICS_QUICK_REFERENCE.md](milestone/METRICS_QUICK_REFERENCE.md)** - Quick reference for all metrics and formulas
+- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Data validation testing guide
 
 ### Implementation Guides
 - **[docs/README_IMPLEMENTATION_DOCS.md](docs/README_IMPLEMENTATION_DOCS.md)** - Index of 12 implementation guides
 - Each major script has comprehensive documentation (12,500+ total lines)
 - Mathematical foundations, design patterns, best practices
-
-### Feature-Specific Guides
-- **[CLASS_IMBALANCE_IMPLEMENTATION.md](CLASS_IMBALANCE_IMPLEMENTATION.md)** - Focal Loss & Weighted CE
-- **[CHECKPOINT_GUIDE.md](CHECKPOINT_GUIDE.md)** - Complete checkpointing system guide
 
 ## 📝 Notes
 

@@ -40,12 +40,7 @@ RL_LOG_PATH.mkdir(parents=True, exist_ok=True)
 # NOTE: The GNN model definition and the environment definition 
 # must be imported from their respective files.
 from phase4_core_training import RoleAwareGraphTransformer 
-# Use enhanced environment with risk-adjusted rewards
-try:
-    from rl_environment_enhanced import StockTradingEnvEnhanced as StockTradingEnv
-except ImportError:
-    from rl_environment import StockTradingEnv
-    print("⚠️  Using basic RL environment. Install enhanced version for risk-adjusted rewards.") 
+from rl_environment import StockTradingEnv 
 
 
 def load_gnn_model_for_rl():
@@ -98,26 +93,12 @@ def run_rl_pipeline():
     # 3. Setup Environment
     # stable-baselines3 requires a function to create the environment
     def make_env():
-        # Use enhanced environment with risk-adjusted rewards and constraints
-        try:
-            from rl_environment_enhanced import StockTradingEnvEnhanced
-            return StockTradingEnvEnhanced(
-                start_date=START_DATE, 
-                end_date=END_DATE, 
-                gnn_model=gnn_model, 
-                device=DEVICE,
-                initial_cash=10000.0,
-                max_position_pct=0.1,  # Max 10% per stock
-                enable_slippage=True,
-                enable_risk_penalty=True
-            )
-        except ImportError:
-            return StockTradingEnv(
-                start_date=START_DATE, 
-                end_date=END_DATE, 
-                gnn_model=gnn_model, 
-                device=DEVICE
-            )
+        return StockTradingEnv(
+            start_date=START_DATE, 
+            end_date=END_DATE, 
+            gnn_model=gnn_model, 
+            device=DEVICE
+        )
 
     # SB3 requires vectorized environments
     vec_env = make_vec_env(make_env, n_envs=NUM_ENVS)

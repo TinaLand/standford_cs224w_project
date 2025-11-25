@@ -169,47 +169,6 @@ class RoleAwareGraphTransformer(torch.nn.Module):
         # 3. Node-Level Output
         out = self.lin_out(x_dict['stock'])
         return out
-    
-    def get_embeddings(self, data):
-        """
-        Extract node embeddings before the final classifier.
-        Used for RL state representation.
-        
-        Returns:
-            torch.Tensor: Node embeddings of shape [N, hidden_dim]
-        """
-        x_dict = data.x_dict
-        edge_index_dict = data.edge_index_dict
-        
-        # 1. Generate/Concatenate PEARL Embeddings
-        x = x_dict['stock']
-        pearl_pe = self.pearl_embedding(x, edge_index_dict)
-        x_with_pe = torch.cat([x, pearl_pe], dim=1)
-        x_dict['stock'] = x_with_pe
-        
-        # 2. Relation-aware Graph Transformer Layers
-        for layer_idx, (conv, aggregator) in enumerate(zip(self.convs, self.relation_aggregators)):
-            # Apply convolution to get outputs for each relation
-            conv_output = conv(x_dict, edge_index_dict)
-            
-            # Collect outputs from different relations for aggregation
-            relation_outputs = {}
-            for edge_type in edge_index_dict.keys():
-                if 'stock' in conv_output:
-                    relation_outputs[edge_type] = conv_output['stock']
-            
-            # Apply relation-aware aggregation if we have relation outputs
-            if relation_outputs and len(relation_outputs) > 1:
-                x_dict['stock'] = aggregator(relation_outputs)
-            else:
-                x_dict = conv_output
-            
-            # Apply activations and dropout
-            x_dict['stock'] = x_dict['stock'].relu()
-            x_dict['stock'] = F.dropout(x_dict['stock'], p=0.4, training=self.training)
-        
-        # Return embeddings before final classifier
-        return x_dict['stock']
 
 # --- 2. Data Utilities (Copied from Phase 3 for consistency) ---
 
