@@ -1,0 +1,95 @@
+# CS224W Stock RL GNN Project Configuration
+# =========================================
+# Centralized configuration for all project phases
+
+# Data Collection Settings
+data:
+  start_date: '2015-01-01'
+  end_date: '2025-01-01'
+  stock_source: 'SPY'  # Options: 'SPY', 'QQQ', 'CUSTOM'
+  num_stocks: 50
+  custom_tickers: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'JPM', 'XOM']
+  
+  # Data validation settings
+  validation:
+    enable: true
+    max_consecutive_missing_days: 5  # Days before considering suspension
+    imputation_method: 'forward_fill'  # Options: 'forward_fill', 'backward_fill', 'interpolate', 'drop'
+    outlier_threshold_iqr: 3.0  # IQR multiplier for outlier detection
+
+# Paths
+paths:
+  project_root: '.'
+  data_raw: 'data/raw'
+  data_processed: 'data/processed'
+  data_graphs: 'data/graphs'
+  data_edges: 'data/edges'
+  models: 'models'
+  models_checkpoints: 'models/checkpoints'
+  runs: 'runs'
+
+# Phase 2: Graph Construction
+graph:
+  correlation_window: 30  # Days for rolling correlation
+  correlation_threshold: 0.4  # Minimum correlation for edge creation
+  top_k_neighbors: 15  # Top-K sparsification
+  edge_types:
+    - 'rolling_correlation'
+    - 'fund_similarity'
+    - 'sector_industry'
+    - 'supply_chain'
+    - 'competitor'
+
+# Phase 3: Baseline Training
+baseline:
+  lookahead_days: 5
+  hidden_channels: 128
+  num_layers: 2
+  num_heads: 4
+  learning_rate: 0.001
+  num_epochs: 40
+  batch_size: 32
+  loss_type: 'focal'  # Options: 'standard', 'weighted', 'focal'
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  enable_early_stopping: true
+  early_stop_patience: 5
+  enable_lr_scheduler: true
+  lr_scheduler_type: 'plateau'  # Options: 'plateau', 'step', 'exponential'
+  enable_tensorboard: true
+  enable_roc_auc: true
+  enable_confusion_matrix: true
+
+# Phase 4: Core Transformer
+transformer:
+  lookahead_days: 5
+  hidden_channels: 256
+  num_layers: 2
+  num_heads: 4
+  learning_rate: 0.0005
+  num_epochs: 10
+  enable_amp: true  # Automatic Mixed Precision
+  grad_clip_max_norm: 1.0
+  enable_mini_batch: false
+  batch_size: 128
+  num_neighbors: [15, 10]  # Neighbors to sample per layer
+
+# Reproducibility
+reproducibility:
+  random_seed: 42
+  pytorch_deterministic: true
+  cudnn_deterministic: true
+  cudnn_benchmark: false
+
+# Logging
+logging:
+  level: 'INFO'  # Options: 'DEBUG', 'INFO', 'WARNING', 'ERROR'
+  structured: false  # Use structured JSON logging
+  progress_bars: true
+
+# Hardware
+hardware:
+  device: 'auto'  # Options: 'auto', 'cpu', 'cuda'
+  num_workers: 0  # DataLoader workers
+  pin_memory: true
+

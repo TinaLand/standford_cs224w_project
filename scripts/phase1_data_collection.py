@@ -11,6 +11,14 @@ Functions:
 - download_fundamental_data(): Downloads fundamental data (P/E, ROE, etc.)
 - download_sentiment_data(): Downloads sentiment and macro data (VIX, news sentiment)
 
+Enhanced with data validation and quality checks:
+- Data quality validation (price sanity, volume checks)
+- Trading calendar alignment
+- Stock suspension handling
+- Split/dividend adjustments
+- Missing value imputation
+- Data collection logging
+
 """
 import yfinance as yf
 import pandas as pd
@@ -18,6 +26,22 @@ import os
 import requests
 from io import StringIO
 from datetime import datetime
+from pathlib import Path
+
+# Import data validation utilities
+try:
+    from utils_data_validation import (
+        validate_ohlcv_data,
+        align_trading_calendars,
+        handle_stock_suspensions,
+        handle_splits_dividends,
+        impute_missing_values,
+        create_data_collection_log
+    )
+    VALIDATION_AVAILABLE = True
+except ImportError:
+    print("⚠️  Warning: Data validation utilities not available. Install required dependencies.")
+    VALIDATION_AVAILABLE = False
 
 # --- Configuration ---
 # Define the project root path
@@ -85,35 +109,97 @@ def fetch_top_etf_holdings(etf_ticker, num_stocks):
 
 # --- Data Collection Functions ---
 
-def download_stock_data(tickers, start, end, output_path):
+def download_stock_data(tickers, start, end, output_path, enable_validation=True):
     """
     Downloads OHLCV data using yfinance for the configured list of tickers.
+    
+    Enhanced with data validation and quality checks:
+    - Validates data quality (prices, volumes, dates)
+    - Aligns trading calendars across tickers
+    - Handles stock suspensions
+    - Adjusts for splits/dividends
+    - Imputes missing values
+    - Creates data collection log
+    
+    Args:
+        tickers: List of ticker symbols
+        start: Start date (YYYY-MM-DD)
+        end: End date (YYYY-MM-DD)
+        output_path: Directory to save data
+        enable_validation: Whether to run data validation and cleaning
     
     Saves to: stock_prices_ohlcv_raw.csv
     """
     print(f"\n--- 1. Downloading OHLCV Data for {len(tickers)} stocks... ---")
     
     try:
-        data = yf.download(tickers, start=start, end=end, group_by='ticker')
+        data = yf.download(tickers, start=start, end=end, group_by='ticker', progress=False)
         
         ohlcv_data = pd.DataFrame()
         for ticker in tickers:
-            stock_df = data[ticker].copy()
-            stock_df.columns = [f'{col}_{ticker}' for col in stock_df.columns]
-            
-            if ohlcv_data.empty:
-                ohlcv_data = stock_df
+            if ticker in data.columns.levels[0] if isinstance(data.columns, pd.MultiIndex) else ticker in data:
+                if isinstance(data.columns, pd.MultiIndex):
+                    stock_df = data[ticker].copy()
+                else:
+                    stock_df = data.copy()
+                
+                stock_df.columns = [f'{col}_{ticker}' for col in stock_df.columns]
+                
+                if ohlcv_data.empty:
+                    ohlcv_data = stock_df
+                else:
+                    # Use outer join to ensure all dates are included, handling missing data later
+                    ohlcv_data = ohlcv_data.join(stock_df, how='outer')
             else:
-                # Use outer join to ensure all dates are included, handling missing data later
-                ohlcv_data = ohlcv_data.join(stock_df, how='outer')
+                print(f"  ⚠️  Warning: No data found for {ticker}")
 
+        # Ensure Date index
+        if not isinstance(ohlcv_data.index, pd.DatetimeIndex):
+            ohlcv_data.index = pd.to_datetime(ohlcv_data.index)
+        ohlcv_data.index.name = 'Date'
+        
+        # Data validation and cleaning
+        if enable_validation and VALIDATION_AVAILABLE:
+            print("\n🔧 Running data validation and cleaning...")
+            
+            # 1. Validate data quality
+            validation_results = validate_ohlcv_data(ohlcv_data, tickers)
+            
+            # 2. Align trading calendars
+            ohlcv_data = align_trading_calendars(ohlcv_data, tickers)
+            
+            # 3. Handle stock suspensions
+            ohlcv_data, suspension_report = handle_stock_suspensions(ohlcv_data, tickers)
+            
+            # 4. Handle splits/dividends
+            ohlcv_data = handle_splits_dividends(ohlcv_data, tickers)
+            
+            # 5. Impute missing values
+            ohlcv_data = impute_missing_values(ohlcv_data, tickers, method='forward_fill')
+            
+            # 6. Create data collection log
+            output_path_obj = Path(output_path)
+            create_data_collection_log(
+                output_path_obj, tickers, start, end,
+                validation_results, suspension_report
+            )
+        elif enable_validation and not VALIDATION_AVAILABLE:
+            print("  ⚠️  Validation requested but utilities not available. Skipping validation.")
+        
+        # Save cleaned data
         file_path = os.path.join(output_path, 'stock_prices_ohlcv_raw.csv')
-        ohlcv_data.to_csv(file_path)
-        print(f"✅ OHLCV data saved successfully to: {file_path}")
-        print(f"Data shape: {ohlcv_data.shape}")
+        ohlcv_data.to_csv(file_path, index_label='Date')
+        print(f"\n✅ OHLCV data saved successfully to: {file_path}")
+        print(f"   Data shape: {ohlcv_data.shape}")
+        print(f"   Date range: {ohlcv_data.index.min().date()} to {ohlcv_data.index.max().date()}")
+        
+        return ohlcv_data
         
     except Exception as e:
         print(f"❌ Error downloading OHLCV data: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 def download_fundamental_data(tickers, output_path):
     """
@@ -297,7 +383,12 @@ def main():
     # Step 3: Sentiment and Macro Data (Partially Real VIX, Partially Simulated)
     download_sentiment_data(DATA_RAW_DIR)
 
-    print("\nPhase 1 Raw Data Collection complete. Raw files are in 'data/raw/'.")
+    print("\n" + "="*60)
+    print("Phase 1 Raw Data Collection complete.")
+    print("Raw files are in 'data/raw/'")
+    if VALIDATION_AVAILABLE:
+        print("Data validation log: data/raw/data_collection_log.json")
+    print("="*60)
 
 if __name__ == "__main__":
     # Ensure yfinance and pandas are installed: pip install yfinance pandas requests
