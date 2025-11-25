@@ -320,7 +320,12 @@ results = validate_ticker_data(
 ### 🚀 Next Steps (Priority Actions)
 
 - **Phase 1 – Data Collection (CRITICAL: Rerun with Real Data)**
-  - [ ] **Rerun Phase 1 with real data** in a connected environment (current run used synthetic data due to offline constraints)
+  - [x] **Rerun Phase 1 with real data** in a connected environment ✅ Code updated to prevent synthetic fallback
+    - ✅ Modified `phase1_data_collection.py`: Added `allow_synthetic_fallback=False` to ensure real data only
+    - ✅ Modified `phase1_feature_engineering.py`: Added explicit error handling for empty data
+    - 📖 **Guide**: See [REAL_DATA_COLLECTION_GUIDE.md](REAL_DATA_COLLECTION_GUIDE.md) for step-by-step instructions
+    - **Requirements**: Internet connection, yfinance library
+    - **Steps**: 1) Verify network, 2) Configure dates, 3) Run `python scripts/phase1_data_collection.py`, 4) Verify data quality
   - [x] Align trading calendars across all tickers (handle different market holidays/exchanges) ✅ Implemented in `utils_data_validation.py`
   - [x] Handle stock suspensions: detect missing trading days and forward-fill or mark as invalid ✅ Implemented
   - [x] Handle stock splits/dividends: adjust historical prices using split ratios ✅ Implemented (detects potential splits)
