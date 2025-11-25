@@ -41,10 +41,16 @@ class StockTradingEnv(gym.Env):
         # State Space: [Portfolio Holdings (N)] + [GNN Node Embeddings (N * H)]
         self.NUM_STOCKS = len(self.data_loader['tickers'])
         
-        # Get actual embedding dimension from a sample graph
+        # Get actual embedding dimension from GNN model output
+        # We need to compute this by running a sample through the model
         sample_graph = torch.load(list(DATA_GRAPHS_DIR.glob('graph_t_*.pt'))[0], weights_only=False)
-        self.EMBEDDING_DIM = sample_graph['stock'].x.shape[1]  # Actual input feature dimension
+        sample_graph_tensor = sample_graph.to(device)
+        with torch.no_grad():
+            gnn_model.eval()
+            sample_embeddings = gnn_model.get_embeddings(sample_graph_tensor)
+            self.EMBEDDING_DIM = sample_embeddings.shape[1]  # Actual GNN output dimension (256)
 
+        # State dimension: holdings (N) + flattened embeddings (N * H)
         state_dim = self.NUM_STOCKS + (self.NUM_STOCKS * self.EMBEDDING_DIM)
         
         # Action Space: Buy/Sell/Hold for each stock (Discrete Multi-Dimensional)
