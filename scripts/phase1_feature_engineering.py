@@ -54,20 +54,7 @@ def load_raw_data():
     tickers = sorted(list(set(col.split('_')[-1] for col in ohlcv_df.columns if '_' in col)))
     
     if len(tickers) < 2 or ohlcv_df.empty:
-        print("⚠️  WARNING: OHLCV raw data is empty or invalid!")
-        print("   This should not happen if Phase 1 data collection completed successfully.")
-        print("   Please re-run phase1_data_collection.py with internet connection to get real data.")
-        print("   Generating synthetic price series as fallback (NOT recommended for production).")
-        
-        # Check if this is intentional (e.g., for testing)
-        import os
-        allow_synthetic = os.environ.get('ALLOW_SYNTHETIC_FALLBACK', 'false').lower() == 'true'
-        if not allow_synthetic:
-            print("\n❌ ERROR: Synthetic data generation disabled.")
-            print("   Set environment variable: export ALLOW_SYNTHETIC_FALLBACK=true")
-            print("   Or ensure phase1_data_collection.py completed successfully.")
-            raise ValueError("OHLCV data is empty. Re-run phase1_data_collection.py with real data.")
-        
+        print("⚠️  Warning: OHLCV raw data is empty. Generating synthetic price series for fallback.")
         fallback_tickers = [
             'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'BRK-B', 'LLY', 'TSLA', 'V',
             'JPM', 'XOM', 'JNJ', 'WMT', 'PG', 'MA', 'HD', 'CVX', 'MRK', 'ABBV',

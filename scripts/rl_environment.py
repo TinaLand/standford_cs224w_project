@@ -69,10 +69,28 @@ class StockTradingEnv(gym.Env):
         
         # We need actual prices for calculating returns
         ohlcv_df = pd.read_csv(PROJECT_ROOT / "data" / "raw" / "stock_prices_ohlcv_raw.csv", index_col='Date', parse_dates=True)
+        
+        # Ensure index is datetime
+        if not isinstance(ohlcv_df.index, pd.DatetimeIndex):
+            ohlcv_df.index = pd.to_datetime(ohlcv_df.index)
+        
         trading_dates = sorted(list(set([pd.to_datetime(f.stem.split('_')[-1]) for f in DATA_GRAPHS_DIR.glob('graph_t_*.pt')])))
         
-        # Filter dates for backtesting period
-        backtest_dates = [d for d in trading_dates if start_date <= d <= end_date]
+        # Filter dates for backtesting period and ensure they exist in price data
+        backtest_dates = []
+        for d in trading_dates:
+            if start_date <= d <= end_date:
+                # Check if date exists in price data
+                if d in ohlcv_df.index:
+                    backtest_dates.append(d)
+                else:
+                    # Try to find nearest date
+                    nearest_date = ohlcv_df.index[ohlcv_df.index.get_indexer([d], method='nearest')[0]]
+                    if abs((nearest_date - d).days) <= 1:  # Within 1 day
+                        backtest_dates.append(nearest_date)
+        
+        if not backtest_dates:
+            raise ValueError(f"No valid trading dates found in range {start_date} to {end_date}")
         
         # Get all available tickers (don't limit here, will be limited later)
         all_tickers = [col.split('_')[-1] for col in ohlcv_df.columns if col.startswith('Close_')]
@@ -134,12 +152,35 @@ class StockTradingEnv(gym.Env):
         date_t = self.data_loader['dates'][self.current_step]
         date_t_plus_1 = self.data_loader['dates'][self.current_step + 1]
 
-        prices_t = self.data_loader['prices'].loc[date_t.strftime('%Y-%m-%d')]
-        prices_t_plus_1 = self.data_loader['prices'].loc[date_t_plus_1.strftime('%Y-%m-%d')]
+        # Get prices using datetime index (more robust)
+        prices_df = self.data_loader['prices']
+        
+        # Try direct datetime access first
+        if date_t in prices_df.index:
+            prices_t = prices_df.loc[date_t]
+        else:
+            # Find nearest date
+            nearest_idx = prices_df.index.get_indexer([date_t], method='nearest')[0]
+            prices_t = prices_df.iloc[nearest_idx]
+        
+        if date_t_plus_1 in prices_df.index:
+            prices_t_plus_1 = prices_df.loc[date_t_plus_1]
+        else:
+            # Find nearest date
+            nearest_idx = prices_df.index.get_indexer([date_t_plus_1], method='nearest')[0]
+            prices_t_plus_1 = prices_df.iloc[nearest_idx]
         
         # Get prices for current tickers (Close_TICKER)
-        current_prices = np.array([prices_t[f'Close_{t}'] for t in self.data_loader['tickers']])
-        next_prices = np.array([prices_t_plus_1[f'Close_{t}'] for t in self.data_loader['tickers']])
+        # Handle both Series and DataFrame cases
+        if isinstance(prices_t, pd.Series):
+            current_prices = np.array([prices_t.get(f'Close_{t}', 0.0) for t in self.data_loader['tickers']])
+        else:
+            current_prices = np.array([prices_t[f'Close_{t}'] for t in self.data_loader['tickers']])
+        
+        if isinstance(prices_t_plus_1, pd.Series):
+            next_prices = np.array([prices_t_plus_1.get(f'Close_{t}', 0.0) for t in self.data_loader['tickers']])
+        else:
+            next_prices = np.array([prices_t_plus_1[f'Close_{t}'] for t in self.data_loader['tickers']])
         
         # Portfolio value before action (based on next day's price)
         current_portfolio_value = self.cash + np.sum(self.holdings * next_prices)

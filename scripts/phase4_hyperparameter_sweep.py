@@ -20,12 +20,14 @@ from pathlib import Path
 from datetime import datetime
 import itertools
 import json
+import sys
+
+# Add scripts directory to path for imports
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / 'scripts'))
 
 # Import the Phase 4 training pipeline
-from scripts import phase4_core_training as core
-
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+import phase4_core_training as core
 SWEEP_ROOT = PROJECT_ROOT / "models" / "sweeps"
 
 

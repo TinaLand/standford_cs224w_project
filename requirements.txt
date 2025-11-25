@@ -8,10 +8,13 @@ requests
 pathlib
 
 # Phase 1: Feature Engineering
-# pip install --upgrade pip
-# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-# brew install ta-lib
-ta-lib                 # For technical indicators (RSI, MACD, etc.)
+# Note: TA-Lib requires system library first:
+#   macOS: brew install ta-lib && pip install TA-Lib
+#   Linux: sudo apt-get install ta-lib && pip install TA-Lib
+#   If installation fails, code will use pure Python fallback implementations
+TA-Lib                 # For technical indicators (RSI, MACD, etc.) - Optional, has fallback
+seaborn
+stable_baselines3
 scikit-learn           # For StandardScaler and MinMaxScaler
 scipy                  # For cosine similarity calculation (if needed)
 

@@ -5,8 +5,14 @@ import pandas as pd
 from pathlib import Path
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.logger import configure
 import sys
+
+# Try to import tensorboard, make it optional
+try:
+    import tensorboard
+    TENSORBOARD_AVAILABLE = True
+except ImportError:
+    TENSORBOARD_AVAILABLE = False
 
 # Fix PyTorch serialization for pandas timestamps (PyTorch 2.6+)
 import torch.serialization
@@ -85,10 +91,27 @@ def run_rl_pipeline():
         return
 
     # 2. Define Backtesting Period (Use dynamic dates corresponding to test/evaluation split)
-    # Placeholder: Assuming the test set starts after a certain date (e.g., 85% split)
-    # In a full project, these dates should be read from the Phase 4 training logs.
-    START_DATE = pd.to_datetime('2022-01-01')
-    END_DATE = pd.to_datetime('2024-12-31')
+    # Get actual date range from available graph files (not just price data)
+    import pandas as pd
+    
+    # Get graph file dates (these are what we actually have)
+    graph_files = list(DATA_GRAPHS_DIR.glob('graph_t_*.pt'))
+    if not graph_files:
+        raise ValueError("No graph files found. Run Phase 2 first.")
+    
+    graph_dates = sorted([pd.to_datetime(f.stem.split('_')[-1]) for f in graph_files])
+    graph_start = graph_dates[0]
+    graph_end = graph_dates[-1]
+    
+    # Use last 20% of graph data for backtesting (test set)
+    date_range_days = (graph_end - graph_start).days
+    start_offset_days = int(date_range_days * 0.8)
+    START_DATE = graph_start + pd.Timedelta(days=start_offset_days)
+    END_DATE = graph_end
+    
+    print(f"📅 Backtesting period: {START_DATE.date()} to {END_DATE.date()}")
+    print(f"   (Graph files available: {graph_start.date()} to {graph_end.date()})")
+    print(f"   (Using last {int((date_range_days - start_offset_days) / date_range_days * 100)}% of graph data)")
     
     # 3. Setup Environment
     # stable-baselines3 requires a function to create the environment
@@ -106,16 +129,30 @@ def run_rl_pipeline():
     # 4. RL Agent Setup (PPO)
     print(f"\n--- 2. Setting up PPO Agent (Total Timesteps: {TOTAL_TIMESTEPS}) ---")
     
+    # Configure tensorboard logging (optional)
+    if TENSORBOARD_AVAILABLE:
+        print("✅ TensorBoard logging enabled")
+        tensorboard_log_path = RL_LOG_PATH
+    else:
+        print("⚠️  TensorBoard not available, logging disabled")
+        print("   Install with: pip install tensorboard")
+        tensorboard_log_path = None
+    
     # We use MlpPolicy, which is standard for Gym's discrete action space
     # PPO with MlpPolicy performs better on CPU according to stable-baselines3
-    model = PPO(
-        "MlpPolicy", 
-        vec_env, 
-        verbose=1, 
-        learning_rate=PPO_LEARNING_RATE, 
-        device='cpu',  # Use CPU for better MLP performance
-        tensorboard_log=RL_LOG_PATH
-    )
+    ppo_kwargs = {
+        "policy": "MlpPolicy",
+        "env": vec_env,
+        "verbose": 1,
+        "learning_rate": PPO_LEARNING_RATE,
+        "device": "cpu",  # Use CPU for better MLP performance
+    }
+    
+    # Only add tensorboard_log if tensorboard is available
+    if tensorboard_log_path:
+        ppo_kwargs["tensorboard_log"] = tensorboard_log_path
+    
+    model = PPO(**ppo_kwargs)
     
     # 5. Training
     print("\n🔨 Starting PPO RL Training (GNN-driven features)...")

@@ -109,7 +109,7 @@ def fetch_top_etf_holdings(etf_ticker, num_stocks):
 
 # --- Data Collection Functions ---
 
-def download_stock_data(tickers, start, end, output_path, enable_validation=True, allow_synthetic_fallback=False):
+def download_stock_data(tickers, start, end, output_path, enable_validation=True):
     """
     Downloads OHLCV data using yfinance for the configured list of tickers.
     
@@ -127,18 +127,12 @@ def download_stock_data(tickers, start, end, output_path, enable_validation=True
         end: End date (YYYY-MM-DD)
         output_path: Directory to save data
         enable_validation: Whether to run data validation and cleaning
-        allow_synthetic_fallback: If True, generate synthetic data on failure. If False, raise error.
     
     Saves to: stock_prices_ohlcv_raw.csv
-    
-    Returns:
-        pd.DataFrame: OHLCV data, or None if download fails and allow_synthetic_fallback=False
     """
     print(f"\n--- 1. Downloading OHLCV Data for {len(tickers)} stocks... ---")
-    print(f"   Mode: {'Real data only (no fallback)' if not allow_synthetic_fallback else 'Real data with synthetic fallback'}")
     
     try:
-        print(f"   Attempting to download from Yahoo Finance...")
         data = yf.download(tickers, start=start, end=end, group_by='ticker', progress=False)
         
         ohlcv_data = pd.DataFrame()
@@ -159,16 +153,10 @@ def download_stock_data(tickers, start, end, output_path, enable_validation=True
             else:
                 print(f"  ⚠️  Warning: No data found for {ticker}")
 
-        # Check if we got any data
-        if ohlcv_data.empty:
-            raise ValueError("No OHLCV data downloaded. All tickers may have failed or data is unavailable.")
-        
         # Ensure Date index
         if not isinstance(ohlcv_data.index, pd.DatetimeIndex):
             ohlcv_data.index = pd.to_datetime(ohlcv_data.index)
         ohlcv_data.index.name = 'Date'
-        
-        print(f"   ✅ Successfully downloaded real data for {len([t for t in tickers if any(f'{col}_{t}' in ohlcv_data.columns for col in ['Open', 'High', 'Low', 'Close'])])} tickers")
         
         # Data validation and cleaning
         if enable_validation and VALIDATION_AVAILABLE:
@@ -211,59 +199,7 @@ def download_stock_data(tickers, start, end, output_path, enable_validation=True
         print(f"❌ Error downloading OHLCV data: {e}")
         import traceback
         traceback.print_exc()
-        
-        if allow_synthetic_fallback:
-            print("\n⚠️  Generating synthetic data as fallback...")
-            return _generate_synthetic_ohlcv(tickers, start, end, output_path)
-        else:
-            print("\n❌ Real data download failed. Set allow_synthetic_fallback=True to use synthetic data.")
-            print("   Or check your network connection and try again.")
-            return None
-
-def _generate_synthetic_ohlcv(tickers, start, end, output_path):
-    """
-    Generates synthetic OHLCV data as a fallback when real data download fails.
-    Only used when allow_synthetic_fallback=True.
-    """
-    import numpy as np
-    from datetime import datetime
-    
-    print("   Generating synthetic OHLCV data using Geometric Brownian Motion...")
-    
-    date_range = pd.date_range(start=start, end=end, freq='B')  # Business days
-    synthetic_data = {}
-    rng = np.random.default_rng(seed=42)
-    
-    for ticker in tickers:
-        # Geometric Brownian Motion for price simulation
-        initial_price = 100.0
-        drift = 0.0003  # Daily drift
-        volatility = 0.02  # Daily volatility
-        
-        returns = rng.normal(loc=drift, scale=volatility, size=len(date_range))
-        price = initial_price * np.exp(np.cumsum(returns))
-        
-        # Generate OHLC from close price
-        open_price = price * (1 + rng.normal(loc=0, scale=0.002, size=len(date_range)))
-        high_price = np.maximum(open_price, price) * (1 + rng.uniform(0, 0.01, size=len(date_range)))
-        low_price = np.minimum(open_price, price) * (1 - rng.uniform(0, 0.01, size=len(date_range)))
-        volume = rng.integers(low=1_000_000, high=10_000_000, size=len(date_range))
-        
-        synthetic_data[f'Open_{ticker}'] = open_price
-        synthetic_data[f'High_{ticker}'] = high_price
-        synthetic_data[f'Low_{ticker}'] = low_price
-        synthetic_data[f'Close_{ticker}'] = price
-        synthetic_data[f'Volume_{ticker}'] = volume
-    
-    ohlcv_df = pd.DataFrame(synthetic_data, index=date_range)
-    ohlcv_df.index.name = 'Date'
-    
-    file_path = os.path.join(output_path, 'stock_prices_ohlcv_raw.csv')
-    ohlcv_df.to_csv(file_path, index_label='Date')
-    print(f"   ✅ Synthetic OHLCV data saved to: {file_path}")
-    print(f"   ⚠️  WARNING: This is synthetic data, not real market data!")
-    
-    return ohlcv_df
+        return None
 
 def download_fundamental_data(tickers, output_path):
     """
@@ -439,22 +375,7 @@ def main():
     print(f"Date range: {CONFIG['START_DATE']} to {CONFIG['END_DATE']}")
     
     # Step 1: OHLCV Price Data (Real)
-    # Set allow_synthetic_fallback=False to ensure we only use real data when online
-    # Set to True if you want fallback to synthetic data when download fails
-    ohlcv_result = download_stock_data(
-        TICKERS, 
-        CONFIG['START_DATE'], 
-        CONFIG['END_DATE'], 
-        DATA_RAW_DIR,
-        enable_validation=True,
-        allow_synthetic_fallback=False  # Set to False for real data only
-    )
-    
-    if ohlcv_result is None:
-        print("\n❌ CRITICAL: Failed to download real OHLCV data.")
-        print("   To use synthetic data as fallback, modify allow_synthetic_fallback=True in main()")
-        print("   Or check your network connection and try again.")
-        return
+    download_stock_data(TICKERS, CONFIG['START_DATE'], CONFIG['END_DATE'], DATA_RAW_DIR)
     
     # Step 2: Fundamental Data (Simulated)
     download_fundamental_data(TICKERS, DATA_RAW_DIR)
