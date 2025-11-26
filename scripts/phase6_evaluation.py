@@ -366,65 +366,220 @@ def run_final_backtest(gnn_model, rl_agent_path: Path) -> Dict[str, Any]:
 
 # --- 3. Ablation Studies (The Research Component) ---
 
+def modify_graph_for_ablation(data, config: Dict) -> torch.Tensor:
+    """
+    Modify graph data for ablation study by removing specific edge types.
+    
+    Args:
+        data: HeteroData graph object
+        config: Dictionary with ablation configuration
+            - 'remove_edges': List of edge types to remove (e.g., ['rolling_correlation'])
+            - 'disable_pearl': Boolean to disable PEARL (handled at model level)
+    
+    Returns:
+        Modified HeteroData object
+    """
+    from torch_geometric.data import HeteroData
+    
+    # Create a copy of the data
+    modified_data = HeteroData()
+    modified_data['stock'].x = data['stock'].x.clone()
+    
+    # Copy tickers if present
+    if 'tickers' in data:
+        modified_data['tickers'] = data['tickers']
+    
+    # Add edges based on config
+    remove_edges = config.get('remove_edges', [])
+    
+    for edge_type in data.edge_index_dict.keys():
+        if edge_type not in remove_edges:
+            # Keep this edge type
+            modified_data[edge_type].edge_index = data[edge_type].edge_index.clone()
+            if hasattr(data[edge_type], 'edge_attr'):
+                modified_data[edge_type].edge_attr = data[edge_type].edge_attr.clone()
+    
+    return modified_data
+
+
+def evaluate_ablation_gnn(gnn_model, test_dates, targets_dict, tickers, config: Dict) -> Dict[str, Any]:
+    """
+    Evaluate GNN model with ablation configuration (modified graph structure).
+    
+    This is a faster alternative to full retraining - we evaluate the existing model
+    on modified graphs to see the impact of removing edge types.
+    """
+    from phase4_core_training import load_graph_data
+    
+    all_predictions = []
+    all_targets = []
+    all_probs = []
+    
+    gnn_model.eval()
+    with torch.no_grad():
+        for date in tqdm(test_dates, desc=f"Ablation: {config.get('name', 'unknown')}"):
+            data = load_graph_data(date)
+            target = targets_dict.get(date)
+            
+            if data and target is not None:
+                # Modify graph according to ablation config
+                modified_data = modify_graph_for_ablation(data, config)
+                
+                # Get predictions
+                out = gnn_model(modified_data.to(DEVICE))
+                probs = F.softmax(out, dim=1)
+                preds = out.argmax(dim=1).cpu().numpy()
+                
+                all_predictions.append(preds)
+                all_targets.append(target.cpu().numpy())
+                all_probs.append(probs.cpu().numpy())
+    
+    if len(all_predictions) == 0:
+        return {}
+    
+    # Calculate metrics
+    predictions_array = np.array(all_predictions)
+    targets_array = np.array(all_targets)
+    probs_array = np.array(all_probs)
+    
+    from sklearn.metrics import accuracy_score, f1_score
+    flat_predictions = predictions_array.flatten()
+    flat_targets = targets_array.flatten()
+    
+    accuracy = accuracy_score(flat_targets, flat_predictions)
+    f1 = f1_score(flat_targets, flat_predictions, average='macro')
+    
+    # Calculate Precision@Top-K
+    precision_k = calculate_precision_at_topk(probs_array, targets_array, k=10)
+    
+    return {
+        'accuracy': accuracy,
+        'f1_score': f1,
+        'precision_at_top10': precision_k
+    }
+
+
 def train_and_evaluate_ablation(ablation_name: str, config_modifier: Dict) -> Dict[str, Any]:
     """
-    Re-trains the GNN/RL pipeline with a modified configuration (ablation) 
-    and evaluates its performance on the test set.
+    Evaluate ablation study by modifying graph structure and evaluating performance.
+    
+    This version uses the existing trained model and evaluates on modified graphs,
+    which is faster than full retraining but still provides meaningful insights.
+    
+    Args:
+        ablation_name: Name of the ablation study
+        config_modifier: Configuration dict with:
+            - 'remove_edges': List of edge types to remove
+            - 'disable_pearl': Boolean (requires model modification, not implemented here)
+    
+    Returns:
+        Dictionary with evaluation metrics
     """
-    print(f"\n--- 3. Running Ablation: {ablation_name} ---")
+    print(f"\n--- Running Ablation: {ablation_name} ---")
+    print(f"   Config: {config_modifier}")
     
-    # NOTE: This function requires running Phase 4 (GNN Retraining) and 
-    # Phase 5 (RL Retraining) within this loop, which is very time-consuming.
+    # Load model and test data
+    gnn_model = load_gnn_model_for_rl()
     
-    # --- Step A: Modify GNN/RL Config ---
-    # In a full run, you would modify the input data or the GNN model structure here.
+    # Get test dates and tickers
+    from phase4_core_training import create_target_labels, _read_time_series_csv, OHLCV_RAW_FILE
+    import pandas as pd
     
-    # 1. Modify the GNN Model (e.g., disable PEARL embeddings)
-    #    config_modifier could be a flag like 'PEARL_DISABLED'
+    graph_files = sorted(list((PROJECT_ROOT / "data" / "graphs").glob('graph_t_*.pt')))
+    all_dates = [pd.to_datetime(f.stem.split('_')[-1]) for f in graph_files]
+    split_85_idx = int(len(all_dates) * 0.85)
+    test_dates = all_dates[split_85_idx:]
     
-    # 2. Rerun GNN Training (Phase 4 Logic)
-    #    (Placeholder for running a dedicated GNN retraining function)
-
-    # 3. Rerun RL Training (Phase 5 Logic)
-    #    (Placeholder for running a dedicated RL retraining function)
+    sample_graph = torch.load(graph_files[0], weights_only=False)
+    if 'tickers' in sample_graph:
+        tickers = sample_graph['tickers']
+    else:
+        ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
+        tickers = [col.replace('Close_', '') for col in ohlcv_df.columns if col.startswith('Close_')]
     
-    # --- Step B: Run Backtest with Ablated Model ---
+    targets_dict = create_target_labels(tickers, all_dates, lookahead_days=5)
     
-    # Placeholder: Assuming we have a path to the ablated RL agent
-    # abl_rl_path = MODELS_DIR / f'abl_{ablation_name}_agent.zip'
+    # Add name to config
+    config_modifier['name'] = ablation_name
     
-    # For demonstration, return dummy results based on the expected effect
-    expected_sharpe = 0.85 if 'NoPEARL' in ablation_name else 1.25 # Assume PE is beneficial
+    # Evaluate with modified graphs
+    metrics = evaluate_ablation_gnn(gnn_model, test_dates, targets_dict, tickers, config_modifier)
+    
+    print(f"   Results: Accuracy={metrics.get('accuracy', 0):.4f}, "
+          f"F1={metrics.get('f1_score', 0):.4f}, "
+          f"Precision@Top-10={metrics.get('precision_at_top10', 0):.4f}")
     
     return {
         'strategy': ablation_name,
-        'sharpe_ratio': expected_sharpe * np.random.uniform(0.9, 1.1),
-        'cumulative_return': 0.20 * np.random.uniform(0.9, 1.1)
+        **metrics
     }
 
 def run_ablation_studies():
     """Defines and runs the full set of ablation studies from the proposal."""
     
+    print("\n" + "=" * 50)
+    print("🔬 Starting Ablation Studies")
+    print("=" * 50)
+    print("Note: Using existing model on modified graphs (faster than full retraining)")
+    print("=" * 50)
+    
+    # Define ablation studies based on edge types available
+    # Edge types: 'rolling_correlation', 'fund_similarity', 'sector_industry', 'supply_competitor'
     ablations = [
-        {'name': 'Full_Model', 'config': {'PEARL': True, 'CORR_EDGE': True, 'FUND_EDGE': True}},
-        {'name': 'Abl_NoPEARL', 'config': {'PEARL': False}},                                   # Proves PEARL value
-        {'name': 'Abl_OnlyStatic', 'config': {'DYNAMIC_EDGE': False}},                         # Proves dynamic edge value
-        {'name': 'Abl_NoFundSim', 'config': {'FUND_EDGE': False}},                            # Proves fundamental edge value
-        {'name': 'Abl_FixedLaplacian', 'config': {'PEARL': False, 'FIXED_PE': True}},        # Proves PEARL > Fixed PE
+        {
+            'name': 'Full_Model', 
+            'config': {'remove_edges': []}  # No edges removed - baseline
+        },
+        {
+            'name': 'Abl_NoCorrelation', 
+            'config': {'remove_edges': ['rolling_correlation']}  # Remove dynamic correlation edges
+        },
+        {
+            'name': 'Abl_NoFundSim', 
+            'config': {'remove_edges': ['fund_similarity']}  # Remove fundamental similarity edges
+        },
+        {
+            'name': 'Abl_NoStatic', 
+            'config': {'remove_edges': ['sector_industry', 'supply_competitor']}  # Remove all static edges
+        },
+        {
+            'name': 'Abl_OnlyCorrelation', 
+            'config': {'remove_edges': ['fund_similarity', 'sector_industry', 'supply_competitor']}  # Only correlation
+        },
+        {
+            'name': 'Abl_OnlyFundSim', 
+            'config': {'remove_edges': ['rolling_correlation', 'sector_industry', 'supply_competitor']}  # Only fund sim
+        },
     ]
     
     ablation_results = []
     
-    # Execute each ablation (This section is the most time-consuming)
+    # Execute each ablation
     for abl in ablations:
-        result = train_and_evaluate_ablation(abl['name'], abl['config'])
-        ablation_results.append(result)
+        try:
+            result = train_and_evaluate_ablation(abl['name'], abl['config'])
+            ablation_results.append(result)
+        except Exception as e:
+            print(f"⚠️  Error in ablation {abl['name']}: {e}")
+            import traceback
+            traceback.print_exc()
+            continue
 
-    ablation_df = pd.DataFrame(ablation_results)
-    ablation_df.to_csv(RESULTS_DIR / 'ablation_results.csv', index=False)
-    
-    print("\n✅ Ablation Studies Complete. Results saved.")
-    return ablation_df
+    if ablation_results:
+        ablation_df = pd.DataFrame(ablation_results)
+        ablation_df.to_csv(RESULTS_DIR / 'ablation_results.csv', index=False)
+        
+        print("\n" + "=" * 50)
+        print("✅ Ablation Studies Complete. Results saved.")
+        print("=" * 50)
+        print("\n📊 Ablation Results Summary:")
+        print(ablation_df[['strategy', 'accuracy', 'f1_score', 'precision_at_top10']].to_string(index=False))
+        print(f"\n📁 Results saved to: {RESULTS_DIR / 'ablation_results.csv'}")
+        
+        return ablation_df
+    else:
+        print("❌ No ablation results generated")
+        return pd.DataFrame()
 
 
 # --- 4. Main Execution ---
@@ -492,9 +647,17 @@ def main():
         metrics_df = pd.DataFrame()
 
     # 3. Run Ablation Studies
-    # NOTE: This step must be run with sufficient GPU/time resources.
-    # ablation_df = run_ablation_studies() 
-    # print(f"\n📈 ABLATION STUDY RESULTS:\n{ablation_df}")
+    print("\n" + "=" * 50)
+    print("📊 Step 3: Ablation Studies")
+    print("=" * 50)
+    try:
+        ablation_df = run_ablation_studies()
+        if not ablation_df.empty:
+            print(f"\n📈 ABLATION STUDY RESULTS:\n{ablation_df}")
+    except Exception as e:
+        print(f"⚠️  Ablation studies failed: {e}")
+        import traceback
+        traceback.print_exc()
     
     print("\n" + "=" * 50)
     print("✅ Project Execution Finalized!")
