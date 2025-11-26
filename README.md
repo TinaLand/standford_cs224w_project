@@ -342,14 +342,18 @@ results = validate_ticker_data(
 - [x] Early stopping & LR scheduler ✅ Implemented
 - [x] TensorBoard logging ✅ ROC-AUC, confusion matrix
 
-#### Phase 4 – Core Transformer ✅
+#### Phase 4 – Core Transformer ⚠️ (70% Complete)
 - [x] PEARL embedding component ✅ `components/pearl_embedding.py`
 - [x] Relation-aware aggregation ✅ Edge-type-specific attention
 - [x] Mini-batch training ✅ Neighbor sampling support
 - [x] AMP & gradient clipping ✅ Stability improvements
-- [x] Hyperparameter sweep ✅ `phase4_hyperparameter_sweep.py`
+- [x] Hyperparameter sweep script ✅ `phase4_hyperparameter_sweep.py`
+- [ ] **TODO**: Run complete Phase 4 training and verify convergence
+- [ ] **TODO**: Run hyperparameter sweep and find optimal configuration
+- [ ] **TODO**: Compare performance with Phase 3 baseline model
+- [ ] **TODO**: Ensure model is fully trained and saved correctly
 
-#### Phase 5 – RL Integration ✅ Core Framework
+#### Phase 5 – RL Integration ⚠️ (50% Complete)
 - [x] Reward shaping with transaction costs ✅ 0.1% per trade
 - [x] SB3 (PPO) integration ✅ `phase5_rl_integration.py`
 - [x] Portfolio constraints ✅ Basic position sizing
@@ -357,18 +361,31 @@ results = validate_ticker_data(
 - [x] GNN embeddings as state ✅ Model integration
 - [x] Discrete action space ✅ MultiDiscrete([3] * N)
 - [x] Reward function ✅ Return-based (can be enhanced)
+- [ ] **TODO**: Run RL training (`python scripts/phase5_rl_integration.py`)
+- [ ] **TODO**: Monitor training process and verify convergence
+- [ ] **TODO**: Validate saved RL agent model
+- [ ] **TODO**: Test RL agent performance on test set
 - [ ] **Enhancement**: Add `get_embeddings()` method to Phase 4 model
 - [ ] **Enhancement**: Improve reward with Sharpe ratio
 - [ ] **Enhancement**: Advanced portfolio constraints
-- [ ] **Testing**: Run Phase 5 training and validate performance
 
-#### Phase 6 – Evaluation ✅ Basic Framework
+#### Phase 6 – Evaluation ⚠️ (40% Complete)
 - [x] Financial metrics calculation ✅ Sharpe, Max Drawdown, Returns
-- [x] Ablation studies framework ✅ `run_ablation_studies()`
-- [x] Final backtesting ✅ `run_final_backtest()`
-- [ ] **Visualization**: Equity curve, drawdown, rolling Sharpe plots
+- [x] Ablation studies framework ✅ `run_ablation_studies()` (structure exists)
+- [x] Final backtesting ✅ `run_final_backtest()` (structure exists)
+- [ ] **TODO**: Implement complete ablation study logic
+  - [ ] Edge type ablation (remove correlation/fundamental/sector edges)
+  - [ ] PEARL ablation (compare with/without PEARL embeddings)
+  - [ ] Threshold sensitivity analysis (correlation thresholds)
+- [ ] **TODO**: Implement visualization scripts
+  - [ ] t-SNE/UMAP embedding visualization
+  - [ ] Attention weights heatmap visualization
+  - [ ] Role analysis visualization (Hubs, Bridges, Role Twins)
+- [ ] **TODO**: Implement missing metrics
+  - [ ] Precision@Top-K
+  - [ ] Information Coefficient (IC)
+- [ ] **TODO**: Run complete evaluation pipeline
 - [ ] **Baseline Comparison**: Buy-and-hold, ETF, equal-weight
-- [ ] **Interpretability**: Attention weights visualization
 - [ ] **Analysis**: Failure case investigation
 
 #### Data & Infrastructure ✅
@@ -384,6 +401,74 @@ results = validate_ticker_data(
 - [ ] Docker/DevContainer
 - [ ] Caching system
 - [ ] Hardware requirements documentation
+
+---
+
+## 🚧 Remaining Tasks (High Priority)
+
+### Phase 4 Completion
+- [ ] **Run complete Phase 4 training**
+  ```bash
+  python scripts/phase4_core_training.py
+  ```
+  - Verify model convergence
+  - Ensure performance exceeds baseline
+  - Save trained model properly
+
+- [ ] **Run hyperparameter sweep**
+  ```bash
+  python scripts/phase4_hyperparameter_sweep.py
+  ```
+  - Find optimal hyperparameters
+  - Document best configuration
+
+### Phase 5 Completion
+- [ ] **Run RL training**
+  ```bash
+  python scripts/phase5_rl_integration.py
+  ```
+  - Monitor training progress
+  - Verify convergence
+  - Check model saving
+
+- [ ] **Validate RL agent performance**
+  - Run agent on test set
+  - Calculate financial metrics
+  - Compare with baseline strategies
+
+### Phase 6 Completion
+- [ ] **Implement ablation studies**
+  - Complete `train_and_evaluate_ablation()` function in `phase6_evaluation.py`
+  - Implement edge type ablation
+  - Implement PEARL ablation
+  - Run all ablation experiments
+
+- [ ] **Create visualization scripts**
+  - Create `scripts/visualization.py`
+  - Implement t-SNE/UMAP visualization
+  - Implement attention weight visualization
+  - Implement role analysis visualization
+
+- [ ] **Implement missing metrics**
+  - Precision@Top-K calculation
+  - Information Coefficient (IC) calculation
+
+- [ ] **Run complete evaluation**
+  ```bash
+  python scripts/phase6_evaluation.py
+  ```
+  - Generate final metrics
+  - Generate ablation study results
+  - Generate visualization plots
+
+### Phase 7 (Optional - If Time Permits)
+- [ ] **Dynamic graph updates**
+  - Implement efficient dynamic graph update mechanism
+  - Test performance improvements
+
+- [ ] **Multi-agent RL**
+  - Design multi-agent architecture
+  - Implement and test
 
 ---
 
@@ -412,6 +497,31 @@ results = validate_ticker_data(
   - macOS OpenMP shared memory errors: set `export OMP_NUM_THREADS=1` if needed.
   - `torch-scatter` / `torch-sparse` warnings are optional; PyG falls back to pure PyTorch.
   - For PyTorch ≥ 2.6, ensure `torch.serialization.add_safe_globals([...])` and `weights_only=False` when loading graphs/models.
+
+## 📊 Project Status Summary
+
+### Implementation Status by Phase
+
+| Phase | Status | Completion | Key Deliverables |
+|-------|--------|------------|------------------|
+| **Phase 1** | ✅ Complete | 100% | Data collection, feature engineering, edge parameters |
+| **Phase 2** | ✅ Complete | 100% | 2,467 graphs built, Top-K sparsification |
+| **Phase 3** | ✅ Complete | 100% | Baseline GAT model trained, metrics recorded |
+| **Phase 4** | ⚠️ Partial | 70% | Model defined, needs full training run |
+| **Phase 5** | ⚠️ Partial | 50% | Framework ready, needs training execution |
+| **Phase 6** | ⚠️ Partial | 40% | Framework exists, needs implementation & visualization |
+| **Phase 7** | ❌ Not Started | 0% | Optional extensions |
+
+### Critical Next Steps
+
+1. **Phase 4**: Run complete training and verify model performance
+2. **Phase 5**: Execute RL training and validate agent learning
+3. **Phase 6**: Implement ablation studies and visualization
+4. **Phase 6**: Run complete evaluation pipeline
+
+See [Remaining Tasks](#-remaining-tasks-high-priority) section below for detailed checklist.
+
+---
 
 ## Proposal-Aligned TODOs (From CS224W Project Proposal)
 
