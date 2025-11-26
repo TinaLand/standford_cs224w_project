@@ -383,7 +383,11 @@ results = validate_ticker_data(
   - [x] Edge type ablation ✅ Removed correlation/fundamental/sector edges
   - [x] Results saved ✅ `results/ablation_results.csv`
   - [ ] **Note**: Full retraining for each ablation would require more time/resources
-- [ ] **Baseline Comparison**: Buy-and-hold, ETF, equal-weight
+- [x] **Baseline Comparison** ✅ Implemented and executed
+  - Buy-and-Hold: Sharpe 2.18, Return 83.13%
+  - Equal-Weight (daily/weekly): Sharpe 2.13-2.14, Return 65-66%
+  - RL Agent: Sharpe 1.98, Return 45.5%, Max DD 6.85% (better risk control)
+  - Results: `results/comprehensive_strategy_comparison.csv`
 - [ ] **Analysis**: Failure case investigation
 
 #### Data & Infrastructure ✅
@@ -510,7 +514,7 @@ results = validate_ticker_data(
 ### Remaining Optional Tasks
 
 - [ ] **Ablation studies**: Full implementation (framework exists)
-- [ ] **Baseline comparison**: Buy-and-hold, equal-weight strategies
+- [x] **Baseline comparison** ✅ Buy-and-hold, equal-weight strategies implemented
 - [ ] **Hyperparameter sweep**: Further optimization
 
 See [Remaining Tasks](#-remaining-tasks-high-priority) section below for detailed checklist.
