@@ -34,8 +34,19 @@ NUM_LAYERS = 2                  # Number of layers
 NUM_HEADS = 4                   # Number of attention heads
 OUT_CHANNELS = 2                # Binary classification: Up/Down
 LEARNING_RATE = 0.0005
-NUM_EPOCHS = 1                 # Increased epochs for complex model
+NUM_EPOCHS = 30                 # Increased epochs for complex model (with early stopping)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# Early Stopping Configuration
+ENABLE_EARLY_STOPPING = True
+EARLY_STOP_PATIENCE = 5         # Stop if no improvement for 5 epochs
+EARLY_STOP_MIN_DELTA = 0.0001   # Minimum improvement threshold
+
+# Learning Rate Scheduler Configuration
+ENABLE_LR_SCHEDULER = True
+LR_SCHEDULER_PATIENCE = 3       # Reduce LR after 3 epochs without improvement
+LR_SCHEDULER_FACTOR = 0.5       # Multiply LR by this factor
+LR_SCHEDULER_MIN_LR = 1e-6      # Minimum learning rate
 
 # --- Helper Utilities ---
 
@@ -459,6 +470,20 @@ def run_training_pipeline():
     scaler = torch.cuda.amp.GradScaler(enabled=ENABLE_AMP)
     model_path = MODELS_DIR / MODEL_SAVE_NAME
     
+    # Learning Rate Scheduler
+    if ENABLE_LR_SCHEDULER:
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode='max',  # Maximize F1 score
+            factor=LR_SCHEDULER_FACTOR,
+            patience=LR_SCHEDULER_PATIENCE,
+            min_lr=LR_SCHEDULER_MIN_LR,
+            verbose=True
+        )
+        print(f"📉 LR Scheduler enabled: ReduceLROnPlateau (patience={LR_SCHEDULER_PATIENCE}, factor={LR_SCHEDULER_FACTOR})")
+    else:
+        scheduler = None
+    
     # 4.1. Mini-batch Training Setup (if enabled and available)
     use_mini_batch = ENABLE_MINI_BATCH and MINI_BATCH_AVAILABLE
     if use_mini_batch:
@@ -482,12 +507,19 @@ def run_training_pipeline():
     # 5. Training Loop
     print("\n🔨 Starting Sequential Training...")
     best_val_f1 = 0.0
+    epochs_without_improvement = 0
+    training_history = {
+        'train_loss': [],
+        'val_f1': [],
+        'learning_rate': []
+    }
     
     for epoch in range(1, NUM_EPOCHS + 1):
         total_loss = 0
+        num_train_batches = 0
         
         # --- Train Phase ---
-        for date in tqdm(train_dates, desc=f"Epoch {epoch} Training"):
+        for date in tqdm(train_dates, desc=f"Epoch {epoch}/{NUM_EPOCHS} Training"):
             data = load_graph_data(date)
             target = targets_dict.get(date)
             if data and target is not None:
@@ -514,12 +546,13 @@ def run_training_pipeline():
                         max_grad_norm=GRAD_CLIP_MAX_NORM
                     )
                 total_loss += loss
+                num_train_batches += 1
         
-        avg_loss = total_loss / max(len(train_dates), 1)
+        avg_loss = total_loss / max(num_train_batches, 1)
 
         # --- Validation Phase ---
         val_f1s = []
-        for date in val_dates:
+        for date in tqdm(val_dates, desc=f"Epoch {epoch}/{NUM_EPOCHS} Validation", leave=False):
             data = load_graph_data(date)
             target = targets_dict.get(date)
             if data and target is not None:
@@ -531,14 +564,39 @@ def run_training_pipeline():
                 val_f1s.append(f1)
         
         avg_val_f1 = float(np.mean(val_f1s)) if val_f1s else 0.0
+        current_lr = optimizer.param_groups[0]['lr']
+        
+        # Update learning rate scheduler
+        if scheduler is not None:
+            scheduler.step(avg_val_f1)
+            new_lr = optimizer.param_groups[0]['lr']
+            if new_lr < current_lr:
+                print(f"  📉 LR reduced: {current_lr:.2e} -> {new_lr:.2e}")
 
-        print(f"Epoch {epoch:02d} | Train Loss: {avg_loss:.4f} | Val F1: {avg_val_f1:.4f}")
+        # Record history
+        training_history['train_loss'].append(avg_loss)
+        training_history['val_f1'].append(avg_val_f1)
+        training_history['learning_rate'].append(current_lr)
+
+        print(f"Epoch {epoch:02d}/{NUM_EPOCHS} | Train Loss: {avg_loss:.4f} | Val F1: {avg_val_f1:.4f} | LR: {current_lr:.2e}")
 
         # Save best model based on F1 score
-        if avg_val_f1 > best_val_f1:
+        improvement = avg_val_f1 - best_val_f1
+        if improvement > EARLY_STOP_MIN_DELTA:
             best_val_f1 = avg_val_f1
+            epochs_without_improvement = 0
             torch.save(model.state_dict(), model_path)
-            print(f"  --> Model Saved (New Best F1: {best_val_f1:.4f})")
+            print(f"  ✅ Model Saved (New Best F1: {best_val_f1:.4f}, Improvement: {improvement:.4f})")
+        else:
+            epochs_without_improvement += 1
+            if improvement > 0:
+                print(f"  ⚠️  No significant improvement (delta: {improvement:.4f} < {EARLY_STOP_MIN_DELTA})")
+        
+        # Early stopping check
+        if ENABLE_EARLY_STOPPING and epochs_without_improvement >= EARLY_STOP_PATIENCE:
+            print(f"\n🛑 Early stopping triggered after {epoch} epochs (no improvement for {EARLY_STOP_PATIENCE} epochs)")
+            print(f"   Best validation F1: {best_val_f1:.4f}")
+            break
     
     # 6. Testing (Final Evaluation)
     if model_path.exists():
