@@ -350,8 +350,8 @@ results = validate_ticker_data(
 - [x] Hyperparameter sweep script ✅ `phase4_hyperparameter_sweep.py`
 - [x] **Complete training** ✅ Trained for 6 epochs (early stopped), Test F1: 0.6725
 - [x] **Model saved** ✅ `models/core_transformer_model.pt`
+- [x] **Baseline comparison** ✅ Compared with Phase 3, results in `results/phase3_vs_phase4_comparison.csv`
 - [ ] **Optional**: Run hyperparameter sweep for further optimization
-- [ ] **Optional**: Compare performance with Phase 3 baseline model
 
 #### Phase 5 – RL Integration ✅ (100% Complete)
 - [x] Reward shaping with transaction costs ✅ 0.1% per trade
