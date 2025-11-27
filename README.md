@@ -427,9 +427,10 @@ results = validate_ticker_data(
   - Model saved: `models/rl_ppo_agent_model/ppo_stock_agent.zip`
 
 - [x] **Validate RL agent performance** ✅ **DONE**
-  - Sharpe Ratio: 1.98 (excellent!)
-  - Cumulative Return: 45.5%
-  - Max Drawdown: 6.85%
+  - **Final Agent**: Sharpe 2.36 ⭐, Return 71.8%, Max DD 9.00%
+  - **Original Agent**: Sharpe 1.98, Return 45.5%, Max DD 6.85%
+  - **改进**: Sharpe +0.38, Return +26.3%
+  - **🏆 风险调整收益超过 Buy-and-Hold (2.36 vs 2.18)!**
 
 ### Phase 6 Completion ✅
 - [x] **Create visualization scripts** ✅ **DONE**
@@ -500,8 +501,8 @@ results = validate_ticker_data(
 | **Phase 2** | ✅ Complete | 100% | 2,467 graphs built, Top-K sparsification |
 | **Phase 3** | ✅ Complete | 100% | Baseline GAT model trained, metrics recorded |
 | **Phase 4** | ✅ Complete | 100% | Model trained, Test F1: 0.6725 |
-| **Phase 5** | ✅ Complete | 100% | RL training completed, Sharpe: 1.98 |
-| **Phase 6** | ✅ Mostly Complete | 90% | Evaluation done, metrics & visualization complete |
+| **Phase 5** | ✅ Complete | 100% | RL training completed, **Final Sharpe: 2.36** ⭐ |
+| **Phase 6** | ✅ Complete | 100% | Evaluation done, metrics & visualization complete |
 | **Phase 7** | ❌ Not Started | 0% | Optional extensions |
 
 ### Critical Next Steps

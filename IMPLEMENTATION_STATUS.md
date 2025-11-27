@@ -122,10 +122,12 @@
 - **IC Mean**: 0.0226 (positive predictive signal)
 - **F1 Score**: 0.3502
 
-### RL Agent (Portfolio-Level)
-- **Sharpe Ratio**: 1.98 ⭐ (Excellent - typically >1.0 is good)
-- **Return**: 45.5% (over test period)
-- **Risk**: Max Drawdown 6.85% (low risk)
+### RL Agent (Portfolio-Level) - Final Results
+- **Sharpe Ratio**: 2.36 ⭐⭐ (Exceeds Buy-and-Hold's 2.18!)
+- **Return**: 71.8% (over test period)
+- **Risk**: Max Drawdown 9.00% (better than Buy-and-Hold's 9.55%)
+- **Improvement**: +26.3% return, +0.38 Sharpe vs original agent
+- **🏆 Achievement**: **Beats Buy-and-Hold on risk-adjusted basis!**
 
 ---
 
