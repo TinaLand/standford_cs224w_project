@@ -1,0 +1,67 @@
+{
+  "transaction_cost_sensitivity": {
+    "0.0005": {
+      "mean_return": 0.09453527761529701,
+      "std_return": 0.0,
+      "mean_sharpe": 2.4349711916620818,
+      "std_sharpe": 0.0,
+      "n_episodes": 3
+    },
+    "0.001": {
+      "mean_return": 0.09453527761529701,
+      "std_return": 0.0,
+      "mean_sharpe": 2.4349711916620818,
+      "std_sharpe": 0.0,
+      "n_episodes": 3
+    },
+    "0.0015": {
+      "mean_return": 0.09453527761529701,
+      "std_return": 0.0,
+      "mean_sharpe": 2.4349711916620818,
+      "std_sharpe": 0.0,
+      "n_episodes": 3
+    },
+    "0.002": {
+      "mean_return": 0.09453527761529701,
+      "std_return": 0.0,
+      "mean_sharpe": 2.4349711916620818,
+      "std_sharpe": 0.0,
+      "n_episodes": 3
+    },
+    "0.003": {
+      "mean_return": 0.09453527761529701,
+      "std_return": 0.0,
+      "mean_sharpe": 2.4349711916620818,
+      "std_sharpe": 0.0,
+      "n_episodes": 3
+    }
+  },
+  "parameter_sensitivity": {},
+  "slippage_impact": {
+    "0.0": {
+      "mean_return": 0.09453527761529701,
+      "std_return": 0.0,
+      "n_episodes": 3
+    },
+    "0.0005": {
+      "mean_return": 0.09453527761529701,
+      "std_return": 0.0,
+      "n_episodes": 3
+    },
+    "0.001": {
+      "mean_return": 0.09453527761529701,
+      "std_return": 0.0,
+      "n_episodes": 3
+    },
+    "0.0015": {
+      "mean_return": 0.09453527761529701,
+      "std_return": 0.0,
+      "n_episodes": 3
+    },
+    "0.002": {
+      "mean_return": 0.09453527761529701,
+      "std_return": 0.0,
+      "n_episodes": 3
+    }
+  }
+}

@@ -101,13 +101,16 @@ class SectorAgent:
         # For now, we'll create a dummy env to initialize the agent
         from stable_baselines3.common.env_util import DummyVecEnv
         
+        num_stocks = self.num_stocks  # Use instance variable
+        
         def dummy_env_factory():
             from gymnasium import spaces
             import gymnasium as gym
             
             class DummyEnv(gym.Env):
-                def __init__(self):
+                def __init__(self, num_stocks=50):
                     super().__init__()
+                    self.num_stocks = num_stocks
                     self.observation_space = spaces.Box(
                         low=-np.inf, high=np.inf, 
                         shape=(self.num_stocks * 10,), dtype=np.float32
@@ -120,7 +123,7 @@ class SectorAgent:
                 def step(self, action):
                     return np.zeros(self.observation_space.shape), 0.0, False, False, {}
             
-            return DummyEnv()
+            return DummyEnv(num_stocks=num_stocks)
         
         vec_env = DummyVecEnv([dummy_env_factory])
         

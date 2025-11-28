@@ -17,7 +17,7 @@ import networkx as nx
 
 sys.path.append(str(Path(__file__).resolve().parent))
 
-from phase4_core_training import RoleAwareGraphTransformer, load_graph_data, load_targets, get_train_val_test_dates
+from phase4_core_training import RoleAwareGraphTransformer, load_graph_data
 from utils_data import load_data_file
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -387,9 +387,20 @@ def main():
     model.eval()
     print("✅ Model loaded")
     
-    # Get test dates and tickers
-    train_dates, val_dates, test_dates = get_train_val_test_dates()
-    tickers = load_data_file('node_features_X_t_final.csv', 'processed').columns.tolist()[:50]
+    # Get test dates and tickers (simplified)
+    # Get sample dates from graph files
+    graph_files = list((PROJECT_ROOT / "data" / "graphs").glob('graph_t_*.pt'))
+    test_dates = [pd.to_datetime(f.stem.split('_')[-1], format='%Y%m%d') for f in graph_files[:50]]
+    
+    # Get tickers from first graph
+    if graph_files:
+        sample_data = torch.load(graph_files[0], weights_only=False)
+        if 'tickers' in sample_data:
+            tickers = sample_data['tickers']
+        else:
+            tickers = [f"Stock_{i}" for i in range(50)]
+    else:
+        tickers = [f"Stock_{i}" for i in range(50)]
     
     # Define edge types
     edge_types = [

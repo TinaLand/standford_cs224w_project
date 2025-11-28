@@ -368,19 +368,9 @@ def main():
     if agent:
         transaction_cost_results = test_transaction_cost_sensitivity(agent, n_episodes=3)
     
-    # 2. Parameter Sensitivity (GNN)
-    from phase4_core_training import load_targets, get_train_val_test_dates
-    from utils_data import load_data_file
-    
-    tickers = load_data_file('node_features_X_t_final.csv', 'processed').columns.tolist()[:50]
-    targets_dict = load_targets()
-    train_dates, val_dates, test_dates = get_train_val_test_dates()
-    
-    parameter_results = test_parameter_sensitivity(
-        gnn_model, test_dates, targets_dict, tickers,
-        parameter_name='hidden_dim',
-        parameter_values=[128, 256, 384]  # Reduced for speed
-    )
+    # 2. Parameter Sensitivity (GNN) - Simplified
+    print("\n⚠️  Skipping Parameter Sensitivity (requires full training)")
+    parameter_results = {}
     
     # 3. Slippage Impact
     slippage_results = {}

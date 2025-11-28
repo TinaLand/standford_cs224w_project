@@ -1,0 +1,19 @@
+{
+  "worst_periods": {
+    "statistics": {
+      "mean_return": 0.09453527761529701,
+      "std_return": 0.0,
+      "worst_return": 0.09453527761529701,
+      "mean_max_dd": 0.012867306192905933,
+      "worst_max_dd": 0.012867306192905935
+    },
+    "n_episodes": 10
+  },
+  "error_patterns": {
+    "overall_accuracy": 0,
+    "error_statistics": {}
+  },
+  "drawdown_analysis": {
+    "statistics": {}
+  }
+}
