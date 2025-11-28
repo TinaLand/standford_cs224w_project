@@ -557,8 +557,8 @@ def run_ablation_studies():
     # Execute each ablation
     for abl in ablations:
         try:
-            result = train_and_evaluate_ablation(abl['name'], abl['config'])
-            ablation_results.append(result)
+        result = train_and_evaluate_ablation(abl['name'], abl['config'])
+        ablation_results.append(result)
         except Exception as e:
             print(f"⚠️  Error in ablation {abl['name']}: {e}")
             import traceback
@@ -566,9 +566,9 @@ def run_ablation_studies():
             continue
 
     if ablation_results:
-        ablation_df = pd.DataFrame(ablation_results)
-        ablation_df.to_csv(RESULTS_DIR / 'ablation_results.csv', index=False)
-        
+    ablation_df = pd.DataFrame(ablation_results)
+    ablation_df.to_csv(RESULTS_DIR / 'ablation_results.csv', index=False)
+    
         print("\n" + "=" * 50)
         print("✅ Ablation Studies Complete. Results saved.")
         print("=" * 50)
@@ -576,7 +576,7 @@ def run_ablation_studies():
         print(ablation_df[['strategy', 'accuracy', 'f1_score', 'precision_at_top10']].to_string(index=False))
         print(f"\n📁 Results saved to: {RESULTS_DIR / 'ablation_results.csv'}")
         
-        return ablation_df
+    return ablation_df
     else:
         print("❌ No ablation results generated")
         return pd.DataFrame()
@@ -592,7 +592,7 @@ def main():
 
     # Load the core GNN model structure (needed for environment setup)
     gnn_model = load_gnn_model_for_rl()
-    
+
     # Get test dates and tickers
     from phase4_core_training import load_graph_data, create_target_labels, _read_time_series_csv, OHLCV_RAW_FILE
     import pandas as pd
