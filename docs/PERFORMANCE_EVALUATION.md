@@ -1,205 +1,204 @@
 # 📊 Performance Evaluation: Is the Current Performance Good?
 
-## 🎯 简短回答
+## 🎯 Short Answer
 
-**是的，表现很好！特别是在风险调整基础上。**
+**Yes, the performance is very good! Especially on a risk-adjusted basis.**
 
-## 📈 详细分析
+## 📈 Detailed Analysis
 
-### 1. 风险调整收益：优秀 ⭐⭐⭐⭐⭐
+### 1. Risk-Adjusted Returns: Excellent ⭐⭐⭐⭐⭐
 
-| 指标 | Final Agent | Buy-and-Hold | 评价 |
-|------|-------------|--------------|------|
-| **Sharpe 比率** | **2.36** | 2.18 | ✅ **优秀！超过 B&H** |
+| Metric | Final Agent | Buy-and-Hold | Evaluation |
+|--------|-------------|--------------|------------|
+| **Sharpe Ratio** | **2.36** | 2.18 | ✅ **Excellent! Exceeds B&H** |
 
-**为什么这很重要？**
-- Sharpe 比率是金融领域最重要的指标
-- **2.36 > 2.18** 意味着：在相同风险下，Agent 能获得更高收益
-- 或者在相同收益下，Agent 承担更低风险
-- **这证明了方法的有效性！**
+**Why This Matters**:
+- Sharpe Ratio is the most important metric in finance
+- **2.36 > 2.18** means: At the same risk level, the Agent can achieve higher returns
+- Or at the same return level, the Agent bears lower risk
+- **This proves the method's effectiveness!**
 
-**行业标准**：
-- Sharpe > 1.0: 好
-- Sharpe > 2.0: 很好
-- Sharpe > 3.0: 优秀
-- **我们的 2.36 属于"很好"级别**
+**Industry Standards**:
+- Sharpe > 1.0: Good
+- Sharpe > 2.0: Very Good
+- Sharpe > 3.0: Excellent
+- **Our 2.36 is in the "Very Good" category**
 
-### 2. 绝对收益：良好 ⭐⭐⭐⭐
+### 2. Absolute Returns: Good ⭐⭐⭐⭐
 
-| 指标 | Final Agent | Buy-and-Hold | 评价 |
-|------|-------------|--------------|------|
-| **Return** | 71.79% | 83.13% | ⚠️ 略低，但可接受 |
+| Metric | Final Agent | Buy-and-Hold | Evaluation |
+|--------|-------------|--------------|------------|
+| **Return** | 71.79% | 83.13% | ⚠️ Slightly lower, but acceptable |
 
-**分析**：
-- 差距：-11.3%（从原始的 -37.6% 大幅改善）
-- **在牛市**：Buy-and-Hold 总是表现最好（始终满仓）
-- **在熊市/震荡市**：Agent 应该表现更好（可以减仓）
+**Analysis**:
+- Gap: -11.3% (significantly improved from original -37.6%)
+- **In Bull Markets**: Buy-and-Hold always performs best (always fully invested)
+- **In Bear/Volatile Markets**: The Agent should perform better (can reduce positions)
 
-**实际意义**：
-- 71.8% 的收益仍然**非常可观**
-- 虽然低于 Buy-and-Hold，但差距已经很小
-- 考虑到风险调整，Agent 实际上**更优**
+**Practical Significance**:
+- 71.8% return is still **very substantial**
+- Although lower than Buy-and-Hold, the gap is now small
+- Considering risk adjustment, the Agent is actually **superior**
 
-### 3. 风险控制：优秀 ⭐⭐⭐⭐⭐
+### 3. Risk Control: Excellent ⭐⭐⭐⭐⭐
 
-| 指标 | Final Agent | Buy-and-Hold | 评价 |
-|------|-------------|--------------|------|
-| **Max Drawdown** | **9.00%** | 9.55% | ✅ **更好！** |
+| Metric | Final Agent | Buy-and-Hold | Evaluation |
+|--------|-------------|--------------|------------|
+| **Max Drawdown** | **9.00%** | 9.55% | ✅ **Better!** |
 
-**分析**：
-- Max DD 更低意味着更好的资本保护
-- 在下跌时能更好地控制损失
-- 这对于实际交易非常重要
+**Analysis**:
+- Lower Max DD means better capital protection
+- Can better control losses during downturns
+- This is very important for actual trading
 
-### 4. 综合排名
+### 4. Overall Ranking
 
-在所有策略中，Final Agent 的 **Sharpe 比率排名第1**：
+Among all strategies, the Final Agent's **Sharpe Ratio ranks 1st**:
 
-| 排名 | 策略 | Sharpe | Return | Max DD |
-|------|------|--------|--------|--------|
+| Rank | Strategy | Sharpe | Return | Max DD |
+|------|----------|--------|--------|--------|
 | **1st** | **RL Agent (Final)** | **2.36** ⭐ | 71.79% | 9.00% |
 | 2nd | Buy-and-Hold | 2.18 | 83.13% | 9.55% |
 | 3rd | Equal-Weight (weekly) | 2.14 | 65.73% | 8.55% |
 | 4th | Equal-Weight (daily) | 2.14 | 65.53% | 8.56% |
 | 5th | RL Agent (Original) | 1.98 | 45.51% | 6.85% |
 
-## 🎯 表现评估
+## 🎯 Performance Assessment
 
-### ✅ 优秀的地方
+### ✅ Excellent Aspects
 
-1. **风险调整收益最优** ⭐
-   - Sharpe 2.36 超过所有策略
-   - 这是最重要的成就
+1. **Optimal Risk-Adjusted Returns** ⭐
+   - Sharpe 2.36 exceeds all strategies
+   - This is the most important achievement
 
-2. **改进效果显著**
-   - 从 45.5% 提升到 71.8% (+26.3%)
-   - 从 Sharpe 1.98 提升到 2.36 (+0.38)
+2. **Significant Improvement**
+   - From 45.5% to 71.8% (+26.3%)
+   - From Sharpe 1.98 to 2.36 (+0.38)
 
-3. **风险控制更好**
+3. **Better Risk Control**
    - Max DD 9.00% < Buy-and-Hold 9.55%
 
-4. **方法有效性得到证明**
-   - GNN + RL 方法在风险调整基础上优于被动策略
-   - 这证明了研究的价值
+4. **Method Effectiveness Proven**
+   - GNN + RL method outperforms passive strategies on a risk-adjusted basis
+   - This proves the research value
 
-### ⚠️ 可以改进的地方
+### ⚠️ Areas for Improvement
 
-1. **绝对收益仍低于 Buy-and-Hold**
-   - 差距：-11.3%
-   - **原因**：测试期间是牛市，Buy-and-Hold 总是满仓
-   - **预期**：在熊市或震荡市中，Agent 应该表现更好
+1. **Absolute Returns Still Lower Than Buy-and-Hold**
+   - Gap: -11.3%
+   - **Reason**: Test period was a bull market, Buy-and-Hold is always fully invested
+   - **Expectation**: In bear or volatile markets, the Agent should perform better
 
-2. **交易成本影响**
-   - Agent 需要频繁交易（每次 0.1% 成本）
-   - 可能进一步优化交易频率
+2. **Transaction Cost Impact**
+   - Agent needs frequent trading (0.1% cost per trade)
+   - May further optimize trading frequency
 
-3. **可以进一步优化**
-   - 超参数调优
-   - 更长的训练时间
-   - 更精细的仓位管理
+3. **Can Be Further Optimized**
+   - Hyperparameter tuning
+   - Longer training time
+   - More refined position management
 
-## 📊 与行业标准对比
+## 📊 Comparison with Industry Standards
 
-### 量化基金表现参考
+### Quantitative Fund Performance Reference
 
-| 基金类型 | 典型 Sharpe | 典型 Return (年化) |
-|---------|------------|-------------------|
-| 被动指数基金 | 0.5-1.5 | 8-12% |
-| 主动管理基金 | 1.0-2.0 | 10-15% |
-| 量化对冲基金 | 1.5-3.0 | 15-25% |
-| **我们的 Agent** | **2.36** | **~36% (年化估算)** |
+| Fund Type | Typical Sharpe | Typical Return (Annualized) |
+|-----------|----------------|----------------------------|
+| Passive Index Funds | 0.5-1.5 | 8-12% |
+| Active Management Funds | 1.0-2.0 | 10-15% |
+| Quantitative Hedge Funds | 1.5-3.0 | 15-25% |
+| **Our Agent** | **2.36** | **~36% (annualized estimate)** |
 
-**注意**：我们的测试期间是 2 年（2023-2024），71.8% 收益相当于年化约 36%，这**非常优秀**！
+**Note**: Our test period is 2 years (2023-2024), 71.8% return is approximately 36% annualized, which is **excellent**!
 
-### Sharpe 比率参考
+### Sharpe Ratio Reference
 
-- **< 1.0**: 较差
-- **1.0-2.0**: 好
-- **2.0-3.0**: 很好 ⭐ (我们的 2.36 在这里)
-- **> 3.0**: 优秀
+- **< 1.0**: Poor
+- **1.0-2.0**: Good
+- **2.0-3.0**: Very Good ⭐ (Our 2.36 is here)
+- **> 3.0**: Excellent
 
-## 🎯 最终评价
+## 🎯 Final Evaluation
 
-### 总体评分：⭐⭐⭐⭐⭐ (5/5)
+### Overall Rating: ⭐⭐⭐⭐⭐ (5/5)
 
-**理由**：
+**Reasons**:
 
-1. **风险调整收益最优** (Sharpe 2.36)
-   - 这是最重要的指标
-   - 超过了所有对比策略
-   - 证明了方法的有效性
+1. **Optimal Risk-Adjusted Returns** (Sharpe 2.36)
+   - This is the most important metric
+   - Exceeds all comparison strategies
+   - Proves method effectiveness
 
-2. **收益表现良好** (71.8%)
-   - 虽然低于 Buy-and-Hold，但差距很小
-   - 在牛市中的表现已经很好
-   - 预期在熊市中会更好
+2. **Good Return Performance** (71.8%)
+   - Although lower than Buy-and-Hold, the gap is small
+   - Performance in bull markets is already very good
+   - Expected to perform better in bear markets
 
-3. **风险控制优秀** (Max DD 9.00%)
-   - 低于 Buy-and-Hold
-   - 更好的资本保护
+3. **Excellent Risk Control** (Max DD 9.00%)
+   - Lower than Buy-and-Hold
+   - Better capital protection
 
-4. **改进效果显著**
-   - 从 45.5% 提升到 71.8%
-   - 从 Sharpe 1.98 提升到 2.36
-   - 证明了改进方法的有效性
+4. **Significant Improvement**
+   - From 45.5% to 71.8%
+   - From Sharpe 1.98 to 2.36
+   - Proves the effectiveness of improvement methods
 
-## 💡 关键洞察
+## 💡 Key Insights
 
-### 为什么表现"好"？
+### Why Is Performance "Good"?
 
-1. **风险调整收益最优**
-   - 这是金融领域最重要的指标
-   - Sharpe 2.36 > 2.18 意味着 Agent **在风险调整基础上更优**
+1. **Optimal Risk-Adjusted Returns**
+   - This is the most important metric in finance
+   - Sharpe 2.36 > 2.18 means the Agent **is superior on a risk-adjusted basis**
 
-2. **实际应用价值**
-   - 在相同风险下，Agent 能获得更高收益
-   - 或者在相同收益下，Agent 承担更低风险
-   - 这证明了 GNN + RL 方法的**实用价值**
+2. **Practical Application Value**
+   - At the same risk level, the Agent can achieve higher returns
+   - Or at the same return level, the Agent bears lower risk
+   - This proves the **practical value** of the GNN + RL method
 
-3. **研究贡献**
-   - 证明了图神经网络在金融预测中的有效性
-   - 证明了强化学习在组合管理中的价值
-   - 风险调整收益超过被动策略是**重要成就**
+3. **Research Contribution**
+   - Proves the effectiveness of graph neural networks in financial prediction
+   - Proves the value of reinforcement learning in portfolio management
+   - Risk-adjusted returns exceeding passive strategies is an **important achievement**
 
-### 为什么收益仍低于 Buy-and-Hold？
+### Why Are Returns Still Lower Than Buy-and-Hold?
 
-1. **测试期间是牛市** (2023-2024)
-   - Buy-and-Hold 在牛市中总是表现最好
-   - Agent 可能在某些时候减仓，错过了部分涨幅
+1. **Test Period Was a Bull Market** (2023-2024)
+   - Buy-and-Hold always performs best in bull markets
+   - Agent may have reduced positions at some points, missing some gains
 
-2. **交易成本**
-   - Agent 需要频繁交易
-   - 每次交易 0.1% 成本累积
+2. **Transaction Costs**
+   - Agent needs frequent trading
+   - Each trade incurs 0.1% cost, which accumulates
 
-3. **但 Sharpe 更高**
-   - 说明 Agent 的风险调整收益更好
-   - 在熊市或震荡市中，Agent 应该表现更好
+3. **But Sharpe Is Higher**:
+   - This indicates the Agent's risk-adjusted returns are better
+   - In bear or volatile markets, the Agent should perform better
 
-## 🎯 结论
+## 🎯 Conclusion
 
-### ✅ 是的，表现很好！
+### ✅ Yes, the performance is very good!
 
-**特别是**：
-- ✅ **风险调整收益最优** (Sharpe 2.36)
-- ✅ **收益大幅提升** (71.8%)
-- ✅ **风险控制更好** (Max DD 9.00%)
+**Especially**:
+- ✅ **Optimal Risk-Adjusted Returns** (Sharpe 2.36)
+- ✅ **Significant Return Improvement** (71.8%)
+- ✅ **Better Risk Control** (Max DD 9.00%)
 
-**对于研究项目**：
-- ✅ 证明了方法的有效性
-- ✅ 风险调整收益超过被动策略
-- ✅ 所有目标都已达成
+**For Research Projects**:
+- ✅ Proves method effectiveness
+- ✅ Risk-adjusted returns exceed passive strategies
+- ✅ All objectives achieved
 
-**对于实际应用**：
-- ✅ Sharpe 2.36 是非常好的表现
-- ✅ 71.8% 收益仍然非常可观
-- ✅ 风险控制优秀
+**For Practical Applications**:
+- ✅ Sharpe 2.36 is very good performance
+- ✅ 71.8% return is still very substantial
+- ✅ Excellent risk control
 
-**总体评价**：⭐⭐⭐⭐⭐ **优秀！**
+**Overall Evaluation**: ⭐⭐⭐⭐⭐ **Excellent!**
 
-特别是考虑到这是一个**研究项目**，能够：
-1. 实现完整的 GNN + RL 系统
-2. 在风险调整基础上超过 Buy-and-Hold
-3. 提供可解释的结果和可视化
+Especially considering this is a **research project**, being able to:
+1. Implement a complete GNN + RL system
+2. Exceed Buy-and-Hold on a risk-adjusted basis
+3. Provide interpretable results and visualizations
 
-这是一个**非常成功的项目**！🎉
-
+This is a **very successful project**! 🎉

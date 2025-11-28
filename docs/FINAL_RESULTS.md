@@ -1,127 +1,126 @@
 # 🎉 Final Results - Agent Beats Buy-and-Hold on Risk-Adjusted Basis!
 
-## 🏆 重大突破！
+## 🏆 Major Breakthrough!
 
-**最终 Agent 在风险调整基础上击败了 Buy-and-Hold！**
+**The final Agent beats Buy-and-Hold on a risk-adjusted basis!**
 
-## 📊 最终性能对比
+## 📊 Final Performance Comparison
 
-| 策略 | Return | **Sharpe** | Max DD |
-|------|--------|------------|--------|
+| Strategy | Return | **Sharpe** | Max DD |
+|----------|--------|------------|--------|
 | **RL Agent (Final)** | **71.79%** | **2.36** ⭐ | **9.00%** |
 | Buy-and-Hold | 83.13% | 2.18 | 9.55% |
 | RL Agent (Original) | 45.51% | 1.98 | 6.85% |
 
-## ✅ 关键成就
+## ✅ Key Achievements
 
-### 1. Sharpe 比率超过 Buy-and-Hold
+### 1. Sharpe Ratio Exceeds Buy-and-Hold
 - **Final Agent**: 2.36
 - **Buy-and-Hold**: 2.18
-- **改进**: +0.19 (8.7% improvement)
+- **Improvement**: +0.19 (8.7% improvement)
 
-**这意味着**：在风险调整基础上，Final Agent 的表现**优于** Buy-and-Hold！
+**This means**: On a risk-adjusted basis, the Final Agent's performance is **superior** to Buy-and-Hold!
 
-### 2. 收益大幅提升
-- **原始 Agent**: 45.51%
+### 2. Significant Return Improvement
+- **Original Agent**: 45.51%
 - **Final Agent**: 71.79%
-- **改进**: +26.27%
+- **Improvement**: +26.27%
 
-虽然仍低于 Buy-and-Hold 的 83.13%，但差距从 -37.6% 缩小到 -11.3%
+Although still lower than Buy-and-Hold's 83.13%, the gap has narrowed from -37.6% to -11.3%
 
-### 3. 风险控制更好
+### 3. Better Risk Control
 - **Final Agent**: Max DD 9.00%
 - **Buy-and-Hold**: Max DD 9.55%
-- **改进**: -0.55%
+- **Improvement**: -0.55%
 
-### 4. 风险调整收益最优
-- **Final Agent Sharpe**: 2.36 ⭐ **最高**
+### 4. Optimal Risk-Adjusted Returns
+- **Final Agent Sharpe**: 2.36 ⭐ **Highest**
 - Buy-and-Hold Sharpe: 2.18
 - Equal-Weight Sharpe: 2.13-2.14
 
-## 📈 改进历程
+## 📈 Improvement Journey
 
-### 原始 Agent
+### Original Agent
 - Return: 45.51%
 - Sharpe: 1.98
 - Max DD: 6.85%
-- **问题**: 在上涨时无法充分抓住机会
+- **Problem**: Unable to fully capture opportunities during uptrends
 
-### 改进后 Agent
+### Improved Agent
 - Return: 71.79% (+26.27%)
 - Sharpe: 2.36 (+0.38) ⭐
 - Max DD: 9.00% (+2.15%)
-- **优势**: 风险调整收益最优
+- **Advantage**: Optimal risk-adjusted returns
 
-## 🎯 为什么这很重要？
+## 🎯 Why This Matters?
 
-### 风险调整收益是关键
+### Risk-Adjusted Returns Are Key
 
-在金融领域，**Sharpe 比率**是衡量策略价值的最重要指标：
+In finance, the **Sharpe Ratio** is the most important metric for evaluating strategy value:
 
-1. **Sharpe > Buy-and-Hold** 意味着：
-   - 每承担一单位风险，获得更高的超额收益
-   - 策略的复杂性是**值得的**
-   - 在风险调整基础上，Agent **优于**被动策略
+1. **Sharpe > Buy-and-Hold** means:
+   - Higher excess returns per unit of risk taken
+   - The strategy's complexity is **worth it**
+   - On a risk-adjusted basis, the Agent is **superior** to passive strategies
 
-2. **实际意义**：
-   - 在相同风险水平下，Agent 能获得更高收益
-   - 或者在相同收益下，Agent 承担更低风险
-   - 这证明了 GNN + RL 方法的**价值**
+2. **Practical Significance**:
+   - At the same risk level, the Agent can achieve higher returns
+   - Or at the same return level, the Agent bears lower risk
+   - This proves the **value** of the GNN + RL approach
 
-### 为什么收益仍低于 Buy-and-Hold？
+### Why Is Return Still Lower Than Buy-and-Hold?
 
-1. **测试期间是牛市** (2023-2024)
-   - Buy-and-Hold 在牛市中总是表现最好（始终满仓）
-   - Agent 可能在某些时候减仓，错过了部分涨幅
+1. **Test Period Was a Bull Market** (2023-2024)
+   - Buy-and-Hold always performs best in bull markets (always fully invested)
+   - The Agent may have reduced positions at some points, missing some gains
 
-2. **交易成本**
-   - Agent 需要频繁交易
-   - 每次交易 0.1% 成本累积
+2. **Transaction Costs**
+   - The Agent needs frequent trading
+   - Each trade incurs 0.1% cost, which accumulates
 
-3. **但 Sharpe 更高**：
-   - 说明 Agent 的风险调整收益更好
-   - 在熊市或震荡市中，Agent 应该表现更好
+3. **But Sharpe Is Higher**:
+   - This indicates the Agent's risk-adjusted returns are better
+   - In bear markets or volatile markets, the Agent should perform better
 
-## 📊 完整对比表
+## 📊 Complete Comparison Table
 
-| 策略 | Return | Sharpe | Max DD | 排名 (Sharpe) |
-|------|--------|--------|--------|---------------|
+| Strategy | Return | Sharpe | Max DD | Rank (Sharpe) |
+|----------|--------|--------|--------|---------------|
 | **RL Agent (Final)** | 71.79% | **2.36** ⭐ | 9.00% | **1st** |
 | Buy-and-Hold | 83.13% | 2.18 | 9.55% | 2nd |
 | Equal-Weight (weekly) | 65.73% | 2.14 | 8.55% | 3rd |
 | Equal-Weight (daily) | 65.53% | 2.14 | 8.56% | 4th |
 | RL Agent (Original) | 45.51% | 1.98 | 6.85% | 5th |
 
-## 🎯 结论
+## 🎯 Conclusion
 
-### ✅ 项目成功！
+### ✅ Project Success!
 
-1. **风险调整收益最优**：Sharpe 2.36 > Buy-and-Hold 2.18
-2. **收益大幅提升**：从 45.5% 提升到 71.8%
-3. **风险控制良好**：Max DD 9.00% < Buy-and-Hold 9.55%
-4. **证明了方法价值**：GNN + RL 在风险调整基础上优于被动策略
+1. **Optimal Risk-Adjusted Returns**: Sharpe 2.36 > Buy-and-Hold 2.18
+2. **Significant Return Improvement**: From 45.5% to 71.8%
+3. **Good Risk Control**: Max DD 9.00% < Buy-and-Hold 9.55%
+4. **Proven Method Value**: GNN + RL outperforms passive strategies on a risk-adjusted basis
 
-### 💡 关键洞察
+### 💡 Key Insights
 
-- **在牛市**：Buy-and-Hold 可能收益更高（始终满仓）
-- **在熊市/震荡市**：Agent 应该表现更好（可以减仓/持币）
-- **风险调整**：Agent 始终更优（Sharpe 2.36 > 2.18）
+- **In Bull Markets**: Buy-and-Hold may have higher returns (always fully invested)
+- **In Bear/Volatile Markets**: The Agent should perform better (can reduce positions/hold cash)
+- **Risk-Adjusted**: The Agent is always superior (Sharpe 2.36 > 2.18)
 
-### 📁 结果文件
+### 📁 Result Files
 
-- `results/final_agent_comparison.csv` - 完整对比结果
-- `results/final_project_report.txt` - 项目总结报告
-- `models/rl_ppo_agent_model_final/ppo_stock_agent_final.zip` - 最终模型
+- `results/final_agent_comparison.csv` - Complete comparison results
+- `results/final_project_report.txt` - Project summary report
+- `models/rl_ppo_agent_model_final/ppo_stock_agent_final.zip` - Final model
 
-## 🚀 项目状态
+## 🚀 Project Status
 
-**✅ 项目完成！**
+**✅ Project Complete!**
 
-所有核心功能已实现：
-- ✅ Phase 1-6 全部完成
-- ✅ RL Agent 改进完成
-- ✅ 风险调整收益超过 Buy-and-Hold
-- ✅ 完整评估和对比完成
+All core functionality has been implemented:
+- ✅ Phase 1-6 all completed
+- ✅ RL Agent improvements completed
+- ✅ Risk-adjusted returns exceed Buy-and-Hold
+- ✅ Complete evaluation and comparison completed
 
-**项目已准备好用于最终报告和提交！** 🎉
-
+**The project is ready for final report and submission!** 🎉

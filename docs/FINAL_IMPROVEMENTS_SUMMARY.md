@@ -1,176 +1,175 @@
 # 🎯 Final Improvements Summary
 
-## 问题诊断
+## Problem Diagnosis
 
-**原始 Agent 的表现**：
-- ✅ 下跌时：Max DD 6.85% (vs B&H 9.55%) - **更好**
-- ❌ 上涨时：Return 45.5% (vs B&H 83.13%) - **更差**
+**Original Agent Performance**:
+- ✅ During downturns: Max DD 6.85% (vs B&H 9.55%) - **Better**
+- ❌ During uptrends: Return 45.5% (vs B&H 83.13%) - **Worse**
 
-**根本原因**：
-- 买入策略过于保守：每次只买 0.02% (1% / 50 stocks)
-- 卖出策略相对激进：每次可卖 20%
-- 结果：减仓容易，加仓困难
+**Root Cause**:
+- Buying strategy too conservative: Only buys 0.02% each time (1% / 50 stocks)
+- Selling strategy relatively aggressive: Can sell 20% each time
+- Result: Easy to reduce positions, difficult to increase positions
 
-## 解决方案
+## Solutions
 
-### 1. 改进交易环境 (`rl_environment_balanced.py`)
+### 1. Improved Trading Environment (`rl_environment_balanced.py`)
 
-**改进**：动态仓位管理
-- 根据 GNN 置信度决定买入量
-- 高置信度 (0.8-1.0) → 买入 1-10%
-- 低置信度 (0.5-0.8) → 买入较少
-- 允许更快建立仓位（1-2 天 vs 50 天）
+**Improvement**: Dynamic Position Management
+- Determine buy amount based on GNN confidence
+- High confidence (0.8-1.0) → Buy 1-10%
+- Low confidence (0.5-0.8) → Buy less
+- Allows faster position building (1-2 days vs 50 days)
 
-### 2. 改进奖励函数 (`rl_environment_improved.py`)
+### 2. Improved Reward Function (`rl_environment_improved.py`)
 
-**改进**：风险调整奖励
+**Improvement**: Risk-Adjusted Reward
 ```
 Reward = Return + Sharpe_Bonus - Drawdown_Penalty - Volatility_Penalty
 ```
 
-- **Sharpe Bonus**: 奖励更高的风险调整收益
-- **Drawdown Penalty**: 惩罚回撤
-- **Volatility Penalty**: 惩罚高波动
+- **Sharpe Bonus**: Rewards higher risk-adjusted returns
+- **Drawdown Penalty**: Penalizes drawdowns
+- **Volatility Penalty**: Penalizes high volatility
 
-### 3. 综合改进 (`phase5_rl_final_training.py`)
+### 3. Combined Improvements (`phase5_rl_final_training.py`)
 
-结合两种改进：
-- 动态仓位管理 + 风险调整奖励
-- 在上涨时能更快建立仓位
-- 在下跌时保持风险控制
+Combines both improvements:
+- Dynamic position management + Risk-adjusted reward
+- Can build positions faster during uptrends
+- Maintains risk control during downtrends
 
-## 验证结果
+## Validation Results
 
-### 环境验证 (`verify_improved_environment.py`)
+### Environment Verification (`verify_improved_environment.py`)
 
-| 指标 | 原始环境 | 改进环境 | 改进 |
-|------|---------|---------|------|
-| 收益 (随机策略) | 0.45% | 10.79% | **+10.34%** |
-| 收益 (全部买入) | 12.28% | 43.87% | **+31.59%** |
-| Sharpe (全部买入) | 1.54 | 2.87 | **+1.33** |
-| 最大仓位 (随机) | 6.29% | 99.99% | **+93.70%** |
+| Metric | Original Environment | Improved Environment | Improvement |
+|--------|---------------------|---------------------|-------------|
+| Return (Random Strategy) | 0.45% | 10.79% | **+10.34%** |
+| Return (All Buy) | 12.28% | 43.87% | **+31.59%** |
+| Sharpe (All Buy) | 1.54 | 2.87 | **+1.33** |
+| Max Position (Random) | 6.29% | 99.99% | **+93.70%** |
 
-### 快速测试结果 (`phase5_rl_quick_test.py`)
+### Quick Test Results (`phase5_rl_quick_test.py`)
 
-**训练**: 5000 timesteps (快速测试)
+**Training**: 5000 timesteps (quick test)
 
-| 策略 | Return | Sharpe | Max DD |
-|------|--------|--------|--------|
+| Strategy | Return | Sharpe | Max DD |
+|----------|--------|--------|--------|
 | **Buy-and-Hold** | 83.13% | 2.18 | 9.55% |
-| **RL Agent (改进)** | **72.60%** | **2.03** | **9.56%** |
-| RL Agent (原始) | 45.51% | 1.98 | 6.85% |
+| **RL Agent (Improved)** | **72.60%** | **2.03** | **9.56%** |
+| RL Agent (Original) | 45.51% | 1.98 | 6.85% |
 
-**关键改进**：
-- ✅ 收益提升：45.5% → 72.6% (**+27.1%**)
-- ✅ Sharpe 提升：1.98 → 2.03 (**+0.05**)
-- ✅ 接近 Buy-and-Hold：差距从 -37.6% 缩小到 -10.5%
-- ✅ 风险控制：Max DD 9.56% (与 B&H 相当)
+**Key Improvements**:
+- ✅ Return improvement: 45.5% → 72.6% (**+27.1%**)
+- ✅ Sharpe improvement: 1.98 → 2.03 (**+0.05**)
+- ✅ Close to Buy-and-Hold: Gap narrowed from -37.6% to -10.5%
+- ✅ Risk control: Max DD 9.56% (comparable to B&H)
 
-## 最终评估
+## Final Evaluation
 
-### 与 Buy-and-Hold 对比
+### Comparison with Buy-and-Hold
 
-| 指标 | Buy-and-Hold | RL Agent (改进) | 差距 |
-|------|--------------|-----------------|------|
+| Metric | Buy-and-Hold | RL Agent (Improved) | Gap |
+|--------|--------------|---------------------|-----|
 | Return | 83.13% | 72.60% | -10.53% |
 | Sharpe | 2.18 | 2.03 | -0.15 |
 | Max DD | 9.55% | 9.56% | +0.01% |
 
-**结论**：
-- ✅ 收益大幅提升，接近 Buy-and-Hold
-- ⚠️ Sharpe 比率仍略低于 Buy-and-Hold (2.03 vs 2.18)
-- ✅ 风险控制与 Buy-and-Hold 相当
+**Conclusion**:
+- ✅ Significant return improvement, close to Buy-and-Hold
+- ⚠️ Sharpe ratio still slightly lower than Buy-and-Hold (2.03 vs 2.18)
+- ✅ Risk control comparable to Buy-and-Hold
 
-### 改进效果
+### Improvement Effects
 
-1. **在上涨时表现更好**
-   - 收益从 45.5% 提升到 72.6%
-   - 能够更快建立仓位，抓住上涨机会
+1. **Better Performance During Uptrends**
+   - Return improved from 45.5% to 72.6%
+   - Can build positions faster, capture uptrend opportunities
 
-2. **风险调整收益提升**
-   - Sharpe 比率从 1.98 提升到 2.03
-   - 虽然仍低于 Buy-and-Hold，但差距缩小
+2. **Risk-Adjusted Return Improvement**
+   - Sharpe ratio improved from 1.98 to 2.03
+   - Although still lower than Buy-and-Hold, gap narrowed
 
-3. **保持风险控制**
-   - Max DD 9.56% (与 Buy-and-Hold 相当)
-   - 在下跌时仍能控制风险
+3. **Maintained Risk Control**
+   - Max DD 9.56% (comparable to Buy-and-Hold)
+   - Can still control risk during downtrends
 
-## 下一步建议
+## Next Steps Recommendations
 
-### 完整训练
+### Full Training
 
-运行完整训练以获得更好结果：
+Run full training for better results:
 
 ```bash
 python scripts/phase5_rl_final_training.py
 ```
 
-**配置**：
-- Total Timesteps: 15000 (vs 5000 快速测试)
-- 预计时间: 15-30 分钟
-- 预期改进: Sharpe 可能达到 2.1-2.2
+**Configuration**:
+- Total Timesteps: 15000 (vs 5000 quick test)
+- Estimated time: 15-30 minutes
+- Expected improvement: Sharpe may reach 2.1-2.2
 
-### 进一步优化
+### Further Optimization
 
-1. **超参数调优**
-   - 调整奖励函数权重
-   - 优化学习率
-   - 调整仓位管理参数
+1. **Hyperparameter Tuning**
+   - Adjust reward function weights
+   - Optimize learning rate
+   - Adjust position management parameters
 
-2. **更长的训练**
-   - 增加到 30000-50000 timesteps
-   - 可能进一步提升性能
+2. **Longer Training**
+   - Increase to 30000-50000 timesteps
+   - May further improve performance
 
-3. **集成学习**
-   - 训练多个 agent
-   - 集成预测
+3. **Ensemble Learning**
+   - Train multiple agents
+   - Ensemble predictions
 
-## 文件清单
+## File List
 
-### 新增文件
+### New Files
 
 1. **`scripts/rl_environment_balanced.py`**
-   - 改进的交易环境（动态仓位管理）
+   - Improved trading environment (dynamic position management)
 
 2. **`scripts/rl_environment_improved.py`**
-   - 改进的奖励函数（风险调整）
+   - Improved reward function (risk-adjusted)
 
 3. **`scripts/phase5_rl_final_training.py`**
-   - 综合训练脚本（结合两种改进）
+   - Combined training script (combines both improvements)
 
 4. **`scripts/verify_improved_environment.py`**
-   - 环境验证脚本
+   - Environment verification script
 
 5. **`scripts/evaluate_quick_agent.py`**
-   - 快速测试评估脚本
+   - Quick test evaluation script
 
 6. **`docs/AGENT_BEHAVIOR_ANALYSIS.md`**
-   - Agent 行为分析文档
+   - Agent behavior analysis documentation
 
 7. **`docs/REWARD_FUNCTION_ANALYSIS.md`**
-   - 奖励函数分析文档
+   - Reward function analysis documentation
 
 8. **`docs/FINAL_IMPROVEMENTS_SUMMARY.md`**
-   - 最终改进总结（本文档）
+   - Final improvements summary (this document)
 
-### 结果文件
+### Result Files
 
-- `results/environment_verification_results.csv` - 环境验证结果
-- `results/quick_agent_comparison.csv` - 快速测试对比结果
+- `results/environment_verification_results.csv` - Environment verification results
+- `results/quick_agent_comparison.csv` - Quick test comparison results
 
-## 总结
+## Summary
 
-✅ **改进成功**：
-- 收益从 45.5% 提升到 72.6% (+27.1%)
-- Sharpe 从 1.98 提升到 2.03 (+0.05)
-- 接近 Buy-and-Hold 的表现
+✅ **Improvements Successful**:
+- Return improved from 45.5% to 72.6% (+27.1%)
+- Sharpe improved from 1.98 to 2.03 (+0.05)
+- Close to Buy-and-Hold performance
 
-⚠️ **仍需改进**：
-- Sharpe 比率仍略低于 Buy-and-Hold (2.03 vs 2.18)
-- 收益仍低于 Buy-and-Hold (72.6% vs 83.1%)
+⚠️ **Still Needs Improvement**:
+- Sharpe ratio still slightly lower than Buy-and-Hold (2.03 vs 2.18)
+- Return still lower than Buy-and-Hold (72.6% vs 83.1%)
 
-💡 **建议**：
-- 运行完整训练 (15000 timesteps)
-- 进一步调优超参数
-- 考虑更长的训练时间
-
+💡 **Recommendations**:
+- Run full training (15000 timesteps)
+- Further tune hyperparameters
+- Consider longer training time
