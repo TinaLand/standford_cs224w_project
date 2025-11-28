@@ -1,0 +1,99 @@
+{
+  "collection_timestamp": "2025-11-25T10:56:22.140384",
+  "date_range": {
+    "start": "2015-01-01",
+    "end": "2025-01-01"
+  },
+  "tickers": {
+    "count": 50,
+    "list": [
+      "MSFT",
+      "AAPL",
+      "NVDA",
+      "AMZN",
+      "GOOGL",
+      "GOOG",
+      "META",
+      "BRK-B",
+      "LLY",
+      "TSLA",
+      "V",
+      "JPM",
+      "XOM",
+      "JNJ",
+      "WMT",
+      "PG",
+      "MA",
+      "HD",
+      "CVX",
+      "MRK",
+      "ABBV",
+      "KO",
+      "PEP",
+      "AVGO",
+      "COST",
+      "PFE",
+      "ADBE",
+      "CSCO",
+      "CMCSA",
+      "NFLX",
+      "DIS",
+      "ACN",
+      "CRM",
+      "TMO",
+      "QCOM",
+      "TXN",
+      "UNH",
+      "BAC",
+      "MCD",
+      "ORCL",
+      "INTC",
+      "SBUX",
+      "CAT",
+      "GE",
+      "NKE",
+      "AXP",
+      "IBM",
+      "MMM",
+      "VZ",
+      "FDX"
+    ]
+  },
+  "validation": {
+    "is_valid": true,
+    "issues": [],
+    "warnings": [
+      "XOM: 3 rows with invalid High prices",
+      "XOM: 2 rows with invalid Low prices",
+      "PG: 1 rows with invalid Low prices",
+      "MA: 1 rows with invalid High prices",
+      "CVX: 1 rows with invalid Low prices",
+      "KO: 1 rows with invalid Low prices",
+      "PFE: 2 rows with invalid High prices",
+      "PFE: 1 rows with invalid Low prices",
+      "CMCSA: 1 rows with invalid High prices",
+      "TXN: 2 rows with invalid High prices",
+      "MCD: 1 rows with invalid High prices",
+      "INTC: 1 rows with invalid Low prices",
+      "CAT: 1 rows with invalid Low prices",
+      "IBM: 1 rows with invalid High prices",
+      "IBM: 3 rows with invalid Low prices",
+      "VZ: 3 rows with invalid Low prices",
+      "NVDA: 217 potential price outliers (3*IQR method)"
+    ],
+    "statistics": {
+      "total_rows": 2516,
+      "total_columns": 250,
+      "date_range": [
+        "2015-01-02 00:00:00",
+        "2024-12-31 00:00:00"
+      ],
+      "missing_pct_overall": 0.0
+    }
+  },
+  "suspensions": {},
+  "data_quality": {
+    "status": "good",
+    "notes": "Data collection completed. Review warnings if any."
+  }
+}

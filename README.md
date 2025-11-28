@@ -26,34 +26,65 @@ This project implements a Graph Neural Network (GNN) approach for stock market p
 
 ```
 cs224_porject/
-├── data/
-│   ├── raw/
-│   │   ├── stock_prices_ohlcv_raw.csv
-│   │   ├── fundamentals_raw.csv
-│   │   └── sentiment_macro_raw.csv
-│   ├── processed/
-│   │   └── node_features_X_t_final.csv     # Consolidated node features X_t
-│   └── edges/
-│       ├── edges_dynamic_corr_params.csv   # Rolling correlations (rho)
-│       ├── edges_dynamic_fund_sim_params.csv # Fundamental similarity
-│       └── static_sector_industry.csv      # Static sector/industry edges
-├── models/
-│   ├── baseline_gcn_model.pt               # Saved baseline model (Phase 3)
-│   └── core_transformer_model.pt           # Saved core model (Phase 4)
-├── scripts/
-│   ├── components/
-│   │   ├── pearl_embedding.py              # PEARL embedding components (optional)
-│   │   └── transformer_layer.py            # Transformer layer components (optional)
-│   ├── phase1_data_collection.py
-│   ├── phase1_feature_engineering.py
-│   ├── phase1_edge_parameter_calc.py
-│   ├── phase2_graph_construction.py        # Builds daily HeteroData graphs
-│   ├── phase3_baseline_training.py         # Baseline GNN (GAT) training
-│   ├── phase4_core_training.py             # Core role-aware transformer training
-│   ├── phase5_rl_integration.py            # RL integration scaffolding
-│   ├── phase6_evaluation.py                # Evaluation & visualization
-│   ├── rl_environment.py                   # Trading env for RL
-│   └── utils_data.py
+├── data/                              # Data directory
+│   ├── raw/                          # Raw data files
+│   ├── processed/                    # Processed features
+│   ├── edges/                        # Edge parameters
+│   └── graphs/                       # Graph snapshots
+│
+├── models/                           # Trained models
+│   ├── checkpoints/                  # Training checkpoints
+│   ├── plots/                        # Visualization plots
+│   └── *.pt                          # Model weights
+│
+├── results/                          # Results and outputs
+│   └── *.json, *.csv                 # Analysis results
+│
+├── src/                              # Source code (NEW)
+│   ├── data/                         # Data processing
+│   │   ├── collection.py
+│   │   ├── feature_engineering.py
+│   │   ├── edge_parameters.py
+│   │   └── graph_construction.py
+│   │
+│   ├── models/                       # Model definitions
+│   │   ├── components/               # Model components
+│   │   │   ├── pearl_embedding.py
+│   │   │   └── transformer_layer.py
+│   │   └── multi_agent/              # Multi-agent RL
+│   │       └── coordinator.py
+│   │
+│   ├── training/                     # Training scripts
+│   │   ├── baseline_trainer.py
+│   │   └── transformer_trainer.py
+│   │
+│   ├── rl/                           # Reinforcement Learning
+│   │   ├── environment.py
+│   │   ├── agent.py
+│   │   ├── integration.py
+│   │   └── training/                 # RL training
+│   │
+│   ├── evaluation/                   # Evaluation & analysis
+│   │   ├── evaluation.py
+│   │   ├── ablation.py
+│   │   ├── visualization.py
+│   │   └── enhancements/             # A+ enhancements
+│   │
+│   ├── utils/                        # Utility modules
+│   │   ├── data.py
+│   │   └── config.py
+│   │
+│   └── scripts/                      # Main execution scripts
+│       └── run_*.py
+│
+├── docs/                             # Documentation
+│   ├── phases/                       # Phase documentation
+│   ├── guides/                       # How-to guides
+│   ├── analysis/                     # Analysis reports
+│   ├── implementation/               # Implementation details
+│   └── results/                      # Result summaries
+│
+├── tests/                            # Test suite
 ├── requirements.txt
 └── README.md
 ```
@@ -85,51 +116,59 @@ cs224_porject/
    pip install -r requirements.txt
    ```
 
-### Running Phase 1: Data + Features
+## 🚀 Quick Start
 
-Execute the Phase 1 scripts in order:
+### Option 1: Run Full Pipeline (Recommended)
 
-1. **Data Collection**:
-   ```bash
-   cd scripts
-   python phase1_data_collection.py
-   ```
-   - Downloads OHLCV data for selected stocks
-   - Collects fundamental data (simulated)
-   - Gathers sentiment and VIX data
+Run all phases in sequence:
 
-2. **Feature Engineering**:
-   ```bash
-   python phase1_feature_engineering.py
-   ```
-   
-   Features include:
-   - Calculates technical indicators (RSI, MACD, Bollinger Bands)
-   - Normalizes fundamental features
-   - Processes sentiment data
-
-3. **Edge Parameter Calculation**:
-   ```bash
-   python phase1_edge_parameter_calc.py
-   ```
-   - Computes rolling correlations between stocks
-   - Calculates fundamental similarity measures
-   - Creates sector-based connection parameters
-
-### Running Phase 2: Graph Construction
-
-From the repo root:
 ```bash
-python scripts/phase2_graph_construction.py
+python run_full_pipeline.py
 ```
-- Output: `data/graphs/graph_t_YYYYMMDD.pt` per trading day.
+
+This will execute:
+1. Phase 1: Data Collection & Feature Engineering
+2. Phase 2: Graph Construction
+3. Phase 3: Baseline Training
+4. Phase 4: Transformer Training
+5. Phase 5: RL Integration
+6. Phase 6: Evaluation
+
+### Option 2: Run Phases Individually
+
+#### Phase 1: Data Collection & Feature Engineering
+
+```bash
+# 1. Data Collection
+python -m src.data.collection
+
+# 2. Feature Engineering
+python -m src.data.feature_engineering
+
+# 3. Edge Parameters
+python -m src.data.edge_parameters
+```
+
+- Downloads OHLCV data for selected stocks
+- Calculates technical indicators (RSI, MACD, Bollinger Bands)
+- Computes rolling correlations and fundamental similarity
+
+#### Phase 2: Graph Construction
+
+```bash
+python -m src.data.graph_construction
+```
+
+- Output: `data/graphs/graph_t_YYYYMMDD.pt` per trading day
 - Graph object: PyG `HeteroData` with node type `'stock'` and edge types:
-  - `'rolling_correlation'`, `'fund_similarity'`, `'sector_industry'`, `'supply_competitor'` (if present)
+  - `'rolling_correlation'`, `'fund_similarity'`, `'sector_industry'`, `'supply_competitor'`
 
-### Running Phase 3: Baseline GNN Training
+#### Phase 3: Baseline GNN Training
+
 ```bash
-python scripts/phase3_baseline_training.py
+python -m src.training.baseline_trainer
 ```
+
 Notes for PyTorch >= 2.6:
 - The script already sets `torch.serialization.add_safe_globals([...])` to allowlist PyG storages.
 - Uses `torch.load(..., weights_only=False)` when loading graphs.
@@ -145,7 +184,49 @@ The script supports three loss function options to handle imbalanced datasets:
    - Automatically down-weights well-classified examples
    - Configure with `FOCAL_ALPHA` (default: 0.25) and `FOCAL_GAMMA` (default: 2.0)
 
-To change the loss type, edit `LOSS_TYPE` in `phase3_baseline_training.py` (line 33).
+To change the loss type, edit `LOSS_TYPE` in `src/training/baseline_trainer.py`.
+
+#### Phase 4: Transformer Training
+
+```bash
+python -m src.training.transformer_trainer
+```
+
+- Trains Role-Aware Graph Transformer with PEARL embeddings
+- Output: `models/core_transformer_model.pt`
+
+#### Phase 5: RL Integration
+
+```bash
+python -m src.rl.integration
+```
+
+- Integrates GNN with PPO RL agent
+- Output: `models/rl_ppo_agent_model/ppo_stock_agent.zip`
+
+#### Phase 6: Evaluation
+
+```bash
+python -m src.evaluation.evaluation
+```
+
+- Evaluates models and generates comprehensive metrics
+- Output: `results/comprehensive_strategy_comparison.csv`
+
+### A+ Enhancements
+
+Run all enhancement analysis scripts:
+
+```bash
+python -m src.scripts.run_all_enhancements
+```
+
+This includes:
+- Multi-agent decision analysis
+- Failure analysis
+- Edge importance analysis
+- Cross-period validation
+- Sensitivity analysis
 
 **Checkpoint Management:**
 The script automatically saves full training checkpoints (model, optimizer, epoch, metrics):

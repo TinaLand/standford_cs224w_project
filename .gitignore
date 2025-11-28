@@ -1,16 +1,73 @@
-# ----------------------------------------------------------------------
-# Core Project Exclusion (Recommended)
-# ----------------------------------------------------------------------
-/venv/              # Exclude Python Virtual Environment
-/data/              # Exclude all raw inputs, processed features, and large graph snapshots
-data/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
 venv/
-runs/
-# ----------------------------------------------------------------------
-# Standard Python/System Exclusions
-# ----------------------------------------------------------------------
-__pycache__/        # Compiled Python bytecode
-*.pyc
-.DS_Store           # macOS system files
-.pytest_cache/      # Pytest cache
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Data (large files)
+data/raw/*.csv
+data/processed/*.csv
+data/graphs/*.pt
+data/edges/*.pkl
+
+# Models (large files)
+models/*.pt
+models/checkpoints/*.pt
+models/rl_ppo_agent_model*/*.zip
+
+# Results
+results/*.png
+results/*.csv
+results/*.json
+
+# Logs
+logs/
+runs/
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+scripts_legacy/
+reorganize_repo.py
