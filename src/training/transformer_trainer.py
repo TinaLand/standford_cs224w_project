@@ -40,6 +40,10 @@ LOSS_TYPE = 'focal'  # Options: 'standard', 'focal'
 FOCAL_ALPHA = 0.80   # Weight for minority class (INCREASED from 0.75 to 0.80 for better minority class handling)
 FOCAL_GAMMA = 2.5    # Focusing parameter (INCREASED from 2.0 to 2.5 for harder focus on hard examples)
 
+# Multi-task Learning Configuration (Classification + Regression on returns)
+ENABLE_MULTI_TASK = True
+REG_LOSS_WEIGHT = 0.5          # Weight for regression loss in total loss
+
 # Early Stopping Configuration
 ENABLE_EARLY_STOPPING = True
 EARLY_STOP_PATIENCE = 12        # Increased from 10 to 12 to allow more training epochs
@@ -193,11 +197,19 @@ class RoleAwareGraphTransformer(torch.nn.Module):
             self.convs.append(conv)
             self.relation_aggregators.append(aggregator)
             
-        # (C) Output Classifier
+        # (C) Output Classifier (classification head)
         self.lin_out = torch.nn.Sequential(
             torch.nn.Linear(hidden_dim, hidden_dim // 2),
             torch.nn.ReLU(),
             torch.nn.Linear(hidden_dim // 2, out_dim)
+        )
+
+        # (D) Regression head for multi-task learning (predict future returns)
+        # Single scalar per node: 5-day ahead return
+        self.lin_reg = torch.nn.Sequential(
+            torch.nn.Linear(hidden_dim, hidden_dim // 2),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_dim // 2, 1)
         )
 
     def forward(self, data):
@@ -270,6 +282,15 @@ class RoleAwareGraphTransformer(torch.nn.Module):
         # Return embeddings before final linear layer
         return x_dict['stock']
 
+    def forward_regression(self, data):
+        """
+        Regression forward pass using the same backbone.
+        Returns a vector of shape [N] with predicted future returns.
+        """
+        embeddings = self.get_embeddings(data)
+        reg_out = self.lin_reg(embeddings).squeeze(-1)
+        return reg_out
+
 # --- 2. Data Utilities (Copied from Phase 3 for consistency) ---
 
 def load_graph_data(date):
@@ -289,8 +310,11 @@ def load_graph_data(date):
         return None
 
 def create_target_labels(tickers, dates, lookahead_days):
-    """Calculates the 5-day ahead return sign (y_{i, t+5}) for all stocks and dates."""
-    print(f"\n🏷️ Calculating {lookahead_days}-day ahead return signs...")
+    """
+    Calculates the 5-day ahead return **sign** (classification label)
+    and **continuous return** (regression target) for all stocks and dates.
+    """
+    print(f"\n🏷️ Calculating {lookahead_days}-day ahead return signs and returns...")
     
     ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
     
@@ -299,23 +323,29 @@ def create_target_labels(tickers, dates, lookahead_days):
     
     forward_returns_df = (close_prices.shift(-lookahead_days) - close_prices) / close_prices
     
+    # Classification labels: 1 if return > 0, else 0
     target_labels = (forward_returns_df > 0).astype(int)
     
-    targets_dict = {}
+    targets_class_dict = {}
+    targets_reg_dict = {}
     for date in dates:
         date_str = date.strftime('%Y-%m-%d')
         if date_str in target_labels.index:
-            target_vector = []
+            class_vec = []
+            reg_vec = []
             for ticker in tickers:
                 col_name = f'Close_{ticker}'
-                if col_name in target_labels.columns:
-                    target_vector.append(target_labels.loc[date_str, col_name])
+                if col_name in target_labels.columns and col_name in forward_returns_df.columns:
+                    class_vec.append(target_labels.loc[date_str, col_name])
+                    reg_vec.append(forward_returns_df.loc[date_str, col_name])
                 else:
-                    target_vector.append(0)
-            targets_dict[date] = torch.tensor(target_vector, dtype=torch.long)
+                    class_vec.append(0)
+                    reg_vec.append(0.0)
+            targets_class_dict[date] = torch.tensor(class_vec, dtype=torch.long)
+            targets_reg_dict[date] = torch.tensor(reg_vec, dtype=torch.float32)
             
-    print(f"✅ Targets calculated for {len(targets_dict)} trading days.")
-    return targets_dict
+    print(f"✅ Targets calculated for {len(targets_class_dict)} trading days.")
+    return targets_class_dict, targets_reg_dict
 
 # --- 3. Training and Evaluation Functions ---
 
@@ -335,8 +365,13 @@ def _backward_step(loss, model, optimizer, scaler=None, max_grad_norm=None):
         optimizer.step()
 
 
-def train(model, optimizer, data, targets, scaler=None, amp_enabled=False, max_grad_norm=None):
-    """Single training step for the Core GNN (HeteroData input)."""
+def train(model, optimizer, data, targets_class, targets_reg=None, scaler=None, amp_enabled=False, max_grad_norm=None):
+    """Single training step for the Core GNN (HeteroData input).
+    
+    If ENABLE_MULTI_TASK and targets_reg is provided, uses a combined loss:
+        L = L_class + REG_LOSS_WEIGHT * L_reg
+    where L_reg is Smooth L1 loss on future returns.
+    """
     model.train()
     optimizer.zero_grad()
     
@@ -345,13 +380,25 @@ def train(model, optimizer, data, targets, scaler=None, amp_enabled=False, max_g
         data[metadata].edge_index = data[metadata].edge_index.to(torch.long)
         
     with torch.cuda.amp.autocast(enabled=amp_enabled):
-        out = model(data.to(DEVICE))
-        # Use Focal Loss if enabled, otherwise standard cross-entropy
+        data_device = data.to(DEVICE)
+        out = model(data_device)
+
+        # --- Classification loss ---
         if LOSS_TYPE == 'focal':
             criterion = FocalLoss(alpha=FOCAL_ALPHA, gamma=FOCAL_GAMMA)
-            loss = criterion(out, targets.to(DEVICE))
+            loss_class = criterion(out, targets_class.to(DEVICE))
         else:
-            loss = F.cross_entropy(out, targets.to(DEVICE))
+            loss_class = F.cross_entropy(out, targets_class.to(DEVICE))
+
+        # --- Optional regression loss (multi-task learning) ---
+        if ENABLE_MULTI_TASK and targets_reg is not None:
+            preds_reg = model.forward_regression(data_device)
+            # Ensure shapes match
+            reg_targets = targets_reg.to(DEVICE).view_as(preds_reg)
+            loss_reg = F.smooth_l1_loss(preds_reg, reg_targets)
+            loss = loss_class + REG_LOSS_WEIGHT * loss_reg
+        else:
+            loss = loss_class
     
     _backward_step(loss, model, optimizer, scaler=scaler, max_grad_norm=max_grad_norm)
     
@@ -508,12 +555,12 @@ def run_training_pipeline():
     
     graph_dates = [pd.to_datetime(f.stem.split('_')[-1]) for f in graph_files]
     
-    # 2. Get Targets and Final Training Dates
+    # 2. Get Targets and Final Training Dates (classification + regression)
     
-    targets_dict = create_target_labels(tickers, graph_dates, LOOKAHEAD_DAYS)
+    targets_class_dict, targets_reg_dict = create_target_labels(tickers, graph_dates, LOOKAHEAD_DAYS)
     
     # Align training dates: intersect dates that have both a graph AND a target
-    training_dates = sorted(list(set(targets_dict.keys()).intersection(graph_dates)))
+    training_dates = sorted(list(set(targets_class_dict.keys()).intersection(graph_dates)))
     
     if not training_dates:
         print("❌ CRITICAL: No overlapping dates found between graphs and targets. STOPPING.")
@@ -595,15 +642,16 @@ def run_training_pipeline():
         # --- Train Phase ---
         for date in tqdm(train_dates, desc=f"Epoch {epoch}/{NUM_EPOCHS} Training"):
             data = load_graph_data(date)
-            target = targets_dict.get(date)
-            if data and target is not None:
+            target_class = targets_class_dict.get(date)
+            target_reg = targets_reg_dict.get(date) if ENABLE_MULTI_TASK else None
+            if data and target_class is not None:
                 if use_mini_batch:
                     loader = create_neighbor_loader(data, target, BATCH_SIZE, NUM_NEIGHBORS, shuffle=True)
                     loss, _ = train_with_sampling(
                         model,
                         optimizer,
                         data,
-                        target,
+                        target_class,
                         loader,
                         scaler=scaler,
                         amp_enabled=scaler.is_enabled(),
@@ -614,7 +662,8 @@ def run_training_pipeline():
                         model,
                         optimizer,
                         data,
-                        target,
+                        target_class,
+                        targets_reg=target_reg,
                         scaler=scaler,
                         amp_enabled=scaler.is_enabled(),
                         max_grad_norm=GRAD_CLIP_NORM
@@ -629,7 +678,7 @@ def run_training_pipeline():
         all_val_true, all_val_probs = [], []
         for date in tqdm(val_dates, desc=f"Epoch {epoch}/{NUM_EPOCHS} Validation", leave=False):
             data = load_graph_data(date)
-            target = targets_dict.get(date)
+            target = targets_class_dict.get(date)
             if data and target is not None:
                 if use_mini_batch:
                     loader = create_neighbor_loader(data, target, BATCH_SIZE * 2, NUM_NEIGHBORS, shuffle=False)
@@ -658,7 +707,7 @@ def run_training_pipeline():
             val_f1s_opt = []
             for date in val_dates:
                 data = load_graph_data(date)
-                target = targets_dict.get(date)
+                target = targets_class_dict.get(date)
                 if data and target is not None:
                     _, _, _, probs = evaluate(model, data, target, return_probs=True)
                     if probs is not None:
@@ -717,7 +766,7 @@ def run_training_pipeline():
     all_val_true_final, all_val_probs_final = [], []
     for date in val_dates:
         data = load_graph_data(date)
-        target = targets_dict.get(date)
+        target = targets_class_dict.get(date)
         if data and target is not None and not use_mini_batch:
             _, _, _, probs = evaluate(model, data, target, return_probs=True)
             if probs is not None:
