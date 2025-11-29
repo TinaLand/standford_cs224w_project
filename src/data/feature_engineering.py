@@ -123,21 +123,32 @@ def calculate_technical_indicators(aligned_data, tickers):
     for ticker in tickers:
         try:
             # Extract OHLCV data using the flat column names (e.g., 'Close_AAPL')
-            # Convert to float64 (double) for TA-Lib compatibility
-            open_prices = aligned_data[f'Open_{ticker}'].dropna().astype(np.float64)
-            high_prices = aligned_data[f'High_{ticker}'].dropna().astype(np.float64)
-            low_prices = aligned_data[f'Low_{ticker}'].dropna().astype(np.float64)
-            close_prices = aligned_data[f'Close_{ticker}'].dropna().astype(np.float64)
-            volume = aligned_data[f'Volume_{ticker}'].dropna().astype(np.float64)
+            # Keep as pandas Series for shift/rolling operations, convert to float64 only for TA-Lib
+            open_prices = aligned_data[f'Open_{ticker}'].dropna()
+            high_prices = aligned_data[f'High_{ticker}'].dropna()
+            low_prices = aligned_data[f'Low_{ticker}'].dropna()
+            close_prices = aligned_data[f'Close_{ticker}'].dropna()
+            volume = aligned_data[f'Volume_{ticker}'].dropna()
             
             # --- Returns and Volatility ---
+            # Note: close_prices is still a pandas Series (for shift/rolling operations)
+            # We'll convert to float64 only when passing to TA-Lib functions
+            
             # 1-, 5-, 20-day returns
             for w in [1, 5, 20]:
-                log_returns = np.log(close_prices / close_prices.shift(w))
+                # Ensure result is pandas Series (not numpy array)
+                log_returns = pd.Series(
+                    np.log(close_prices / close_prices.shift(w)),
+                    index=close_prices.index
+                )
                 technical_features[f'LogRet_{w}d_{ticker}'] = log_returns
             
             # Volatility (30-day Annualized)
-            daily_returns = np.log(close_prices / close_prices.shift(1))
+            # Ensure daily_returns is pandas Series for rolling operations
+            daily_returns = pd.Series(
+                np.log(close_prices / close_prices.shift(1)),
+                index=close_prices.index
+            )
             volatility_30d = daily_returns.rolling(window=30).std() * np.sqrt(252)
             technical_features[f'Vol_30d_{ticker}'] = volatility_30d
             
@@ -254,7 +265,9 @@ def calculate_technical_indicators(aligned_data, tickers):
             
             # Price-Volume Trend (PVT)
             pvt = talib.OBV(close_prices.values.astype(np.float64), volume.values.astype(np.float64))
-            pvt_normalized = (pvt - pvt.rolling(window=20).mean()) / (pvt.rolling(window=20).std() + 1e-8)
+            # Convert pvt back to pandas Series for rolling operations
+            pvt_series = pd.Series(pvt, index=close_prices.index)
+            pvt_normalized = (pvt_series - pvt_series.rolling(window=20).mean()) / (pvt_series.rolling(window=20).std() + 1e-8)
             technical_features[f'PVT_Norm_{ticker}'] = pvt_normalized.values
             
             # Additional volatility measures
