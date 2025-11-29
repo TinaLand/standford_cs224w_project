@@ -100,10 +100,32 @@ def find_optimal_threshold(y_true, y_prob):
     try:
         if len(np.unique(y_true)) < 2:
             return 0.5
+        
+        # Check if all probabilities are the same
+        if np.std(y_prob) < 1e-6:
+            return 0.5
+        
         fpr, tpr, thresholds = roc_curve(y_true, y_prob)
-        j_scores = tpr - fpr
+        
+        # Filter out inf and nan values
+        valid_mask = np.isfinite(thresholds)
+        if not np.any(valid_mask):
+            return 0.5
+        
+        valid_thresholds = thresholds[valid_mask]
+        valid_fpr = fpr[valid_mask]
+        valid_tpr = tpr[valid_mask]
+        
+        # Calculate Youden's J statistic
+        j_scores = valid_tpr - valid_fpr
         optimal_idx = np.argmax(j_scores)
-        return thresholds[optimal_idx]
+        optimal_threshold = valid_thresholds[optimal_idx]
+        
+        # Ensure threshold is in valid range [0, 1]
+        if not np.isfinite(optimal_threshold) or optimal_threshold < 0 or optimal_threshold > 1:
+            return 0.5
+        
+        return optimal_threshold
     except Exception as e:
         print(f"  ⚠️ Could not find optimal threshold: {e}, using default 0.5")
         return 0.5
@@ -646,7 +668,7 @@ def run_training_pipeline():
             target_reg = targets_reg_dict.get(date) if ENABLE_MULTI_TASK else None
             if data and target_class is not None:
                 if use_mini_batch:
-                    loader = create_neighbor_loader(data, target, BATCH_SIZE, NUM_NEIGHBORS, shuffle=True)
+                    loader = create_neighbor_loader(data, target_class, BATCH_SIZE, NUM_NEIGHBORS, shuffle=True)
                     loss, _ = train_with_sampling(
                         model,
                         optimizer,
@@ -789,7 +811,7 @@ def run_training_pipeline():
     
     for date in test_dates:
         data = load_graph_data(date)
-        target = targets_dict.get(date)
+        target = targets_class_dict.get(date)
         if data and target is not None:
             if use_mini_batch:
                 loader = create_neighbor_loader(data, target, BATCH_SIZE * 2, NUM_NEIGHBORS, shuffle=False)
