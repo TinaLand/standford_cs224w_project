@@ -19,7 +19,8 @@ if hasattr(torch.serialization, 'add_safe_globals'):
     torch.serialization.add_safe_globals([BaseStorage, NodeStorage, EdgeStorage, GlobalStorage])
 
 # --- Configuration & Hyperparameters (from Proposal) ---
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# NOTE: This file lives in `src/training/`, so the project root is three levels up.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_GRAPHS_DIR = PROJECT_ROOT / "data" / "graphs"
 MODELS_DIR = PROJECT_ROOT / "models"
 OHLCV_RAW_FILE = PROJECT_ROOT / "data" / "raw" / "stock_prices_ohlcv_raw.csv"

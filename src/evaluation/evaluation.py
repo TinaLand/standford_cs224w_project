@@ -17,7 +17,8 @@ from src.rl.environment import StockTradingEnv
 from src.rl.agent import StockTradingAgent 
 
 # --- Configuration & Setup ---
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# NOTE: This file lives in `src/evaluation/`, so the project root is three levels up.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
 RL_SAVE_PATH = MODELS_DIR / "rl_ppo_agent_model"
 RESULTS_DIR = PROJECT_ROOT / "results"

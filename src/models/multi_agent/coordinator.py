@@ -22,7 +22,7 @@ from src.training.transformer_trainer import RoleAwareGraphTransformer, load_gra
 import torch
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
 RESULTS_DIR = PROJECT_ROOT / "results"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)

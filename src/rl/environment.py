@@ -12,7 +12,8 @@ if hasattr(torch.serialization, 'add_safe_globals'):
     torch.serialization.add_safe_globals([pd._libs.tslibs.timestamps._unpickle_timestamp])
 
 # --- Configuration (Must match training script) ---
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# NOTE: This file lives in `src/rl/`, so the project root is three levels up.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_GRAPHS_DIR = PROJECT_ROOT / "data" / "graphs"
 MODELS_DIR = PROJECT_ROOT / "models"
 LOOKAHEAD_DAYS = 5

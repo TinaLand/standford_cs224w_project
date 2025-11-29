@@ -20,9 +20,10 @@ if hasattr(torch.serialization, 'add_safe_globals'):
     torch.serialization.add_safe_globals([pd._libs.tslibs.timestamps._unpickle_timestamp])
 
 # Add necessary paths for local imports
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.append(str(PROJECT_ROOT / 'scripts')) # To import rl_environment
-sys.path.append(str(PROJECT_ROOT / 'scripts' / 'components')) # For GNN model components
+# NOTE: This file lives in `src/rl/`, so the project root is three levels up.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(PROJECT_ROOT / 'scripts')) # To import rl_environment (legacy, kept for backward compatibility)
+sys.path.append(str(PROJECT_ROOT / 'scripts' / 'components')) # For GNN model components (legacy)
 
 # --- Configuration (Shared) ---
 MODELS_DIR = PROJECT_ROOT / "models"
@@ -45,7 +46,13 @@ RL_LOG_PATH.mkdir(parents=True, exist_ok=True)
 
 # NOTE: The GNN model definition and the environment definition 
 # must be imported from their respective files.
-from src.training.transformer_trainer import RoleAwareGraphTransformer 
+from src.training.transformer_trainer import (
+    RoleAwareGraphTransformer,
+    HIDDEN_CHANNELS,
+    OUT_CHANNELS,
+    NUM_LAYERS,
+    NUM_HEADS,
+)
 from src.rl.environment import StockTradingEnv
 from src.rl.agent import StockTradingAgent 
 
@@ -62,16 +69,30 @@ def load_gnn_model_for_rl():
     temp_data = torch.load(sample_graph_path, weights_only=False)
     INPUT_DIM = temp_data['stock'].x.shape[1]
 
-    # 2. Initialize GNN model structure (Must match Phase 4)
+    # 2. Initialize GNN model structure (MUST match Phase 4 training hyperparameters)
+    # Use the same HIDDEN_CHANNELS / NUM_LAYERS / NUM_HEADS as in transformer_trainer.py
     gnn_model = RoleAwareGraphTransformer(
-        INPUT_DIM, 256, 2, 2, 4 # Use same dimensions as Phase 4 training
+        INPUT_DIM,
+        HIDDEN_CHANNELS,
+        OUT_CHANNELS,
+        NUM_LAYERS,
+        NUM_HEADS,
     ).to(DEVICE)
     
     # 3. Load trained weights
     if not CORE_GNN_MODEL_PATH.exists():
         raise FileNotFoundError(f"Trained GNN model not found at: {CORE_GNN_MODEL_PATH}")
-        
-    gnn_model.load_state_dict(torch.load(CORE_GNN_MODEL_PATH, map_location=DEVICE, weights_only=False))
+
+    # Use strict=False to be robust to minor architecture/logging changes while
+    # ensuring that matching layers are correctly loaded.
+    state_dict = torch.load(CORE_GNN_MODEL_PATH, map_location=DEVICE, weights_only=False)
+    missing, unexpected = gnn_model.load_state_dict(state_dict, strict=False)
+    if missing or unexpected:
+        print("⚠️  Warning when loading GNN state_dict for RL:")
+        if missing:
+            print(f"   Missing keys: {missing}")
+        if unexpected:
+            print(f"   Unexpected keys: {unexpected}")
     
     # 4. Freeze GNN parameters
     for param in gnn_model.parameters():

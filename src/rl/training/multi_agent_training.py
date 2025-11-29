@@ -24,7 +24,7 @@ from src.models.multi_agent.coordinator import (
 from src.rl.integration import load_gnn_model_for_rl
 from src.rl.environment import StockTradingEnv
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
 RESULTS_DIR = PROJECT_ROOT / "results"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
