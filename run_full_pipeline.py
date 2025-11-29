@@ -122,11 +122,13 @@ def main():
         results[phase['name']] = 'Success' if success else 'Failed'
         
         if not success:
-            print(f"\n⚠️  {phase['name']} failed. Continue? (y/n): ", end='')
-            response = input().strip().lower()
-            if response != 'y':
-                print("\n❌ Pipeline stopped by user")
-                break
+            print(f"\n⚠️  {phase['name']} failed.")
+            print("Continuing to next phase...")
+            # Auto-continue instead of asking for input
+            # response = input().strip().lower()
+            # if response != 'y':
+            #     print("\n❌ Pipeline stopped by user")
+            #     break
         
         # Small delay between phases
         time.sleep(1)

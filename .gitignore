@@ -43,11 +43,17 @@ data/raw/*.csv
 data/processed/*.csv
 data/graphs/*.pt
 data/edges/*.pkl
+data/edges/*.csv
+src/data/edges/*.csv
+src/data/processed/*.csv
 
 # Models (large files)
 models/*.pt
 models/checkpoints/*.pt
 models/rl_ppo_agent_model*/*.zip
+src/models/*.pt
+src/models/checkpoints/*.pt
+src/rl/models/**/*.zip
 
 # Results
 results/*.png
