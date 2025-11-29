@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from tqdm import tqdm
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, roc_curve, confusion_matrix, classification_report
 import os
 import sys
 from torch.nn.utils import clip_grad_norm_
@@ -18,37 +18,90 @@ from torch_geometric.data.storage import BaseStorage, NodeStorage, EdgeStorage, 
 if hasattr(torch.serialization, 'add_safe_globals'):
     torch.serialization.add_safe_globals([BaseStorage, NodeStorage, EdgeStorage, GlobalStorage])
 
-# Add components directory to path for imports
-sys.path.append(str(Path(__file__).resolve().parent / 'components'))
-
 # --- Configuration & Hyperparameters (from Proposal) ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_GRAPHS_DIR = PROJECT_ROOT / "data" / "graphs"
 MODELS_DIR = PROJECT_ROOT / "models"
 OHLCV_RAW_FILE = PROJECT_ROOT / "data" / "raw" / "stock_prices_ohlcv_raw.csv"
 
-# Hyperparameters (based on proposal)
+# Hyperparameters (IMPROVED for better performance)
 LOOKAHEAD_DAYS = 5              # Target: 5-day-ahead return sign
-HIDDEN_CHANNELS = 256           # Hidden size
-NUM_LAYERS = 2                  # Number of layers
-NUM_HEADS = 4                   # Number of attention heads
+HIDDEN_CHANNELS = 512           # Hidden size (INCREASED from 256 to 512 for better capacity)
+NUM_LAYERS = 3                  # Number of layers (INCREASED from 2 to 3 for deeper model)
+NUM_HEADS = 8                   # Number of attention heads (INCREASED from 4 to 8 for better attention)
 OUT_CHANNELS = 2                # Binary classification: Up/Down
-LEARNING_RATE = 0.0005
-NUM_EPOCHS = 30                 # Increased epochs for complex model (with early stopping)
+LEARNING_RATE = 0.001           # Learning rate (INCREASED from 0.0005 to 0.001 for faster convergence)
+NUM_EPOCHS = 40                 # Increased epochs (from 30 to 40) for more training
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# Class Imbalance Handling Configuration
+LOSS_TYPE = 'focal'  # Options: 'standard', 'focal'
+FOCAL_ALPHA = 0.80   # Weight for minority class (INCREASED from 0.75 to 0.80 for better minority class handling)
+FOCAL_GAMMA = 2.5    # Focusing parameter (INCREASED from 2.0 to 2.5 for harder focus on hard examples)
 
 # Early Stopping Configuration
 ENABLE_EARLY_STOPPING = True
-EARLY_STOP_PATIENCE = 5         # Stop if no improvement for 5 epochs
+EARLY_STOP_PATIENCE = 12        # Increased from 10 to 12 to allow more training epochs
 EARLY_STOP_MIN_DELTA = 0.0001   # Minimum improvement threshold
 
 # Learning Rate Scheduler Configuration
 ENABLE_LR_SCHEDULER = True
-LR_SCHEDULER_PATIENCE = 3       # Reduce LR after 3 epochs without improvement
+LR_SCHEDULER_PATIENCE = 4       # Increased from 3 to 4 for more stable training
 LR_SCHEDULER_FACTOR = 0.5       # Multiply LR by this factor
 LR_SCHEDULER_MIN_LR = 1e-6      # Minimum learning rate
 
+# Additional Training Improvements
+DROPOUT_RATE = 0.3              # Dropout rate for regularization (NEW)
+WEIGHT_DECAY = 1e-5             # L2 regularization (NEW)
+GRAD_CLIP_NORM = 1.0            # Gradient clipping norm (NEW)
+
 # --- Helper Utilities ---
+
+class FocalLoss(torch.nn.Module):
+    """
+    Focal Loss for addressing class imbalance in classification tasks.
+    
+    FL(p_t) = -α_t * (1 - p_t)^γ * log(p_t)
+    
+    Reference: Lin et al. "Focal Loss for Dense Object Detection" (2017)
+    """
+    def __init__(self, alpha=0.75, gamma=2.0, reduction='mean'):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
+    
+    def forward(self, inputs, targets):
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none')
+        p = F.softmax(inputs, dim=1)
+        p_t = p.gather(1, targets.view(-1, 1)).squeeze(1)
+        focal_weight = (1 - p_t) ** self.gamma
+        alpha_t = torch.where(targets == 1, 
+                             torch.tensor(self.alpha, device=inputs.device),
+                             torch.tensor(1 - self.alpha, device=inputs.device))
+        focal_loss = alpha_t * focal_weight * ce_loss
+        
+        if self.reduction == 'mean':
+            return focal_loss.mean()
+        elif self.reduction == 'sum':
+            return focal_loss.sum()
+        else:
+            return focal_loss
+
+def find_optimal_threshold(y_true, y_prob):
+    """
+    Find optimal classification threshold using ROC curve (Youden's J statistic).
+    """
+    try:
+        if len(np.unique(y_true)) < 2:
+            return 0.5
+        fpr, tpr, thresholds = roc_curve(y_true, y_prob)
+        j_scores = tpr - fpr
+        optimal_idx = np.argmax(j_scores)
+        return thresholds[optimal_idx]
+    except Exception as e:
+        print(f"  ⚠️ Could not find optimal threshold: {e}, using default 0.5")
+        return 0.5
 
 def _read_time_series_csv(path: Path) -> pd.DataFrame:
     """
@@ -73,7 +126,7 @@ ENABLE_MINI_BATCH = False      # Enable neighbor sampling for large graphs (requ
 BATCH_SIZE = 128               # Number of target nodes per batch
 NUM_NEIGHBORS = [15, 10]       # Neighbors to sample per layer
 ENABLE_AMP = torch.cuda.is_available()  # Enable automatic mixed precision if CUDA available
-GRAD_CLIP_MAX_NORM = 1.0       # Gradient clipping to stabilize training
+GRAD_CLIP_MAX_NORM = GRAD_CLIP_NORM  # Use the new constant
 MODEL_SAVE_NAME = 'core_transformer_model.pt'
 
 # Ensure model directory exists
@@ -82,8 +135,8 @@ MODELS_DIR.mkdir(parents=True, exist_ok=True)
 # --- 1. Model Definition: Core Role-Aware Graph Transformer ---
 
 # Import the enhanced components
-from components.pearl_embedding import PEARLPositionalEmbedding
-from components.transformer_layer import RelationAwareGATv2Conv, RelationAwareAggregator
+from src.models.components.pearl_embedding import PEARLPositionalEmbedding
+from src.models.components.transformer_layer import RelationAwareGATv2Conv, RelationAwareAggregator
 
 # Import PyTorch Geometric's neighbor sampling (requires sparse libraries)
 try:
@@ -127,7 +180,7 @@ class RoleAwareGraphTransformer(torch.nn.Module):
                     in_d, 
                     hidden_dim // num_heads, 
                     heads=num_heads, 
-                    dropout=0.3,
+                    dropout=DROPOUT_RATE,
                     edge_type=edge_type
                 )
                 for edge_type in metadata
@@ -175,7 +228,7 @@ class RoleAwareGraphTransformer(torch.nn.Module):
             
             # Apply activations and dropout
             x_dict['stock'] = x_dict['stock'].relu()
-            x_dict['stock'] = F.dropout(x_dict['stock'], p=0.4, training=self.training)
+            x_dict['stock'] = F.dropout(x_dict['stock'], p=DROPOUT_RATE, training=self.training)
         
         # 3. Node-Level Output
         out = self.lin_out(x_dict['stock'])
@@ -211,7 +264,7 @@ class RoleAwareGraphTransformer(torch.nn.Module):
                 x_dict = conv_output
             
             x_dict['stock'] = x_dict['stock'].relu()
-            x_dict['stock'] = F.dropout(x_dict['stock'], p=0.4, training=self.training)
+            x_dict['stock'] = F.dropout(x_dict['stock'], p=DROPOUT_RATE, training=self.training)
         
         # Return embeddings before final linear layer
         return x_dict['stock']
@@ -292,14 +345,19 @@ def train(model, optimizer, data, targets, scaler=None, amp_enabled=False, max_g
         
     with torch.cuda.amp.autocast(enabled=amp_enabled):
         out = model(data.to(DEVICE))
-        loss = F.cross_entropy(out, targets.to(DEVICE))
+        # Use Focal Loss if enabled, otherwise standard cross-entropy
+        if LOSS_TYPE == 'focal':
+            criterion = FocalLoss(alpha=FOCAL_ALPHA, gamma=FOCAL_GAMMA)
+            loss = criterion(out, targets.to(DEVICE))
+        else:
+            loss = F.cross_entropy(out, targets.to(DEVICE))
     
     _backward_step(loss, model, optimizer, scaler=scaler, max_grad_norm=max_grad_norm)
     
     return loss.item(), out.detach().argmax(dim=1)
 
 
-def evaluate(model, data, targets):
+def evaluate(model, data, targets, return_probs=False, threshold=0.5):
     """Single evaluation step."""
     model.eval()
     
@@ -308,11 +366,16 @@ def evaluate(model, data, targets):
             out = model(data.to(DEVICE))
     
     y_true = targets.cpu().numpy()
-    y_pred = out.argmax(dim=1).cpu().numpy()
+    probs = F.softmax(out, dim=1)[:, 1].cpu().numpy()  # Probability of positive class
+    
+    # Use threshold instead of argmax for better class balance
+    y_pred = (probs >= threshold).astype(int)
     
     acc = accuracy_score(y_true, y_pred)
     f1 = f1_score(y_true, y_pred, average='binary', zero_division=0)
     
+    if return_probs:
+        return acc, f1, out, probs
     return acc, f1
 
 
@@ -337,7 +400,12 @@ def train_with_sampling(model, optimizer, data, targets, loader, scaler=None, am
         batch_out = out[:batch_size]
         batch_targets = batch['stock'].y[:batch_size] if hasattr(batch['stock'], 'y') else targets[:batch_size]
         
-        loss = F.cross_entropy(batch_out, batch_targets)
+        # Use Focal Loss if enabled, otherwise standard cross-entropy
+        if LOSS_TYPE == 'focal':
+            criterion = FocalLoss(alpha=FOCAL_ALPHA, gamma=FOCAL_GAMMA)
+            loss = criterion(batch_out, batch_targets)
+        else:
+            loss = F.cross_entropy(batch_out, batch_targets)
         _backward_step(loss, model, optimizer, scaler=scaler, max_grad_norm=max_grad_norm)
         
         total_loss += loss.item()
@@ -466,9 +534,15 @@ def run_training_pipeline():
     
     # 4. Model Setup
     model = RoleAwareGraphTransformer(INPUT_DIM, HIDDEN_CHANNELS, OUT_CHANNELS, NUM_LAYERS, NUM_HEADS).to(DEVICE)
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)  # Added weight decay for regularization
     scaler = torch.cuda.amp.GradScaler(enabled=ENABLE_AMP)
     model_path = MODELS_DIR / MODEL_SAVE_NAME
+    
+    # Print loss function configuration
+    if LOSS_TYPE == 'focal':
+        print(f"✅ Using Focal Loss (alpha={FOCAL_ALPHA}, gamma={FOCAL_GAMMA}) for class imbalance handling")
+    else:
+        print(f"⚠️  Using Standard Cross-Entropy (consider 'focal' for imbalanced data)")
     
     # Learning Rate Scheduler
     if ENABLE_LR_SCHEDULER:
@@ -477,8 +551,7 @@ def run_training_pipeline():
             mode='max',  # Maximize F1 score
             factor=LR_SCHEDULER_FACTOR,
             patience=LR_SCHEDULER_PATIENCE,
-            min_lr=LR_SCHEDULER_MIN_LR,
-            verbose=True
+            min_lr=LR_SCHEDULER_MIN_LR
         )
         print(f"📉 LR Scheduler enabled: ReduceLROnPlateau (patience={LR_SCHEDULER_PATIENCE}, factor={LR_SCHEDULER_FACTOR})")
     else:
@@ -533,7 +606,7 @@ def run_training_pipeline():
                         loader,
                         scaler=scaler,
                         amp_enabled=scaler.is_enabled(),
-                        max_grad_norm=GRAD_CLIP_MAX_NORM
+                        max_grad_norm=GRAD_CLIP_NORM
                     )
                 else:
                     loss, _ = train(
@@ -543,7 +616,7 @@ def run_training_pipeline():
                         target,
                         scaler=scaler,
                         amp_enabled=scaler.is_enabled(),
-                        max_grad_norm=GRAD_CLIP_MAX_NORM
+                        max_grad_norm=GRAD_CLIP_NORM
                     )
                 total_loss += loss
                 num_train_batches += 1
@@ -552,6 +625,7 @@ def run_training_pipeline():
 
         # --- Validation Phase ---
         val_f1s = []
+        all_val_true, all_val_probs = [], []
         for date in tqdm(val_dates, desc=f"Epoch {epoch}/{NUM_EPOCHS} Validation", leave=False):
             data = load_graph_data(date)
             target = targets_dict.get(date)
@@ -559,11 +633,44 @@ def run_training_pipeline():
                 if use_mini_batch:
                     loader = create_neighbor_loader(data, target, BATCH_SIZE * 2, NUM_NEIGHBORS, shuffle=False)
                     _, f1 = evaluate_with_sampling(model, data, target, loader)
+                    # For mini-batch, we can't easily get probabilities, so use default threshold
+                    val_f1s.append(f1)
                 else:
-                    _, f1 = evaluate(model, data, target)
-                val_f1s.append(f1)
+                    _, f1, _, probs = evaluate(model, data, target, return_probs=True)
+                    val_f1s.append(f1)
+                    if probs is not None:
+                        all_val_true.extend(target.cpu().numpy())
+                        all_val_probs.extend(probs)
         
-        avg_val_f1 = float(np.mean(val_f1s)) if val_f1s else 0.0
+        # Find optimal threshold on validation set (every 5 epochs or first epoch)
+        optimal_threshold = 0.5  # Default
+        if len(all_val_true) > 0 and len(all_val_probs) > 0 and (epoch == 1 or epoch % 5 == 0):
+            optimal_threshold = find_optimal_threshold(
+                np.array(all_val_true),
+                np.array(all_val_probs)
+            )
+            if epoch == 1 or epoch % 5 == 0:
+                print(f"   📊 Optimal threshold (validation): {optimal_threshold:.4f}")
+        
+        # Re-evaluate with optimal threshold for better F1 score
+        if len(all_val_true) > 0 and len(all_val_probs) > 0 and not use_mini_batch:
+            val_f1s_opt = []
+            for date in val_dates:
+                data = load_graph_data(date)
+                target = targets_dict.get(date)
+                if data and target is not None:
+                    _, _, _, probs = evaluate(model, data, target, return_probs=True)
+                    if probs is not None:
+                        y_true = target.cpu().numpy()
+                        y_pred_opt = (probs >= optimal_threshold).astype(int)
+                        f1_opt = f1_score(y_true, y_pred_opt, average='binary', zero_division=0)
+                        val_f1s_opt.append(f1_opt)
+            if val_f1s_opt:
+                avg_val_f1 = float(np.mean(val_f1s_opt))
+            else:
+                avg_val_f1 = float(np.mean(val_f1s)) if val_f1s else 0.0
+        else:
+            avg_val_f1 = float(np.mean(val_f1s)) if val_f1s else 0.0
         current_lr = optimizer.param_groups[0]['lr']
         
         # Update learning rate scheduler
@@ -603,7 +710,32 @@ def run_training_pipeline():
         model.load_state_dict(torch.load(model_path, weights_only=False))
     else:
         print("⚠️  Warning: Best model checkpoint not found. Using final weights.")
+    
+    # Find optimal threshold on validation set
+    print("\n🔍 Finding optimal classification threshold on validation set...")
+    all_val_true_final, all_val_probs_final = [], []
+    for date in val_dates:
+        data = load_graph_data(date)
+        target = targets_dict.get(date)
+        if data and target is not None and not use_mini_batch:
+            _, _, _, probs = evaluate(model, data, target, return_probs=True)
+            if probs is not None:
+                all_val_true_final.extend(target.cpu().numpy())
+                all_val_probs_final.extend(probs)
+    
+    optimal_threshold = 0.5  # Default
+    if len(all_val_true_final) > 0 and len(all_val_probs_final) > 0:
+        optimal_threshold = find_optimal_threshold(
+            np.array(all_val_true_final),
+            np.array(all_val_probs_final)
+        )
+        print(f"   ✅ Optimal threshold: {optimal_threshold:.4f} (default: 0.5)")
+    else:
+        print(f"   ⚠️  Could not find optimal threshold, using default: 0.5")
+    
+    # Test with optimal threshold
     test_accs, test_f1s = [], []
+    all_test_true, all_test_pred = [], []
     
     for date in test_dates:
         data = load_graph_data(date)
@@ -612,13 +744,32 @@ def run_training_pipeline():
             if use_mini_batch:
                 loader = create_neighbor_loader(data, target, BATCH_SIZE * 2, NUM_NEIGHBORS, shuffle=False)
                 acc, f1 = evaluate_with_sampling(model, data, target, loader)
+                test_accs.append(acc)
+                test_f1s.append(f1)
             else:
-                acc, f1 = evaluate(model, data, target)
-            test_accs.append(acc)
-            test_f1s.append(f1)
+                _, _, out, probs = evaluate(model, data, target, return_probs=True)
+                if probs is not None:
+                    y_true = target.cpu().numpy()
+                    y_pred_opt = (probs >= optimal_threshold).astype(int)
+                    acc_opt = accuracy_score(y_true, y_pred_opt)
+                    f1_opt = f1_score(y_true, y_pred_opt, average='binary', zero_division=0)
+                    test_accs.append(acc_opt)
+                    test_f1s.append(f1_opt)
+                    all_test_true.extend(y_true)
+                    all_test_pred.extend(y_pred_opt)
             
     mean_test_acc = float(np.mean(test_accs)) if test_accs else 0.0
     mean_test_f1 = float(np.mean(test_f1s)) if test_f1s else 0.0
+    
+    # Print classification report if we have predictions
+    if len(all_test_true) > 0 and len(all_test_pred) > 0:
+        print(f"\n📋 Classification Report:")
+        print(classification_report(
+            all_test_true,
+            all_test_pred,
+            target_names=['Down/Flat (0)', 'Up (1)'],
+            digits=4
+        ))
 
     print("\n" + "=" * 50)
     print(f"🚀 Final Test Results (Core GNN, Averaged over {len(test_dates)} days):")

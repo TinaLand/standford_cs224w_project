@@ -256,9 +256,9 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.logger import configure
 
-# Import GNN model and environment
-from phase4_core_training import RoleAwareGraphTransformer
-from rl_environment import StockTradingEnv
+# Import GNN model
+from src.training.transformer_trainer import RoleAwareGraphTransformer
+# Note: StockTradingEnv is defined in this same file, no need to import
 
 # --- Configuration (Shared) ---
 MODEL_PATH = MODELS_DIR / 'core_transformer_model.pt'

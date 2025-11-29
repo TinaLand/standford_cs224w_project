@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from tqdm import tqdm
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, confusion_matrix, classification_report
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, confusion_matrix, classification_report, roc_curve, roc_curve
 from datetime import datetime
 import time
 import matplotlib.pyplot as plt
@@ -43,7 +43,7 @@ LOOKAHEAD_DAYS = 5 # 预测 5-day-ahead stock return sign [cite: 29]
 # Class Imbalance Handling Configuration
 # Options: 'standard' (no weighting), 'weighted' (class weights), 'focal' (focal loss)
 LOSS_TYPE = 'focal'  # Using focal loss for imbalance handling
-FOCAL_ALPHA = 0.50    # Balanced weight (0.5 for binary)
+FOCAL_ALPHA = 0.75    # Increased from 0.5 to give more weight to minority class (Down/Flat)
 FOCAL_GAMMA = 2.0      # Standard focusing parameter
 
 # Checkpoint Configuration
@@ -54,7 +54,7 @@ SAVE_CHECKPOINT_EVERY = 5       # Save checkpoint every N epochs (in addition to
 
 # Early Stopping Configuration
 ENABLE_EARLY_STOPPING = True    # Stop training if validation F1 doesn't improve
-EARLY_STOP_PATIENCE = 5         # Number of epochs to wait before stopping
+EARLY_STOP_PATIENCE = 10        # Increased from 5 to allow more training epochs
 EARLY_STOP_MIN_DELTA = 0.0001   # Minimum improvement to be considered as improvement
 
 # Learning Rate Scheduler Configuration
@@ -523,6 +523,39 @@ def plot_confusion_matrix(y_true, y_pred, epoch, split='test', save_dir=None):
     
     return cm, save_path
 
+def find_optimal_threshold(y_true, y_prob):
+    """
+    Find optimal classification threshold using ROC curve.
+    
+    Uses Youden's J statistic: J = TPR - FPR
+    Optimal threshold maximizes J (best balance between sensitivity and specificity).
+    
+    Args:
+        y_true: Ground truth labels (0 or 1)
+        y_prob: Predicted probabilities for positive class
+    
+    Returns:
+        optimal_threshold: Threshold that maximizes Youden's J statistic
+    """
+    try:
+        if len(np.unique(y_true)) < 2:
+            return 0.5  # Default threshold if only one class
+        
+        # Calculate ROC curve
+        fpr, tpr, thresholds = roc_curve(y_true, y_prob)
+        
+        # Calculate Youden's J statistic: J = TPR - FPR
+        j_scores = tpr - fpr
+        
+        # Find threshold that maximizes J
+        optimal_idx = np.argmax(j_scores)
+        optimal_threshold = thresholds[optimal_idx]
+        
+        return optimal_threshold
+    except Exception as e:
+        print(f"  ⚠️ Could not find optimal threshold: {e}, using default 0.5")
+        return 0.5
+
 def calculate_roc_auc(y_true, y_prob):
     """
     Calculate ROC-AUC score.
@@ -679,6 +712,8 @@ def train(model, optimizer, data, target, criterion):
     optimizer.step()
     
     # Return loss and predicted labels (for evaluation)
+    # Note: During training, we still use argmax for simplicity
+    # Threshold optimization is applied during validation/test
     return loss.item(), out.argmax(dim=1)
 
 def evaluate(model, data, target, return_probs=False):
@@ -714,15 +749,20 @@ def evaluate(model, data, target, return_probs=False):
     
     # Convert true labels and predictions to numpy arrays
     y_true = target.cpu().numpy()
-    y_pred = out.argmax(dim=1).cpu().numpy()
+    
+    # Get probabilities
+    probs = F.softmax(out, dim=1)[:, 1].cpu().numpy()  # Probability of positive class
+    
+    # Use threshold instead of argmax for better class balance
+    # Default threshold is 0.5, but can be optimized
+    threshold = 0.5  # Will be optimized in validation/test phase
+    y_pred = (probs >= threshold).astype(int)
     
     # Compute metrics
     acc = accuracy_score(y_true, y_pred)
-    f1 = f1_score(y_true, y_pred, average='binary')
+    f1 = f1_score(y_true, y_pred, average='binary', zero_division=0)
     
     if return_probs:
-        # Get probabilities for ROC-AUC calculation
-        probs = F.softmax(out, dim=1)[:, 1].cpu().numpy()  # Probability of positive class
         return acc, f1, out, probs
     
     return acc, f1, out
@@ -929,14 +969,40 @@ def run_training_pipeline():
                 val_accs.append(acc)
                 val_f1s.append(f1)
                 
-                # Collect for ROC-AUC and confusion matrix
+                # Collect for ROC-AUC and optimal threshold finding
                 if probs is not None:
                     all_val_true.extend(target.cpu().numpy())
-                    all_val_pred.extend(np.argmax(F.softmax(_, dim=1).cpu().numpy(), axis=1))
                     all_val_probs.extend(probs)
         
-        avg_val_acc = np.mean(val_accs)
-        avg_val_f1 = np.mean(val_f1s)
+        # Find optimal threshold on validation set
+        optimal_threshold = 0.5  # Default
+        if len(all_val_true) > 0 and len(all_val_probs) > 0:
+            optimal_threshold = find_optimal_threshold(
+                np.array(all_val_true),
+                np.array(all_val_probs)
+            )
+            if epoch == start_epoch or epoch % 5 == 0:  # Print every 5 epochs or first epoch
+                print(f"   📊 Optimal threshold (validation): {optimal_threshold:.4f}")
+        
+        # Re-evaluate with optimal threshold
+        val_accs_opt, val_f1s_opt = [], []
+        for date in val_dates:
+            data = load_graph_data(date)
+            target = targets_dict.get(date)
+            if data and target is not None:
+                # Get probabilities
+                _, _, out, probs = evaluate(model, data, target, return_probs=True)
+                if probs is not None:
+                    y_true = target.cpu().numpy()
+                    y_pred_opt = (probs >= optimal_threshold).astype(int)
+                    acc_opt = accuracy_score(y_true, y_pred_opt)
+                    f1_opt = f1_score(y_true, y_pred_opt, average='binary', zero_division=0)
+                    val_accs_opt.append(acc_opt)
+                    val_f1s_opt.append(f1_opt)
+                    all_val_pred.extend(y_pred_opt)
+        
+        avg_val_acc = np.mean(val_accs_opt) if val_accs_opt else np.mean(val_accs)
+        avg_val_f1 = np.mean(val_f1s_opt) if val_f1s_opt else np.mean(val_f1s)
         
         # Calculate ROC-AUC if enabled
         avg_val_roc_auc = None
@@ -1067,6 +1133,30 @@ def run_training_pipeline():
     print("=" * 60)
     
     model.load_state_dict(torch.load(MODELS_DIR / 'baseline_gcn_model.pt', weights_only=False))
+    
+    # Find optimal threshold on validation set (use last validation run)
+    print("\n🔍 Finding optimal classification threshold on validation set...")
+    all_val_true_final, all_val_probs_final = [], []
+    for date in val_dates:
+        data = load_graph_data(date)
+        target = targets_dict.get(date)
+        if data and target is not None:
+            _, _, _, probs = evaluate(model, data, target, return_probs=True)
+            if probs is not None:
+                all_val_true_final.extend(target.cpu().numpy())
+                all_val_probs_final.extend(probs)
+    
+    optimal_threshold = 0.5  # Default
+    if len(all_val_true_final) > 0 and len(all_val_probs_final) > 0:
+        optimal_threshold = find_optimal_threshold(
+            np.array(all_val_true_final),
+            np.array(all_val_probs_final)
+        )
+        print(f"   ✅ Optimal threshold: {optimal_threshold:.4f} (default: 0.5)")
+    else:
+        print(f"   ⚠️  Could not find optimal threshold, using default: 0.5")
+    
+    # Test with optimal threshold
     test_accs, test_f1s = [], []
     all_test_true, all_test_pred, all_test_probs = [], [], []
     
@@ -1074,14 +1164,20 @@ def run_training_pipeline():
         data = load_graph_data(date)
         target = targets_dict.get(date)
         if data and target is not None:
-            acc, f1, out, probs = evaluate(model, data, target, return_probs=True)
-            test_accs.append(acc)
-            test_f1s.append(f1)
+            _, _, out, probs = evaluate(model, data, target, return_probs=True)
             
-            # Collect for final metrics
+            # Use optimal threshold for predictions
             if probs is not None:
-                all_test_true.extend(target.cpu().numpy())
-                all_test_pred.extend(np.argmax(F.softmax(out, dim=1).cpu().numpy(), axis=1))
+                y_true = target.cpu().numpy()
+                y_pred_opt = (probs >= optimal_threshold).astype(int)
+                acc_opt = accuracy_score(y_true, y_pred_opt)
+                f1_opt = f1_score(y_true, y_pred_opt, average='binary', zero_division=0)
+                test_accs.append(acc_opt)
+                test_f1s.append(f1_opt)
+                
+                # Collect for final metrics
+                all_test_true.extend(y_true)
+                all_test_pred.extend(y_pred_opt)
                 all_test_probs.extend(probs)
     
     # Calculate final test metrics

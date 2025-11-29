@@ -11,10 +11,10 @@ from tqdm import tqdm
 from typing import Dict, Any, List
 
 # Import necessary modules from previous phases
-from phase4_core_training import RoleAwareGraphTransformer 
-from phase5_rl_integration import load_gnn_model_for_rl 
-from rl_environment import StockTradingEnv
-from rl_agent import StockTradingAgent 
+from src.training.transformer_trainer import RoleAwareGraphTransformer, load_graph_data, create_target_labels, _read_time_series_csv, OHLCV_RAW_FILE
+from src.rl.integration import load_gnn_model_for_rl 
+from src.rl.environment import StockTradingEnv
+from src.rl.agent import StockTradingAgent 
 
 # --- Configuration & Setup ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -188,7 +188,7 @@ def evaluate_gnn_metrics(gnn_model, test_dates, targets_dict, tickers) -> Dict[s
     """
     print("\n--- Evaluating GNN Model Metrics ---")
     
-    from phase4_core_training import load_graph_data, evaluate
+    # load_graph_data already imported at top
     
     all_predictions = []
     all_targets = []
@@ -230,7 +230,7 @@ def evaluate_gnn_metrics(gnn_model, test_dates, targets_dict, tickers) -> Dict[s
     # Calculate IC (need actual returns, not just binary labels)
     # For IC, we need to load actual forward returns
     try:
-        from phase4_core_training import _read_time_series_csv, OHLCV_RAW_FILE
+        # _read_time_series_csv and OHLCV_RAW_FILE already imported at top
         ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
         
         # Calculate 5-day forward returns
@@ -409,7 +409,7 @@ def evaluate_ablation_gnn(gnn_model, test_dates, targets_dict, tickers, config: 
     This is a faster alternative to full retraining - we evaluate the existing model
     on modified graphs to see the impact of removing edge types.
     """
-    from phase4_core_training import load_graph_data
+    # load_graph_data already imported at top
     
     all_predictions = []
     all_targets = []
@@ -482,7 +482,7 @@ def train_and_evaluate_ablation(ablation_name: str, config_modifier: Dict) -> Di
     gnn_model = load_gnn_model_for_rl()
     
     # Get test dates and tickers
-    from phase4_core_training import create_target_labels, _read_time_series_csv, OHLCV_RAW_FILE
+    # create_target_labels, _read_time_series_csv, OHLCV_RAW_FILE already imported at top
     import pandas as pd
     
     graph_files = sorted(list((PROJECT_ROOT / "data" / "graphs").glob('graph_t_*.pt')))
@@ -557,8 +557,8 @@ def run_ablation_studies():
     # Execute each ablation
     for abl in ablations:
         try:
-        result = train_and_evaluate_ablation(abl['name'], abl['config'])
-        ablation_results.append(result)
+            result = train_and_evaluate_ablation(abl['name'], abl['config'])
+            ablation_results.append(result)
         except Exception as e:
             print(f"⚠️  Error in ablation {abl['name']}: {e}")
             import traceback
@@ -566,9 +566,9 @@ def run_ablation_studies():
             continue
 
     if ablation_results:
-    ablation_df = pd.DataFrame(ablation_results)
-    ablation_df.to_csv(RESULTS_DIR / 'ablation_results.csv', index=False)
-    
+        ablation_df = pd.DataFrame(ablation_results)
+        ablation_df.to_csv(RESULTS_DIR / 'ablation_results.csv', index=False)
+        
         print("\n" + "=" * 50)
         print("✅ Ablation Studies Complete. Results saved.")
         print("=" * 50)
@@ -576,7 +576,7 @@ def run_ablation_studies():
         print(ablation_df[['strategy', 'accuracy', 'f1_score', 'precision_at_top10']].to_string(index=False))
         print(f"\n📁 Results saved to: {RESULTS_DIR / 'ablation_results.csv'}")
         
-    return ablation_df
+        return ablation_df
     else:
         print("❌ No ablation results generated")
         return pd.DataFrame()
@@ -594,7 +594,7 @@ def main():
     gnn_model = load_gnn_model_for_rl()
 
     # Get test dates and tickers
-    from phase4_core_training import load_graph_data, create_target_labels, _read_time_series_csv, OHLCV_RAW_FILE
+    # load_graph_data, create_target_labels, _read_time_series_csv, OHLCV_RAW_FILE already imported at top
     import pandas as pd
     
     # Get all graph dates

@@ -16,9 +16,11 @@ sys.path.append(str(Path(__file__).resolve().parent))
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-from rl_agent import StockTradingAgent
-from rl_environment import StockTradingEnv
-from phase4_core_training import RoleAwareGraphTransformer, load_graph_data, DEVICE
+from src.rl.agent import StockTradingAgent
+from src.rl.environment import StockTradingEnv
+from src.training.transformer_trainer import RoleAwareGraphTransformer, load_graph_data
+import torch
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
@@ -408,6 +410,12 @@ class MultiAgentTradingEnv:
         """
         Split global observation into sector-specific observations.
         
+        Observation format: [holdings (N)] + [embeddings (N * H)]
+        where N = num_stocks, H = embedding_dim
+        
+        Each sector agent expects observation shape: (num_stocks * 10,)
+        where num_stocks is the number of stocks in that sector.
+        
         Args:
             global_obs: Global observation [total_dim]
         
@@ -416,11 +424,50 @@ class MultiAgentTradingEnv:
         """
         sector_obs = {}
         
+        # Get observation dimensions from base environment
+        num_stocks = len(self.all_tickers)
+        holdings_dim = num_stocks
+        embeddings_dim = len(global_obs) - holdings_dim
+        embedding_dim = embeddings_dim // num_stocks if num_stocks > 0 else 0
+        
+        # Split holdings and embeddings
+        holdings = global_obs[:holdings_dim]
+        embeddings_flat = global_obs[holdings_dim:]
+        embeddings = embeddings_flat.reshape(num_stocks, embedding_dim) if embedding_dim > 0 else embeddings_flat
+        
         for sector, indices in self.sector_indices.items():
-            # Extract relevant parts of observation for this sector
-            # This is simplified - in practice, you'd need to properly split
-            # holdings, embeddings, features for each sector
-            sector_obs[sector] = global_obs  # Placeholder - needs proper splitting
+            if len(indices) > 0:
+                num_sector_stocks = len(indices)
+                expected_obs_dim = num_sector_stocks * 10  # Agent expects (num_stocks * 10,)
+                
+                # Extract sector-specific holdings and embeddings
+                sector_holdings = holdings[indices]
+                sector_embeddings = embeddings[indices] if embedding_dim > 0 else embeddings_flat
+                
+                # Flatten sector embeddings
+                if embedding_dim > 0:
+                    sector_embeddings_flat = sector_embeddings.flatten()
+                else:
+                    sector_embeddings_flat = sector_embeddings
+                
+                # Concatenate holdings and embeddings for this sector
+                sector_obs_full = np.concatenate([sector_holdings, sector_embeddings_flat]).astype(np.float32)
+                
+                # Pad or truncate to match expected dimension
+                if len(sector_obs_full) < expected_obs_dim:
+                    # Pad with zeros
+                    padding = np.zeros(expected_obs_dim - len(sector_obs_full), dtype=np.float32)
+                    sector_obs[sector] = np.concatenate([sector_obs_full, padding])
+                elif len(sector_obs_full) > expected_obs_dim:
+                    # Truncate
+                    sector_obs[sector] = sector_obs_full[:expected_obs_dim]
+                else:
+                    sector_obs[sector] = sector_obs_full
+            else:
+                # Fallback: create zero observation with expected shape
+                # Use a default size based on typical sector size
+                default_size = 10 * 10  # 10 stocks * 10 features
+                sector_obs[sector] = np.zeros(default_size, dtype=np.float32)
         
         return sector_obs
     

@@ -32,20 +32,21 @@ DATA_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 DATA_EDGES_DIR = PROJECT_ROOT / "data" / "edges"
 DATA_GRAPHS_DIR = PROJECT_ROOT / "data" / "graphs"
 
-# Graph construction parameters
-CORRELATION_THRESHOLD = 0.6  # |ρ_ij| > 0.6 for dynamic edges
-FUNDAMENTAL_SIMILARITY_THRESHOLD = 0.8  # Fundamental similarity threshold
-MIN_EDGE_WEIGHT = 0.1  # Minimum edge weight to include
+# Graph construction parameters (IMPROVED for better graph structure)
+CORRELATION_THRESHOLD = 0.5  # |ρ_ij| > 0.5 for dynamic edges (LOWERED from 0.6 to 0.5 to include more meaningful connections)
+FUNDAMENTAL_SIMILARITY_THRESHOLD = 0.55  # Fundamental similarity threshold (LOWERED from 0.6 to 0.55 to capture more fundamental relationships)
+MIN_EDGE_WEIGHT = 0.05  # Minimum edge weight to include (LOWERED from 0.1 to 0.05 to retain more edges)
 BATCH_SIZE_DAYS = 30  # Process graphs in batches to manage memory
 
 # Edge attribute normalization parameters
 NORMALIZE_EDGE_ATTRS = True  # Enable edge attribute normalization
 EDGE_NORMALIZATION_METHOD = 'min_max'  # Options: 'min_max', 'standard', 'robust'
+# Note: fund_similarity edges use 'standard' normalization specifically (see line 532)
 
-# Graph sparsification parameters (CRITICAL: Prevents over-smoothing)
+# Graph sparsification parameters (IMPROVED: Better connectivity while preventing over-smoothing)
 # Limit each node to connect to at most TOP_K neighbors per edge type
-MAX_EDGES_PER_NODE_CORRELATION = 5   # Top-5 most correlated stocks
-MAX_EDGES_PER_NODE_FUNDAMENTAL = 5   # Top-5 most similar fundamentals
+MAX_EDGES_PER_NODE_CORRELATION = 8   # Top-8 most correlated stocks (INCREASED from 5 to 8 for better information flow)
+MAX_EDGES_PER_NODE_FUNDAMENTAL = 8   # Top-8 most similar fundamentals (INCREASED from 5 to 8 for richer graph structure)
 
 # Ensure output directory exists
 DATA_GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
@@ -72,12 +73,16 @@ def normalize_edge_attributes(edge_weights, method='min_max', edge_type='unknown
     
     original_min, original_max = edge_weights.min().item(), edge_weights.max().item()
     
+    # Check if all values are the same (no variance)
+    if original_max == original_min:
+        # All values are identical - use uniform weights (1.0) to allow Top-K to work
+        # This ensures Top-K can still select edges based on other criteria if needed
+        print(f"    ⚠️  {edge_type}: All values identical ({original_min:.4f}), using uniform weights")
+        return torch.ones_like(edge_weights)
+    
     if method == 'min_max':
         # Min-Max normalization: scale to [0, 1]
-        if original_max > original_min:
-            normalized = (edge_weights - original_min) / (original_max - original_min)
-        else:
-            normalized = torch.zeros_like(edge_weights)
+        normalized = (edge_weights - original_min) / (original_max - original_min)
     
     elif method == 'standard':
         # Standard normalization: mean=0, std=1
@@ -86,7 +91,9 @@ def normalize_edge_attributes(edge_weights, method='min_max', edge_type='unknown
         if std > 0:
             normalized = (edge_weights - mean) / std
         else:
-            normalized = edge_weights - mean
+            # All values are identical - use uniform weights
+            print(f"    ⚠️  {edge_type}: All values identical ({mean:.4f}), using uniform weights")
+            normalized = torch.ones_like(edge_weights)
     
     elif method == 'robust':
         # Robust normalization using median and IQR
@@ -96,7 +103,9 @@ def normalize_edge_attributes(edge_weights, method='min_max', edge_type='unknown
         if iqr > 0:
             normalized = (edge_weights - median) / iqr
         else:
-            normalized = edge_weights - median
+            # All values are identical - use uniform weights
+            print(f"    ⚠️  {edge_type}: All values identical ({median.item():.4f}), using uniform weights")
+            normalized = torch.ones_like(edge_weights)
     
     else:
         normalized = edge_weights
@@ -520,7 +529,8 @@ def construct_graph_for_date(date, node_features_df, correlations_df, similariti
         fund_sim_edge_weight = torch.tensor(fund_sim_weights, dtype=torch.float32).unsqueeze(1)
         
         # Apply normalization to fundamental similarity edge attributes
-        normalized_fund_sim_weight = normalize_edge_attributes(fund_sim_edge_weight, EDGE_NORMALIZATION_METHOD, 'fund_similarity')
+        # Use 'standard' normalization for fund_similarity to maintain relative differences regardless of value range
+        normalized_fund_sim_weight = normalize_edge_attributes(fund_sim_edge_weight, 'standard', 'fund_similarity')
         
         # Apply Top-K sparsification to prevent over-smoothing
         fund_sim_edge_index, normalized_fund_sim_weight = apply_topk_per_node(

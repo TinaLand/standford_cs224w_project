@@ -243,8 +243,62 @@ def compute_sector_similarity(fundamental_data):
     """
     print("🏭 Computing sector-based connections...")
     
-    if fundamental_data is None or 'sector' not in fundamental_data.columns:
-        print("❌ No sector data available")
+    # Load sector data from static file
+    # BASE_DIR is src, so we need to go up one level to get to project root
+    project_root = BASE_DIR.parent
+    sector_file = project_root / "data" / "raw" / "static_sector_industry.csv"
+    sector_dict_upper = {}
+    sector_dict_original = {}
+    
+    if sector_file.exists():
+        try:
+            sector_df = pd.read_csv(sector_file)
+            if 'Ticker' in sector_df.columns and 'Sector' in sector_df.columns:
+                # Create a case-insensitive mapping (convert both to uppercase for matching)
+                sector_df['Ticker_Upper'] = sector_df['Ticker'].str.upper()
+                sector_dict_upper = sector_df.set_index('Ticker_Upper')['Sector'].to_dict()
+                # Also create original case mapping for reference
+                sector_dict_original = sector_df.set_index('Ticker')['Sector'].to_dict()
+                
+                print(f"✅ Loaded sector data from static file: {len(sector_dict_upper)} tickers")
+        except Exception as e:
+            print(f"⚠️  Could not load sector data: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        print(f"⚠️  Sector file not found: {sector_file}")
+    
+    # Check if fundamental_data is available
+    if fundamental_data is None or fundamental_data.empty:
+        print("❌ No fundamental data available")
+        return None
+    
+    # Try to add sector column if not present
+    if 'sector' not in fundamental_data.columns:
+        if sector_dict_upper:
+            # Map sector data using case-insensitive matching
+            fundamental_data['ticker_upper'] = fundamental_data['ticker'].str.upper()
+            fundamental_data['sector'] = fundamental_data['ticker_upper'].map(sector_dict_upper)
+            fundamental_data = fundamental_data.drop('ticker_upper', axis=1)
+            matched_count = fundamental_data['sector'].notna().sum()
+            total_count = len(fundamental_data)
+            print(f"✅ Mapped sector data: {matched_count}/{total_count} tickers matched")
+            if matched_count == 0:
+                print(f"⚠️  Warning: No tickers matched. Sample tickers in fundamental_data: {fundamental_data['ticker'].head(5).tolist()}")
+                if sector_dict_original:
+                    print(f"⚠️  Sample tickers in sector file: {list(sector_dict_original.keys())[:5]}")
+        else:
+            print("❌ No sector data available to map")
+            return None
+    
+    # Check if sector data is available
+    if 'sector' not in fundamental_data.columns:
+        print("❌ No sector column in fundamental data")
+        return None
+    
+    if fundamental_data['sector'].isna().all():
+        print("❌ All sector values are NaN (ticker names may not match)")
+        print(f"   Sample tickers: {fundamental_data['ticker'].head(10).tolist()}")
         return None
     
     sector_data = []

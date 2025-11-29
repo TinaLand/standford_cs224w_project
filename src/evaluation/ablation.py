@@ -39,7 +39,7 @@ ABLATION_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Import PEARL and Laplacian embeddings
-from components.pearl_embedding import PEARLPositionalEmbedding
+from src.models.components.pearl_embedding import PEARLPositionalEmbedding
 try:
     from torch_geometric.nn import LaplacianEigenvectorPE
     LAPLACIAN_AVAILABLE = True

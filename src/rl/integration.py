@@ -45,9 +45,9 @@ RL_LOG_PATH.mkdir(parents=True, exist_ok=True)
 
 # NOTE: The GNN model definition and the environment definition 
 # must be imported from their respective files.
-from phase4_core_training import RoleAwareGraphTransformer 
-from rl_environment import StockTradingEnv
-from rl_agent import StockTradingAgent 
+from src.training.transformer_trainer import RoleAwareGraphTransformer 
+from src.rl.environment import StockTradingEnv
+from src.rl.agent import StockTradingAgent 
 
 
 def load_gnn_model_for_rl():

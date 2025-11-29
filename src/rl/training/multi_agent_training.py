@@ -16,13 +16,13 @@ sys.path.append(str(Path(__file__).resolve().parent))
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
-from multi_agent_rl_coordinator import (
+from src.models.multi_agent.coordinator import (
     MultiAgentCoordinator,
     SectorGrouping,
     MultiAgentTradingEnv
 )
-from phase5_rl_integration import load_gnn_model_for_rl
-from rl_environment import StockTradingEnv
+from src.rl.integration import load_gnn_model_for_rl
+from src.rl.environment import StockTradingEnv
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
@@ -134,10 +134,11 @@ def train_multi_agent_system(
         
         try:
             # Train agent
+            # Disable progress bar to avoid dependency issues
             agent.agent.learn(
                 total_timesteps=total_timesteps // len(coordinator.agents),
                 callback=callback,
-                progress_bar=True
+                progress_bar=False  # Disabled to avoid rich dependency issues
             )
             
             agent.is_trained = True
@@ -180,39 +181,40 @@ def evaluate_multi_agent_system(
     print("📊 Evaluating Multi-Agent System")
     print("="*60)
     
-    # Create evaluation environment
-    env = StockTradingEnv(start_date, end_date, coordinator.gnn_model, DEVICE)
+    # Use MultiAgentTradingEnv for proper observation splitting
+    multi_env = MultiAgentTradingEnv(
+        start_date=start_date,
+        end_date=end_date,
+        gnn_model=coordinator.gnn_model,
+        sector_groups=coordinator.sector_groups,
+        all_tickers=coordinator.all_tickers,
+        device=DEVICE
+    )
     
     episode_returns = []
     episode_sharpe = []
     episode_max_dd = []
     
     for episode in range(n_episodes):
-        obs, info = env.reset()
+        obs, info = multi_env.reset()
         done = False
-        portfolio_values = [env.portfolio_value]
+        portfolio_values = [multi_env.base_env.portfolio_value]
+        step_count = 0
+        max_steps = min(50, multi_env.base_env.max_steps)  # Limit steps per episode for faster evaluation
         
-        while not done:
-            # Get observations for each sector
-            sector_obs = {}  # Would need proper splitting
+        while not done and step_count < max_steps:
+            # Split global observation into sector-specific observations
+            sector_obs = multi_env.get_sector_observations(obs)
             
             # Get actions from all agents
             actions_dict = coordinator.get_agent_actions(sector_obs, deterministic=True)
             
-            # Merge actions
-            ticker_to_sector = {}
-            for sector, tickers in coordinator.sector_groups.items():
-                for ticker in tickers:
-                    if ticker in coordinator.all_tickers:
-                        ticker_to_sector[ticker] = sector
-            
-            combined_actions = coordinator.merge_actions(actions_dict, ticker_to_sector)
-            
-            # Step environment
-            obs, reward, terminated, truncated, info = env.step(combined_actions)
+            # Step environment with merged actions
+            obs, reward, terminated, truncated, info = multi_env.step(actions_dict)
             done = terminated or truncated
             
-            portfolio_values.append(env.portfolio_value)
+            portfolio_values.append(multi_env.base_env.portfolio_value)
+            step_count += 1
         
         # Calculate metrics
         returns = np.array(portfolio_values)
@@ -263,21 +265,26 @@ def main():
         print("   Please ensure Phase 4 model is trained first.")
         return
     
-    # Create multi-agent coordinator
+    # Get all tickers from sector groups BEFORE creating coordinator
     print("\n🤖 Creating multi-agent system...")
+    sector_groups = SectorGrouping.load_sector_mapping()
+    
+    # Extract all tickers from sector groups
+    all_tickers = []
+    for tickers in sector_groups.values():
+        all_tickers.extend(tickers)
+    all_tickers = sorted(list(set(all_tickers)))
+    
+    print(f"📊 Loaded {len(sector_groups)} sectors with {len(all_tickers)} total tickers")
+    
+    # Create multi-agent coordinator with all tickers
     coordinator = MultiAgentCoordinator(
         gnn_model=gnn_model,
-        sector_groups=SectorGrouping.load_sector_mapping(),
-        all_tickers=[],  # Will be populated from data
+        sector_groups=sector_groups,
+        all_tickers=all_tickers,  # Now properly populated
         device=DEVICE,
         learning_rate=LEARNING_RATE
     )
-    
-    # Get all tickers from coordinator
-    all_tickers = []
-    for tickers in coordinator.sector_groups.values():
-        all_tickers.extend(tickers)
-    coordinator.all_tickers = sorted(list(set(all_tickers)))
     
     # Train multi-agent system
     training_stats = train_multi_agent_system(

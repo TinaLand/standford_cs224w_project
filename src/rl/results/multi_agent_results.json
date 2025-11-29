@@ -1,0 +1,35 @@
+{
+  "training_stats": {
+    "sector_performance": {
+      "Technology": {
+        "mean_reward": 0,
+        "mean_length": 0
+      },
+      "Financials": {
+        "mean_reward": 0,
+        "mean_length": 0
+      },
+      "Healthcare": {
+        "mean_reward": 0,
+        "mean_length": 0
+      },
+      "Consumer Discretionary": {
+        "mean_reward": 0,
+        "mean_length": 0
+      },
+      "Energy": {
+        "mean_reward": 0,
+        "mean_length": 0
+      }
+    },
+    "global_performance": {},
+    "mixing_network_loss": []
+  },
+  "evaluation_results": {
+    "mean_return": 0.0021575978831620546,
+    "std_return": 0.0,
+    "mean_sharpe": 0.5792810646775959,
+    "mean_max_dd": 0.009721283593561654,
+    "n_episodes": 5
+  }
+}
