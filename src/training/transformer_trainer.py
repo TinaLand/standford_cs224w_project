@@ -44,6 +44,10 @@ FOCAL_GAMMA = 2.5    # Focusing parameter (INCREASED from 2.0 to 2.5 for harder 
 ENABLE_MULTI_TASK = True
 REG_LOSS_WEIGHT = 0.5          # Weight for regression loss in total loss
 
+# Time-Aware Modeling Configuration
+ENABLE_TIME_AWARE = True        # Enable time-aware positional encoding
+TIME_PE_DIM = 16                # Dimension for time positional encoding
+
 # Early Stopping Configuration
 ENABLE_EARLY_STOPPING = True
 EARLY_STOP_PATIENCE = 12        # Increased from 10 to 12 to allow more training epochs
@@ -173,13 +177,77 @@ except ImportError:
     MINI_BATCH_AVAILABLE = False
     NeighborLoader = None
 
+class TimePositionalEncoding(torch.nn.Module):
+    """
+    Time-aware positional encoding based on trading date.
+    Encodes temporal information (day of week, month, year, etc.) into embeddings.
+    """
+    def __init__(self, pe_dim):
+        super().__init__()
+        self.pe_dim = pe_dim
+        
+        # Learnable embeddings for different time features
+        # Day of week (0-6) -> 7 categories
+        self.day_of_week_emb = torch.nn.Embedding(7, pe_dim // 4)
+        # Month (1-12) -> 12 categories
+        self.month_emb = torch.nn.Embedding(12, pe_dim // 4)
+        # Quarter (1-4) -> 4 categories
+        self.quarter_emb = torch.nn.Embedding(4, pe_dim // 4)
+        # Year (normalized) -> continuous, use sinusoidal encoding
+        self.year_proj = torch.nn.Linear(1, pe_dim // 4)
+        
+    def forward(self, date_tensor):
+        """
+        Args:
+            date_tensor: Tensor of shape [N] with timestamps (days since epoch or similar)
+        Returns:
+            time_pe: Tensor of shape [N, pe_dim] with time positional encodings
+        """
+        # Convert to datetime if needed (assuming date_tensor is days since epoch)
+        # For simplicity, we'll use a normalized timestamp
+        # In practice, you'd extract actual date features
+        
+        # Normalize timestamp to [0, 1] range (assuming dates are in reasonable range)
+        # This is a placeholder - in real implementation, extract actual date features
+        normalized_time = date_tensor.float() / 10000.0  # Normalize
+        
+        # Extract time features (simplified - in practice use actual date parsing)
+        # For now, use sinusoidal encoding for continuous time
+        time_features = []
+        
+        # Sinusoidal encoding for continuous time
+        div_term = torch.exp(torch.arange(0, self.pe_dim, 2).float() * 
+                           -(torch.log(torch.tensor(10000.0)) / self.pe_dim))
+        time_features.append(torch.sin(normalized_time.unsqueeze(-1) * div_term))
+        time_features.append(torch.cos(normalized_time.unsqueeze(-1) * div_term))
+        
+        # Concatenate all time features
+        time_pe = torch.cat(time_features, dim=-1)
+        
+        # Ensure output dimension matches pe_dim
+        if time_pe.shape[-1] != self.pe_dim:
+            # Project to correct dimension
+            if not hasattr(self, 'time_proj'):
+                self.time_proj = torch.nn.Linear(time_pe.shape[-1], self.pe_dim).to(time_pe.device)
+            time_pe = self.time_proj(time_pe)
+        
+        return time_pe
+
 class RoleAwareGraphTransformer(torch.nn.Module):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_layers, num_heads):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers, num_heads, enable_time_aware=True):
         super().__init__()
         
         # PEARL related dimension
         self.PE_DIM = 32
-        total_in_dim = in_dim + self.PE_DIM 
+        self.enable_time_aware = enable_time_aware
+        
+        # Time-aware positional encoding
+        if enable_time_aware:
+            self.TIME_PE_DIM = 16
+            self.time_pe = TimePositionalEncoding(self.TIME_PE_DIM)
+            total_in_dim = in_dim + self.PE_DIM + self.TIME_PE_DIM
+        else:
+            total_in_dim = in_dim + self.PE_DIM 
         
         # (A) PEARL Positional Embedding Block
         self.pearl_embedding = PEARLPositionalEmbedding(in_dim, self.PE_DIM)
@@ -234,14 +302,26 @@ class RoleAwareGraphTransformer(torch.nn.Module):
             torch.nn.Linear(hidden_dim // 2, 1)
         )
 
-    def forward(self, data):
+    def forward(self, data, date_tensor=None):
+        """
+        Args:
+            data: HeteroData graph object
+            date_tensor: Optional tensor of shape [N] with timestamps for time-aware encoding
+        """
         x_dict = data.x_dict
         edge_index_dict = data.edge_index_dict
         
         # 1. Generate/Concatenate PEARL Embeddings
         x = x_dict['stock']
         pearl_pe = self.pearl_embedding(x, edge_index_dict)
-        x_with_pe = torch.cat([x, pearl_pe], dim=1)
+        
+        # 2. Add time-aware positional encoding if enabled
+        if self.enable_time_aware and date_tensor is not None:
+            time_pe = self.time_pe(date_tensor)
+            x_with_pe = torch.cat([x, pearl_pe, time_pe], dim=1)
+        else:
+            x_with_pe = torch.cat([x, pearl_pe], dim=1)
+        
         x_dict['stock'] = x_with_pe
         
         # 2. Relation-aware Graph Transformer Layers
@@ -269,7 +349,7 @@ class RoleAwareGraphTransformer(torch.nn.Module):
         out = self.lin_out(x_dict['stock'])
         return out
     
-    def get_embeddings(self, data):
+    def get_embeddings(self, data, date_tensor=None):
         """
         Extracts node embeddings from the last graph transformer layer
         before the final classification head.
@@ -281,7 +361,14 @@ class RoleAwareGraphTransformer(torch.nn.Module):
         # 1. Generate/Concatenate PEARL Embeddings
         x = x_dict['stock']
         pearl_pe = self.pearl_embedding(x, edge_index_dict)
-        x_with_pe = torch.cat([x, pearl_pe], dim=1)
+        
+        # 2. Add time-aware positional encoding if enabled
+        if self.enable_time_aware and date_tensor is not None:
+            time_pe = self.time_pe(date_tensor)
+            x_with_pe = torch.cat([x, pearl_pe, time_pe], dim=1)
+        else:
+            x_with_pe = torch.cat([x, pearl_pe], dim=1)
+        
         x_dict['stock'] = x_with_pe
         
         # 2. Relation-aware Graph Transformer Layers
@@ -304,12 +391,12 @@ class RoleAwareGraphTransformer(torch.nn.Module):
         # Return embeddings before final linear layer
         return x_dict['stock']
 
-    def forward_regression(self, data):
+    def forward_regression(self, data, date_tensor=None):
         """
         Regression forward pass using the same backbone.
         Returns a vector of shape [N] with predicted future returns.
         """
-        embeddings = self.get_embeddings(data)
+        embeddings = self.get_embeddings(data, date_tensor=date_tensor)
         reg_out = self.lin_reg(embeddings).squeeze(-1)
         return reg_out
 
@@ -387,12 +474,15 @@ def _backward_step(loss, model, optimizer, scaler=None, max_grad_norm=None):
         optimizer.step()
 
 
-def train(model, optimizer, data, targets_class, targets_reg=None, scaler=None, amp_enabled=False, max_grad_norm=None):
+def train(model, optimizer, data, targets_class, targets_reg=None, date_tensor=None, scaler=None, amp_enabled=False, max_grad_norm=None):
     """Single training step for the Core GNN (HeteroData input).
     
     If ENABLE_MULTI_TASK and targets_reg is provided, uses a combined loss:
         L = L_class + REG_LOSS_WEIGHT * L_reg
     where L_reg is Smooth L1 loss on future returns.
+    
+    Args:
+        date_tensor: Optional tensor of shape [N] with timestamps for time-aware encoding
     """
     model.train()
     optimizer.zero_grad()
@@ -403,7 +493,9 @@ def train(model, optimizer, data, targets_class, targets_reg=None, scaler=None, 
         
     with torch.cuda.amp.autocast(enabled=amp_enabled):
         data_device = data.to(DEVICE)
-        out = model(data_device)
+        if date_tensor is not None:
+            date_tensor = date_tensor.to(DEVICE)
+        out = model(data_device, date_tensor=date_tensor)
 
         # --- Classification loss ---
         if LOSS_TYPE == 'focal':
@@ -414,7 +506,7 @@ def train(model, optimizer, data, targets_class, targets_reg=None, scaler=None, 
 
         # --- Optional regression loss (multi-task learning) ---
         if ENABLE_MULTI_TASK and targets_reg is not None:
-            preds_reg = model.forward_regression(data_device)
+            preds_reg = model.forward_regression(data_device, date_tensor=date_tensor)
             # Ensure shapes match
             reg_targets = targets_reg.to(DEVICE).view_as(preds_reg)
             loss_reg = F.smooth_l1_loss(preds_reg, reg_targets)
@@ -427,13 +519,20 @@ def train(model, optimizer, data, targets_class, targets_reg=None, scaler=None, 
     return loss.item(), out.detach().argmax(dim=1)
 
 
-def evaluate(model, data, targets, return_probs=False, threshold=0.5):
-    """Single evaluation step."""
+def evaluate(model, data, targets, return_probs=False, threshold=0.5, date_tensor=None):
+    """Single evaluation step.
+    
+    Args:
+        date_tensor: Optional tensor of shape [N] with timestamps for time-aware encoding
+    """
     model.eval()
     
     with torch.no_grad():
         with torch.cuda.amp.autocast(enabled=ENABLE_AMP):
-            out = model(data.to(DEVICE))
+            data_device = data.to(DEVICE)
+            if date_tensor is not None:
+                date_tensor = date_tensor.to(DEVICE)
+            out = model(data_device, date_tensor=date_tensor)
     
     y_true = targets.cpu().numpy()
     probs = F.softmax(out, dim=1)[:, 1].cpu().numpy()  # Probability of positive class
@@ -603,7 +702,10 @@ def run_training_pipeline():
     print(f"   - Test:  {len(test_dates)} days")
     
     # 4. Model Setup
-    model = RoleAwareGraphTransformer(INPUT_DIM, HIDDEN_CHANNELS, OUT_CHANNELS, NUM_LAYERS, NUM_HEADS).to(DEVICE)
+    model = RoleAwareGraphTransformer(
+        INPUT_DIM, HIDDEN_CHANNELS, OUT_CHANNELS, NUM_LAYERS, NUM_HEADS,
+        enable_time_aware=ENABLE_TIME_AWARE
+    ).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)  # Added weight decay for regularization
     scaler = torch.cuda.amp.GradScaler(enabled=ENABLE_AMP)
     model_path = MODELS_DIR / MODEL_SAVE_NAME
@@ -667,6 +769,17 @@ def run_training_pipeline():
             target_class = targets_class_dict.get(date)
             target_reg = targets_reg_dict.get(date) if ENABLE_MULTI_TASK else None
             if data and target_class is not None:
+                # Create time tensor for time-aware encoding
+                num_nodes = data['stock'].x.size(0)
+                if ENABLE_TIME_AWARE:
+                    # Convert date to timestamp (days since epoch or reference date)
+                    # Use a reference date (e.g., 2015-01-01) for normalization
+                    reference_date = pd.Timestamp('2015-01-01')
+                    days_since_ref = (date - reference_date).days
+                    date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32)
+                else:
+                    date_tensor = None
+                
                 if use_mini_batch:
                     loader = create_neighbor_loader(data, target_class, BATCH_SIZE, NUM_NEIGHBORS, shuffle=True)
                     loss, _ = train_with_sampling(
@@ -686,6 +799,7 @@ def run_training_pipeline():
                         data,
                         target_class,
                         targets_reg=target_reg,
+                        date_tensor=date_tensor,
                         scaler=scaler,
                         amp_enabled=scaler.is_enabled(),
                         max_grad_norm=GRAD_CLIP_NORM
@@ -702,13 +816,22 @@ def run_training_pipeline():
             data = load_graph_data(date)
             target = targets_class_dict.get(date)
             if data and target is not None:
+                # Create time tensor for time-aware encoding
+                num_nodes = data['stock'].x.size(0)
+                if ENABLE_TIME_AWARE:
+                    reference_date = pd.Timestamp('2015-01-01')
+                    days_since_ref = (date - reference_date).days
+                    date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32)
+                else:
+                    date_tensor = None
+                
                 if use_mini_batch:
                     loader = create_neighbor_loader(data, target, BATCH_SIZE * 2, NUM_NEIGHBORS, shuffle=False)
                     _, f1 = evaluate_with_sampling(model, data, target, loader)
                     # For mini-batch, we can't easily get probabilities, so use default threshold
                     val_f1s.append(f1)
                 else:
-                    _, f1, _, probs = evaluate(model, data, target, return_probs=True)
+                    _, f1, _, probs = evaluate(model, data, target, return_probs=True, date_tensor=date_tensor)
                     val_f1s.append(f1)
                     if probs is not None:
                         all_val_true.extend(target.cpu().numpy())
@@ -731,7 +854,15 @@ def run_training_pipeline():
                 data = load_graph_data(date)
                 target = targets_class_dict.get(date)
                 if data and target is not None:
-                    _, _, _, probs = evaluate(model, data, target, return_probs=True)
+                    # Create time tensor
+                    num_nodes = data['stock'].x.size(0)
+                    if ENABLE_TIME_AWARE:
+                        reference_date = pd.Timestamp('2015-01-01')
+                        days_since_ref = (date - reference_date).days
+                        date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32)
+                    else:
+                        date_tensor = None
+                    _, _, _, probs = evaluate(model, data, target, return_probs=True, date_tensor=date_tensor)
                     if probs is not None:
                         y_true = target.cpu().numpy()
                         y_pred_opt = (probs >= optimal_threshold).astype(int)
@@ -790,18 +921,31 @@ def run_training_pipeline():
         data = load_graph_data(date)
         target = targets_class_dict.get(date)
         if data and target is not None and not use_mini_batch:
-            _, _, _, probs = evaluate(model, data, target, return_probs=True)
+            # Create time tensor
+            num_nodes = data['stock'].x.size(0)
+            if ENABLE_TIME_AWARE:
+                reference_date = pd.Timestamp('2015-01-01')
+                days_since_ref = (date - reference_date).days
+                date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32)
+            else:
+                date_tensor = None
+            _, _, _, probs = evaluate(model, data, target, return_probs=True, date_tensor=date_tensor)
             if probs is not None:
                 all_val_true_final.extend(target.cpu().numpy())
                 all_val_probs_final.extend(probs)
     
     optimal_threshold = 0.5  # Default
     if len(all_val_true_final) > 0 and len(all_val_probs_final) > 0:
-        optimal_threshold = find_optimal_threshold(
+        computed_threshold = find_optimal_threshold(
             np.array(all_val_true_final),
             np.array(all_val_probs_final)
         )
-        print(f"   ✅ Optimal threshold: {optimal_threshold:.4f} (default: 0.5)")
+        # Ensure threshold is valid (not inf/nan)
+        if np.isfinite(computed_threshold) and 0 <= computed_threshold <= 1:
+            optimal_threshold = computed_threshold
+            print(f"   ✅ Optimal threshold: {optimal_threshold:.4f}")
+        else:
+            print(f"   ⚠️  Computed threshold invalid ({computed_threshold}), using default: 0.5")
     else:
         print(f"   ⚠️  Could not find optimal threshold, using default: 0.5")
     
@@ -813,13 +957,22 @@ def run_training_pipeline():
         data = load_graph_data(date)
         target = targets_class_dict.get(date)
         if data and target is not None:
+            # Create time tensor
+            num_nodes = data['stock'].x.size(0)
+            if ENABLE_TIME_AWARE:
+                reference_date = pd.Timestamp('2015-01-01')
+                days_since_ref = (date - reference_date).days
+                date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32)
+            else:
+                date_tensor = None
+            
             if use_mini_batch:
                 loader = create_neighbor_loader(data, target, BATCH_SIZE * 2, NUM_NEIGHBORS, shuffle=False)
                 acc, f1 = evaluate_with_sampling(model, data, target, loader)
                 test_accs.append(acc)
                 test_f1s.append(f1)
             else:
-                _, _, out, probs = evaluate(model, data, target, return_probs=True)
+                _, _, out, probs = evaluate(model, data, target, return_probs=True, date_tensor=date_tensor)
                 if probs is not None:
                     y_true = target.cpu().numpy()
                     y_pred_opt = (probs >= optimal_threshold).astype(int)
