@@ -44,8 +44,11 @@ data/processed/*.csv
 data/graphs/*.pt
 data/edges/*.pkl
 data/edges/*.csv
-src/data/edges/*.csv
+src/data/raw/*.csv
 src/data/processed/*.csv
+src/data/edges/*.csv
+src/data/edges/*.pkl
+src/data/graphs/*.pt
 
 # Models (large files)
 models/*.pt
