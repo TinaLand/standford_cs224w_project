@@ -27,21 +27,25 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # --- Configuration ---
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# NOTE: This file lives in `src/data/`, so the project root is three levels up.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 DATA_EDGES_DIR = PROJECT_ROOT / "data" / "edges"
 DATA_GRAPHS_DIR = PROJECT_ROOT / "data" / "graphs"
 
 # Graph construction parameters (IMPROVED for better graph structure)
-CORRELATION_THRESHOLD = 0.5  # |ρ_ij| > 0.5 for dynamic edges (LOWERED from 0.6 to 0.5 to include more meaningful connections)
-FUNDAMENTAL_SIMILARITY_THRESHOLD = 0.55  # Fundamental similarity threshold (LOWERED from 0.6 to 0.55 to capture more fundamental relationships)
+CORRELATION_THRESHOLD = 0.5  # |ρ_ij| > 0.5 for dynamic edges
+# Fundamental similarity threshold:
+# - Set to 0.0 so that we do not hard-cut by absolute similarity value
+# - Let Top-K sparsification decide which fundamental neighbors to keep
+FUNDAMENTAL_SIMILARITY_THRESHOLD = 0.0
 MIN_EDGE_WEIGHT = 0.05  # Minimum edge weight to include (LOWERED from 0.1 to 0.05 to retain more edges)
 BATCH_SIZE_DAYS = 30  # Process graphs in batches to manage memory
 
 # Edge attribute normalization parameters
 NORMALIZE_EDGE_ATTRS = True  # Enable edge attribute normalization
 EDGE_NORMALIZATION_METHOD = 'min_max'  # Options: 'min_max', 'standard', 'robust'
-# Note: fund_similarity edges use 'standard' normalization specifically (see line 532)
+# Note: fund_similarity edges use 'min_max' normalization to keep non-negative edge weights (see line 534)
 
 # Graph sparsification parameters (IMPROVED: Better connectivity while preventing over-smoothing)
 # Limit each node to connect to at most TOP_K neighbors per edge type
@@ -529,8 +533,9 @@ def construct_graph_for_date(date, node_features_df, correlations_df, similariti
         fund_sim_edge_weight = torch.tensor(fund_sim_weights, dtype=torch.float32).unsqueeze(1)
         
         # Apply normalization to fundamental similarity edge attributes
-        # Use 'standard' normalization for fund_similarity to maintain relative differences regardless of value range
-        normalized_fund_sim_weight = normalize_edge_attributes(fund_sim_edge_weight, 'standard', 'fund_similarity')
+        # Use 'min_max' normalization for fund_similarity to keep values in [0, 1] range (non-negative edge weights)
+        # This is better than 'standard' normalization which can produce negative values
+        normalized_fund_sim_weight = normalize_edge_attributes(fund_sim_edge_weight, 'min_max', 'fund_similarity')
         
         # Apply Top-K sparsification to prevent over-smoothing
         fund_sim_edge_index, normalized_fund_sim_weight = apply_topk_per_node(

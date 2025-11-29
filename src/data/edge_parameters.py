@@ -27,7 +27,8 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Set up paths
-BASE_DIR = Path(__file__).parent.parent
+# NOTE: This file lives in `src/data/`, so the project root is three levels up.
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_PROCESSED_DIR = BASE_DIR / "data" / "processed"
 DATA_EDGES_DIR = BASE_DIR / "data" / "edges"
 
@@ -244,9 +245,8 @@ def compute_sector_similarity(fundamental_data):
     print("🏭 Computing sector-based connections...")
     
     # Load sector data from static file
-    # BASE_DIR is src, so we need to go up one level to get to project root
-    project_root = BASE_DIR.parent
-    sector_file = project_root / "data" / "raw" / "static_sector_industry.csv"
+    # BASE_DIR is already the project root (parent.parent.parent from src/data/edge_parameters.py)
+    sector_file = BASE_DIR / "data" / "raw" / "static_sector_industry.csv"
     sector_dict_upper = {}
     sector_dict_original = {}
     

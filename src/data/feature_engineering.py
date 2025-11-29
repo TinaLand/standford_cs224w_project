@@ -12,7 +12,9 @@ warnings.filterwarnings('ignore')
 
 # --- Configuration ---
 # Set up paths
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# NOTE: PROJECT_ROOT should point to the project root (one level above `src/`)
+# `__file__` is in `src/data/`, so we need `.parent.parent.parent`
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"
 DATA_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 DATA_EDGES_DIR = PROJECT_ROOT / "data" / "edges"
@@ -256,15 +258,13 @@ def calculate_dynamic_edge_params(aligned_data, tickers):
     print("  - Calculating Fundamental Similarity Matrix (latest data)...")
     
     # 1. Define Universal Fundamental Metrics
-    # Find ALL unique fundamental/ROE/PE columns across the entire ALIGNED_DATA set.
-    # This creates a standardized feature space for all stocks.
-    
-    # Identify unique feature suffixes for fundamental data across all stocks
-    # Example: ['PE', 'ROE', 'PE_Log', 'ROE_Log']
+    # Find ALL unique fundamental/ROE/PE suffixes across the aligned data.
+    # Columns look like 'MSFT_PE', 'AAPL_ROE', etc.
+    # We want metric suffixes like 'PE', 'ROE', 'PE_Log', 'ROE_Log'.
     universal_metrics = sorted(list(set(
-        '_'.join(col.split('_')[1:]) 
-        for col in aligned_data.columns 
-        if any(metric in col for metric in ['PE', 'ROE']) # Focus on key metrics
+        '_'.join(col.split('_')[1:])
+        for col in aligned_data.columns
+        if any(metric in col for metric in ['PE', 'ROE'])  # Focus on key metrics
     )))
     
     print(f"    Universal fundamental metrics identified: {universal_metrics}")
@@ -279,8 +279,8 @@ def calculate_dynamic_edge_params(aligned_data, tickers):
         
         # Build the vector using the universal list of metrics
         for metric_suffix in universal_metrics:
-            # The column name is reconstructed: e.g., 'PE_AAPL', 'PE_Log_AAPL'
-            col_name = f'{metric_suffix}_{ticker}'
+            # The column name is reconstructed: e.g., 'AAPL_PE', 'AAPL_ROE'
+            col_name = f'{ticker}_{metric_suffix}'
             
             if col_name in aligned_data.columns:
                 vector.append(aligned_data.loc[latest_date, col_name])
@@ -312,7 +312,11 @@ def calculate_dynamic_edge_params(aligned_data, tickers):
                     except Exception as e:
                         sim_matrix.loc[i, j] = 0.0 # Safety fallback
         
-        fund_sim_path = DATA_EDGES_DIR / 'edges_dynamic_fund_sim_params.csv'
+        # Save a dense similarity matrix (tickers x tickers) for analysis.
+        # NOTE: Edge list for GNN graph construction is computed separately
+        # in `src/data/edge_parameters.py` and saved to
+        # 'edges_dynamic_fund_sim_params.csv'.
+        fund_sim_path = DATA_EDGES_DIR / 'edges_fundamental_similarity_matrix.csv'
         sim_matrix.to_csv(fund_sim_path)
         print(f"✅ Fundamental Similarity matrix (latest) saved to: {fund_sim_path}")
         print(f"    Similarity matrix shape: {sim_matrix.shape}")
@@ -510,8 +514,8 @@ def main():
         # Summary of generated files
         print(f"\n📋 Generated Files Summary:")
         print(f"   🎯 Node Features: node_features_X_t_final.csv")
-        print(f"   📊 Dynamic Edges: edges_dynamic_corr_params.pkl") 
-        print(f"   🔗 Fundamental Similarity: edges_dynamic_fund_sim_params.csv")
+        print(f"   📊 Dynamic Edges (correlation): edges_dynamic_corr_params.pkl") 
+        print(f"   🔗 Fundamental Similarity (matrix for analysis): edges_fundamental_similarity_matrix.csv")
         print(f"   🏢 Static Connections: edges_static_connections.csv")
         
     except FileNotFoundError as e:
