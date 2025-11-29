@@ -123,11 +123,12 @@ def calculate_technical_indicators(aligned_data, tickers):
     for ticker in tickers:
         try:
             # Extract OHLCV data using the flat column names (e.g., 'Close_AAPL')
-            open_prices = aligned_data[f'Open_{ticker}'].dropna()
-            high_prices = aligned_data[f'High_{ticker}'].dropna()
-            low_prices = aligned_data[f'Low_{ticker}'].dropna()
-            close_prices = aligned_data[f'Close_{ticker}'].dropna()
-            volume = aligned_data[f'Volume_{ticker}'].dropna()
+            # Convert to float64 (double) for TA-Lib compatibility
+            open_prices = aligned_data[f'Open_{ticker}'].dropna().astype(np.float64)
+            high_prices = aligned_data[f'High_{ticker}'].dropna().astype(np.float64)
+            low_prices = aligned_data[f'Low_{ticker}'].dropna().astype(np.float64)
+            close_prices = aligned_data[f'Close_{ticker}'].dropna().astype(np.float64)
+            volume = aligned_data[f'Volume_{ticker}'].dropna().astype(np.float64)
             
             # --- Returns and Volatility ---
             # 1-, 5-, 20-day returns
@@ -143,64 +144,98 @@ def calculate_technical_indicators(aligned_data, tickers):
             # --- TA-Lib Indicators ---
             
             # RSI (14 day)
-            technical_features[f'RSI_14_{ticker}'] = talib.RSI(close_prices.values, timeperiod=14)
+            # Ensure values are float64 for TA-Lib
+            technical_features[f'RSI_14_{ticker}'] = talib.RSI(close_prices.values.astype(np.float64), timeperiod=14)
             
             # MACD (MACD, MACD Signal, MACD Hist)
-            macd, macd_signal, macd_hist = talib.MACD(close_prices.values)
+            # Ensure float64 for TA-Lib
+            macd, macd_signal, macd_hist = talib.MACD(close_prices.values.astype(np.float64))
             technical_features[f'MACD_{ticker}'] = macd
             technical_features[f'MACD_Sig_{ticker}'] = macd_signal
             technical_features[f'MACD_Hist_{ticker}'] = macd_hist
             
             # Bollinger Bands Width (Normalized: (Upper-Lower) / Middle)
-            bb_upper, bb_middle, bb_lower = talib.BBANDS(close_prices.values)
+            # Ensure float64 for TA-Lib
+            bb_upper, bb_middle, bb_lower = talib.BBANDS(close_prices.values.astype(np.float64))
             bb_width = (bb_upper - bb_lower) / bb_middle
             technical_features[f'BB_Width_{ticker}'] = bb_width
             
             # Moving Averages Ratio (MA50 relative to price)
-            sma_50 = talib.SMA(close_prices.values, timeperiod=50)
-            technical_features[f'Price_to_SMA50_{ticker}'] = close_prices.values / sma_50 - 1.0
+            # Ensure float64 for TA-Lib
+            sma_50 = talib.SMA(close_prices.values.astype(np.float64), timeperiod=50)
+            technical_features[f'Price_to_SMA50_{ticker}'] = close_prices.values / (sma_50 + 1e-8) - 1.0
 
             # ATR (14 day)
-            technical_features[f'ATR_14_{ticker}'] = talib.ATR(high_prices.values, low_prices.values, close_prices.values, timeperiod=14)
+            technical_features[f'ATR_14_{ticker}'] = talib.ATR(
+                high_prices.values.astype(np.float64),
+                low_prices.values.astype(np.float64),
+                close_prices.values.astype(np.float64),
+                timeperiod=14
+            )
             
             # --- Additional Technical Indicators (Enhanced Feature Engineering) ---
             
             # Stochastic Oscillator (%K, %D)
-            slowk, slowd = talib.STOCH(high_prices.values, low_prices.values, close_prices.values,
-                                      fastk_period=14, slowk_period=3, slowd_period=3)
+            # Ensure float64 for TA-Lib
+            slowk, slowd = talib.STOCH(
+                high_prices.values.astype(np.float64),
+                low_prices.values.astype(np.float64),
+                close_prices.values.astype(np.float64),
+                fastk_period=14, slowk_period=3, slowd_period=3
+            )
             technical_features[f'STOCH_K_{ticker}'] = slowk
             technical_features[f'STOCH_D_{ticker}'] = slowd
             
             # ADX (Average Directional Index) - Trend strength indicator
-            technical_features[f'ADX_14_{ticker}'] = talib.ADX(high_prices.values, low_prices.values, close_prices.values, timeperiod=14)
+            technical_features[f'ADX_14_{ticker}'] = talib.ADX(
+                high_prices.values.astype(np.float64),
+                low_prices.values.astype(np.float64),
+                close_prices.values.astype(np.float64),
+                timeperiod=14
+            )
             
             # CCI (Commodity Channel Index)
-            technical_features[f'CCI_14_{ticker}'] = talib.CCI(high_prices.values, low_prices.values, close_prices.values, timeperiod=14)
+            technical_features[f'CCI_14_{ticker}'] = talib.CCI(
+                high_prices.values.astype(np.float64),
+                low_prices.values.astype(np.float64),
+                close_prices.values.astype(np.float64),
+                timeperiod=14
+            )
             
             # Williams %R
-            technical_features[f'WILLR_14_{ticker}'] = talib.WILLR(high_prices.values, low_prices.values, close_prices.values, timeperiod=14)
+            technical_features[f'WILLR_14_{ticker}'] = talib.WILLR(
+                high_prices.values.astype(np.float64),
+                low_prices.values.astype(np.float64),
+                close_prices.values.astype(np.float64),
+                timeperiod=14
+            )
             
             # OBV (On Balance Volume) - Volume-based momentum
-            obv = talib.OBV(close_prices.values, volume.values)
+            obv = talib.OBV(close_prices.values.astype(np.float64), volume.values.astype(np.float64))
             # Normalize OBV by price to make it comparable across stocks
             technical_features[f'OBV_Norm_{ticker}'] = obv / (close_prices.values + 1e-8)
             
             # AD (Accumulation/Distribution Line)
-            ad = talib.AD(high_prices.values, low_prices.values, close_prices.values, volume.values)
+            ad = talib.AD(
+                high_prices.values.astype(np.float64),
+                low_prices.values.astype(np.float64),
+                close_prices.values.astype(np.float64),
+                volume.values.astype(np.float64)
+            )
             # Normalize AD by price
             technical_features[f'AD_Norm_{ticker}'] = ad / (close_prices.values + 1e-8)
             
             # Momentum (10-day)
-            technical_features[f'MOM_10_{ticker}'] = talib.MOM(close_prices.values, timeperiod=10)
+            technical_features[f'MOM_10_{ticker}'] = talib.MOM(close_prices.values.astype(np.float64), timeperiod=10)
             
             # Rate of Change (ROC, 10-day)
-            technical_features[f'ROC_10_{ticker}'] = talib.ROC(close_prices.values, timeperiod=10)
+            technical_features[f'ROC_10_{ticker}'] = talib.ROC(close_prices.values.astype(np.float64), timeperiod=10)
             
             # Additional Moving Averages and Crossovers
-            sma_20 = talib.SMA(close_prices.values, timeperiod=20)
-            sma_200 = talib.SMA(close_prices.values, timeperiod=200)
-            ema_12 = talib.EMA(close_prices.values, timeperiod=12)
-            ema_26 = talib.EMA(close_prices.values, timeperiod=26)
+            sma_20 = talib.SMA(close_prices.values.astype(np.float64), timeperiod=20)
+            sma_200 = talib.SMA(close_prices.values.astype(np.float64), timeperiod=200)
+            ema_12 = talib.EMA(close_prices.values.astype(np.float64), timeperiod=12)
+            ema_26 = talib.EMA(close_prices.values.astype(np.float64), timeperiod=26)
             
             # MA Crossovers (price relative to MAs)
             technical_features[f'Price_to_SMA20_{ticker}'] = close_prices.values / (sma_20 + 1e-8) - 1.0
@@ -210,15 +245,15 @@ def calculate_technical_indicators(aligned_data, tickers):
             
             # Volume-based indicators
             # Volume Rate of Change (10-day)
-            volume_roc = talib.ROC(volume.values, timeperiod=10)
+            volume_roc = talib.ROC(volume.values.astype(np.float64), timeperiod=10)
             technical_features[f'Volume_ROC_10_{ticker}'] = volume_roc
             
             # Volume Moving Average Ratio
-            volume_ma = talib.SMA(volume.values, timeperiod=20)
+            volume_ma = talib.SMA(volume.values.astype(np.float64), timeperiod=20)
             technical_features[f'Volume_to_MA20_{ticker}'] = volume.values / (volume_ma + 1e-8) - 1.0
             
             # Price-Volume Trend (PVT)
-            pvt = talib.OBV(close_prices.values, volume.values)  # Similar to OBV but we'll compute it differently
+            pvt = talib.OBV(close_prices.values.astype(np.float64), volume.values.astype(np.float64))
             pvt_normalized = (pvt - pvt.rolling(window=20).mean()) / (pvt.rolling(window=20).std() + 1e-8)
             technical_features[f'PVT_Norm_{ticker}'] = pvt_normalized.values
             
@@ -228,7 +263,11 @@ def calculate_technical_indicators(aligned_data, tickers):
             technical_features[f'HV_20d_{ticker}'] = hv_20d
             
             # True Range normalized by price
-            tr = talib.TRANGE(high_prices.values, low_prices.values, close_prices.values)
+            tr = talib.TRANGE(
+                high_prices.values.astype(np.float64),
+                low_prices.values.astype(np.float64),
+                close_prices.values.astype(np.float64)
+            )
             technical_features[f'TR_Norm_{ticker}'] = tr / (close_prices.values + 1e-8)
             
         except Exception as e:
