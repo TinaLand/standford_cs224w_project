@@ -52,10 +52,14 @@ src/data/graphs/*.pt
 
 # Models (large files)
 models/*.pt
+models/**/*.pt
 models/checkpoints/*.pt
 models/rl_ppo_agent_model*/*.zip
+models/**/*.zip
 src/models/*.pt
+src/models/**/*.pt
 src/models/checkpoints/*.pt
+src/models/rl_ppo_agent_model/**/*.zip
 src/rl/models/**/*.zip
 
 # Results

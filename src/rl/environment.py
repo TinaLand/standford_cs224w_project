@@ -48,7 +48,15 @@ class StockTradingEnv(gym.Env):
         sample_graph_tensor = sample_graph.to(device)
         with torch.no_grad():
             gnn_model.eval()
-            sample_embeddings = gnn_model.get_embeddings(sample_graph_tensor)
+            # Create date_tensor for time-aware encoding if enabled
+            import pandas as pd
+            sample_date_str = list(DATA_GRAPHS_DIR.glob('graph_t_*.pt'))[0].stem.split('_')[-1]
+            sample_date = pd.to_datetime(sample_date_str)
+            REFERENCE_DATE = pd.to_datetime('2015-01-01')
+            days_since_ref = (sample_date - REFERENCE_DATE).days
+            num_nodes = sample_graph_tensor['stock'].x.shape[0]
+            date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32).to(device) if hasattr(gnn_model, 'enable_time_aware') and gnn_model.enable_time_aware else None
+            sample_embeddings = gnn_model.get_embeddings(sample_graph_tensor, date_tensor=date_tensor)
             self.EMBEDDING_DIM = sample_embeddings.shape[1]  # Actual GNN output dimension (256)
 
         # State dimension: holdings (N) + flattened embeddings (N * H)
@@ -136,7 +144,13 @@ class StockTradingEnv(gym.Env):
             self.gnn_model.eval()
             # Use the get_embeddings() method to extract embeddings before final classifier
             data_t_tensor = data_t.to(self.device)
-            embeddings_t = self.gnn_model.get_embeddings(data_t_tensor)
+            # Create date_tensor for time-aware encoding if enabled
+            import pandas as pd
+            REFERENCE_DATE = pd.to_datetime('2015-01-01')
+            days_since_ref = (date_t - REFERENCE_DATE).days
+            num_nodes = data_t_tensor['stock'].x.shape[0]
+            date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32).to(self.device) if hasattr(self.gnn_model, 'enable_time_aware') and self.gnn_model.enable_time_aware else None
+            embeddings_t = self.gnn_model.get_embeddings(data_t_tensor, date_tensor=date_tensor)
             embeddings_t = embeddings_t.cpu().numpy()
             
             # Flatten embeddings: [N * H]

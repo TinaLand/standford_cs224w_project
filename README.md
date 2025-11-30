@@ -215,18 +215,37 @@ python -m src.evaluation.evaluation
 
 ### A+ Enhancements
 
-Run all enhancement analysis scripts:
+Run all enhancement analysis:
 
 ```bash
-python -m src.scripts.run_all_enhancements
+python run_aplus_enhancements.py
 ```
 
 This includes:
-- Multi-agent decision analysis
-- Failure analysis
-- Edge importance analysis
-- Cross-period validation
-- Sensitivity analysis
+- **Enhanced Evaluation**: Deep analysis (error patterns, feature importance, trading behavior)
+- **Enhanced Visualizations**: Portfolio value, drawdown analysis, returns distribution
+- **Enhanced Ablation Studies**: True retraining for each configuration (optional, time-consuming)
+- **Comprehensive Reporting**: Detailed analysis reports
+
+Or run individual components:
+
+```bash
+# Enhanced evaluation with deep analysis
+python -m src.evaluation.enhanced_evaluation
+
+# Enhanced ablation studies (retrains models, takes hours)
+python -m src.evaluation.enhanced_ablation
+```
+
+**Enhancement Features**:
+- Fixed IC (Information Coefficient) calculation with proper date matching
+- Error pattern analysis (confusion matrix, false positive/negative rates)
+- Feature importance analysis (gradient-based)
+- Trading behavior analysis (win rate, turnover, volatility)
+- Professional visualizations (portfolio charts, drawdown analysis)
+- Comprehensive reporting
+
+See `A_PLUS_GRADE_REPORT.md` for detailed enhancement documentation.
 
 **Checkpoint Management:**
 The script automatically saves full training checkpoints (model, optimizer, epoch, metrics):

@@ -183,7 +183,7 @@ def calculate_information_coefficient(predictions: np.ndarray, actual_returns: n
 
 # --- 2. Node-Level Metrics Calculation (GNN Model) ---
 
-def evaluate_gnn_metrics(gnn_model, test_dates, targets_dict, tickers) -> Dict[str, Any]:
+def evaluate_gnn_metrics(gnn_model, test_dates, targets_class_dict, tickers) -> Dict[str, Any]:
     """
     Evaluate GNN model on test set and calculate node-level metrics including Precision@Top-K and IC.
     """
@@ -196,15 +196,22 @@ def evaluate_gnn_metrics(gnn_model, test_dates, targets_dict, tickers) -> Dict[s
     all_probs = []
     
     # Collect predictions for all test dates
+    import pandas as pd
+    REFERENCE_DATE = pd.to_datetime('2015-01-01')
+    
     for date in tqdm(test_dates, desc="Evaluating GNN"):
         data = load_graph_data(date)
-        target = targets_dict.get(date)
+        target = targets_class_dict.get(date)
         
         if data and target is not None:
             # Get model predictions
             gnn_model.eval()
             with torch.no_grad():
-                out = gnn_model(data.to(DEVICE))  # Shape: (num_stocks, 2)
+                # Create date_tensor for time-aware encoding if enabled
+                days_since_ref = (date - REFERENCE_DATE).days
+                num_nodes = data['stock'].x.shape[0]
+                date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32).to(DEVICE) if hasattr(gnn_model, 'enable_time_aware') and gnn_model.enable_time_aware else None
+                out = gnn_model(data.to(DEVICE), date_tensor=date_tensor)  # Shape: (num_stocks, 2)
                 probs = F.softmax(out, dim=1)  # Convert logits to probabilities
                 preds = out.argmax(dim=1).cpu().numpy()
             
@@ -234,37 +241,83 @@ def evaluate_gnn_metrics(gnn_model, test_dates, targets_dict, tickers) -> Dict[s
         # _read_time_series_csv and OHLCV_RAW_FILE already imported at top
         ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
         
+        # Ensure index is datetime
+        if not isinstance(ohlcv_df.index, pd.DatetimeIndex):
+            ohlcv_df.index = pd.to_datetime(ohlcv_df.index)
+        
         # Calculate 5-day forward returns
         close_cols = [col for col in ohlcv_df.columns if col.startswith('Close_')]
+        if not close_cols:
+            raise ValueError("No Close columns found in OHLCV data")
+        
         close_prices = ohlcv_df[close_cols].copy()
         forward_returns = (close_prices.shift(-5) - close_prices) / close_prices
         
-        # Extract returns for test dates
+        # Extract returns for test dates - ensure proper date matching
         actual_returns_list = []
+        valid_dates_count = 0
         for date in test_dates:
+            # Try to find matching date in forward_returns
             date_str = date.strftime('%Y-%m-%d')
-            if date_str in forward_returns.index:
+            date_idx = None
+            
+            # Try exact match first
+            if hasattr(forward_returns.index, 'strftime'):
+                date_matches = forward_returns.index.strftime('%Y-%m-%d') == date_str
+                if date_matches.any():
+                    date_idx = forward_returns.index[date_matches][0]
+            
+            # If not found, try to find closest date (within 5 days)
+            if date_idx is None:
+                date_diffs = abs(forward_returns.index - date)
+                if len(date_diffs) > 0 and date_diffs.min() <= pd.Timedelta(days=5):
+                    date_idx = forward_returns.index[date_diffs.argmin()]
+            
+            if date_idx is not None:
                 returns_vector = []
                 for ticker in tickers:
                     col_name = f'Close_{ticker}'
                     if col_name in forward_returns.columns:
-                        ret = forward_returns.loc[date_str, col_name]
-                        returns_vector.append(ret if not pd.isna(ret) else 0.0)
+                        ret = forward_returns.loc[date_idx, col_name]
+                        # Only use valid returns (not NaN, not inf)
+                        if pd.notna(ret) and np.isfinite(ret):
+                            returns_vector.append(float(ret))
+                        else:
+                            returns_vector.append(np.nan)
                     else:
-                        returns_vector.append(0.0)
+                        returns_vector.append(np.nan)
                 actual_returns_list.append(returns_vector)
+                valid_dates_count += 1
             else:
-                actual_returns_list.append([0.0] * len(tickers))
+                # If date not found, use NaN for all stocks
+                actual_returns_list.append([np.nan] * len(tickers))
         
         actual_returns_array = np.array(actual_returns_list)  # Shape: (num_days, num_stocks)
         
+        # Filter out rows/columns with too many NaN values
+        # Keep rows where at least 50% of stocks have valid returns
+        valid_rows = np.sum(~np.isnan(actual_returns_array), axis=1) >= (len(tickers) * 0.5)
+        if np.sum(valid_rows) < 10:  # Need at least 10 valid days
+            raise ValueError(f"Too few valid dates for IC calculation: {np.sum(valid_rows)}")
+        
+        actual_returns_array = actual_returns_array[valid_rows]
+        pred_probs_up = probs_array[valid_rows, :, 1]  # Filter predictions to match
+        
+        print(f"   IC Calculation: {np.sum(valid_rows)}/{len(test_dates)} dates with valid returns")
+        print(f"   Prediction shape: {pred_probs_up.shape}, Returns shape: {actual_returns_array.shape}")
+        print(f"   Prediction range: [{pred_probs_up.min():.4f}, {pred_probs_up.max():.4f}]")
+        print(f"   Returns range: [{np.nanmin(actual_returns_array):.4f}, {np.nanmax(actual_returns_array):.4f}]")
+        print(f"   Valid returns count: {np.sum(~np.isnan(actual_returns_array))}/{actual_returns_array.size}")
+        
         # Calculate IC using probability of "Up" class as prediction signal
-        pred_probs_up = probs_array[:, :, 1]  # Probability of "Up" class
         ic_results = calculate_information_coefficient(pred_probs_up, actual_returns_array)
         
         print(f"   IC Mean: {ic_results['IC_mean']:.4f}")
         print(f"   IC Std: {ic_results['IC_std']:.4f}")
         print(f"   IC IR (Information Ratio): {ic_results['IC_IR']:.4f}")
+        if 'IC_values' in ic_results and len(ic_results['IC_values']) > 0:
+            print(f"   IC Values computed for {len(ic_results['IC_values'])} days")
+            print(f"   IC Range: [{min(ic_results['IC_values']):.4f}, {max(ic_results['IC_values']):.4f}]")
         
     except Exception as e:
         print(f"⚠️  Could not calculate IC: {e}")
@@ -403,7 +456,7 @@ def modify_graph_for_ablation(data, config: Dict) -> torch.Tensor:
     return modified_data
 
 
-def evaluate_ablation_gnn(gnn_model, test_dates, targets_dict, tickers, config: Dict) -> Dict[str, Any]:
+def evaluate_ablation_gnn(gnn_model, test_dates, targets_class_dict, tickers, config: Dict) -> Dict[str, Any]:
     """
     Evaluate GNN model with ablation configuration (modified graph structure).
     
@@ -420,14 +473,21 @@ def evaluate_ablation_gnn(gnn_model, test_dates, targets_dict, tickers, config: 
     with torch.no_grad():
         for date in tqdm(test_dates, desc=f"Ablation: {config.get('name', 'unknown')}"):
             data = load_graph_data(date)
-            target = targets_dict.get(date)
+            target = targets_class_dict.get(date)
             
             if data and target is not None:
                 # Modify graph according to ablation config
                 modified_data = modify_graph_for_ablation(data, config)
                 
+                # Create date_tensor for time-aware encoding if enabled
+                import pandas as pd
+                REFERENCE_DATE = pd.to_datetime('2015-01-01')
+                days_since_ref = (date - REFERENCE_DATE).days
+                num_nodes = modified_data['stock'].x.shape[0]
+                date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32).to(DEVICE) if hasattr(gnn_model, 'enable_time_aware') and gnn_model.enable_time_aware else None
+                
                 # Get predictions
-                out = gnn_model(modified_data.to(DEVICE))
+                out = gnn_model(modified_data.to(DEVICE), date_tensor=date_tensor)
                 probs = F.softmax(out, dim=1)
                 preds = out.argmax(dim=1).cpu().numpy()
                 
@@ -498,13 +558,13 @@ def train_and_evaluate_ablation(ablation_name: str, config_modifier: Dict) -> Di
         ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
         tickers = [col.replace('Close_', '') for col in ohlcv_df.columns if col.startswith('Close_')]
     
-    targets_dict = create_target_labels(tickers, all_dates, lookahead_days=5)
+    targets_class_dict, targets_reg_dict = create_target_labels(tickers, all_dates, lookahead_days=5)
     
     # Add name to config
     config_modifier['name'] = ablation_name
     
     # Evaluate with modified graphs
-    metrics = evaluate_ablation_gnn(gnn_model, test_dates, targets_dict, tickers, config_modifier)
+    metrics = evaluate_ablation_gnn(gnn_model, test_dates, targets_class_dict, tickers, config_modifier)
     
     print(f"   Results: Accuracy={metrics.get('accuracy', 0):.4f}, "
           f"F1={metrics.get('f1_score', 0):.4f}, "
@@ -616,14 +676,14 @@ def main():
         ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
         tickers = [col.replace('Close_', '') for col in ohlcv_df.columns if col.startswith('Close_')]
     
-    # Create targets
-    targets_dict = create_target_labels(tickers, all_dates, lookahead_days=5)
+    # Create targets (returns tuple: targets_class_dict, targets_reg_dict)
+    targets_class_dict, targets_reg_dict = create_target_labels(tickers, all_dates, lookahead_days=5)
 
     # 1. Evaluate GNN Model Metrics (Precision@Top-K, IC)
     print("\n" + "=" * 50)
     print("📊 Step 1: GNN Model Node-Level Metrics")
     print("=" * 50)
-    gnn_metrics = evaluate_gnn_metrics(gnn_model, test_dates, targets_dict, tickers)
+    gnn_metrics = evaluate_gnn_metrics(gnn_model, test_dates, targets_class_dict, tickers)
     
     # Save GNN metrics
     gnn_metrics_df = pd.DataFrame([gnn_metrics])
