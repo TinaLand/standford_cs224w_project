@@ -403,11 +403,11 @@
 ### Three-Dimensional Score
 
 ```
-Model Complexity: ████████░░ 8.5/10 Excellent
-Excellent Results: ████████░░ 8.0/10 Very Good
-Deep Analysis: ███████░░░ 7.0/10 Good (Needs Enhancement)
-─────────────────────────────────────────────
-Overall: ████████░░ 7.8/10 Very Good (A-)
+Model Complexity:  8.5/10 Excellent
+Excellent Results:  8.0/10 Very Good
+Deep Analysis:  7.0/10 Good (Needs Enhancement)
+
+Overall:  7.8/10 Very Good (A-)
 ```
 
 ### Grade Breakdown

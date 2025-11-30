@@ -19,27 +19,27 @@ Based on your project characteristics (stock trading, GNN, RL), we chose:
 ### Overall Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│ Multi-Agent RL System (CTDE) │
-│ │
-│ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ │
-│ │ Agent 1: │ │ Agent 2: │ │ Agent N: │ │
-│ │ Technology │ │ Healthcare │ │ Finance │ │
-│ │ (10 stocks) │ │ (10 stocks) │ │ (10 stocks)│
-│ └──────┬───────┘ └──────┬───────┘ └────┬─────┘ │
-│ │ │ │ │
-│ └──────────────────┼────────────────┘ │
-│ │ │
-│ ┌─────────▼─────────┐ │
-│ │ Mixing Network │ │
-│ │ (QMIX-style) │ │
-│ └──────────────────┘ │
-│ │ │
-│ ┌─────────▼─────────┐ │
-│ │ Global Reward │ │
-│ │ (Portfolio) │ │
-│ └──────────────────┘ │
-└─────────────────────────────────────────────────────┘
+
+ Multi-Agent RL System (CTDE) 
+ 
+    
+  Agent 1:   Agent 2:   Agent N:  
+  Technology   Healthcare   Finance  
+  (10 stocks)   (10 stocks)   (10 stocks)
+    
+    
+  
+  
+  
+  Mixing Network  
+  (QMIX-style)  
+  
+  
+  
+  Global Reward  
+  (Portfolio)  
+  
+
 ```
 
 ### Core Components
@@ -471,18 +471,18 @@ END_DATE = pd.to_datetime('2024-12-31')
 
 ```
 scripts/
-├── multi_agent_rl_coordinator.py # Core architecture 
-│ ├── SectorGrouping # Sector grouping
-│ ├── SectorAgent # Individual agent
-│ ├── MixingNetwork # QMIX mixing network
-│ └── MultiAgentCoordinator # Coordinator
-│
-├── src/rl/training/multi_agent_training.py # Training script 
-│ ├── train_multi_agent_system() # Training function
-│ └── evaluate_multi_agent_system() # Evaluation function
-│
-└── src/rl/multi_agent_env.py # Multi-agent environment (to be implemented)
- └── SectorTradingEnv # Sector-specific environment
+ multi_agent_rl_coordinator.py # Core architecture 
+  SectorGrouping # Sector grouping
+  SectorAgent # Individual agent
+  MixingNetwork # QMIX mixing network
+  MultiAgentCoordinator # Coordinator
+
+ src/rl/training/multi_agent_training.py # Training script 
+  train_multi_agent_system() # Training function
+  evaluate_multi_agent_system() # Evaluation function
+
+ src/rl/multi_agent_env.py # Multi-agent environment (to be implemented)
+  SectorTradingEnv # Sector-specific environment
 ```
 
 ---

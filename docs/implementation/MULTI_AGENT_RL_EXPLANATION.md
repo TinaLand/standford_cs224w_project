@@ -14,22 +14,22 @@
 ### Current Architecture
 
 ```
-┌─────────────────────────────────────┐
-│ Single RL Agent (PPO) │
-│ │
-│ ┌──────────────────────────────┐ │
-│ │ State: │ │
-│ │ - Portfolio holdings (50) │ │
-│ │ - GNN embeddings (50×256) │ │
-│ │ - Node features (50×15) │ │
-│ └──────────────────────────────┘ │
-│ ↓ │
-│ ┌──────────────────────────────┐ │
-│ │ Action: │ │
-│ │ Buy/Sell/Hold for all 50 │ │
-│ │ stocks simultaneously │ │
-│ └──────────────────────────────┘ │
-└─────────────────────────────────────┘
+
+ Single RL Agent (PPO) 
+ 
+  
+  State:  
+  - Portfolio holdings (50)  
+  - GNN embeddings (50×256)  
+  - Node features (50×15)  
+  
+ ↓ 
+  
+  Action:  
+  Buy/Sell/Hold for all 50  
+  stocks simultaneously  
+  
+
 ```
 
 **Characteristics**:
@@ -49,22 +49,22 @@
 ### Multi-Agent Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│ Multi-Agent RL System │
-│ │
-│ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ │
-│ │ Agent 1: │ │ Agent 2: │ │ Agent N: │ │
-│ │ Technology │ │ Healthcare │ │ Finance │ │
-│ │ Sector │ │ Sector │ │ Sector │ │
-│ └──────────────┘ └──────────────┘ └──────────┘ │
-│ │ │ │ │
-│ └─────────────────┼─────────────────┘ │
-│ │ │
-│ ┌────────▼────────┐ │
-│ │ Coordinator │ │
-│ │ (Optional) │ │
-│ └─────────────────┘ │
-└─────────────────────────────────────────────────────┘
+
+ Multi-Agent RL System 
+ 
+    
+  Agent 1:   Agent 2:   Agent N:  
+  Technology   Healthcare   Finance  
+  Sector   Sector   Sector  
+    
+    
+  
+  
+  
+  Coordinator  
+  (Optional)  
+  
+
 ```
 
 ### Design Approaches

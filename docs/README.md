@@ -1,8 +1,8 @@
-# 📚 Documentation Index
+# Documentation Index
 
 Welcome to the CS224W Stock RL GNN Project documentation. This directory contains comprehensive documentation for all aspects of the project.
 
-## 📖 Quick Links
+## Quick Links
 
 - **[Main README](../README.md)** - Project overview and quick start guide
 - **[Final Report](../FINAL_REPORT.md)** - Complete project report (Blog post format)
@@ -10,7 +10,7 @@ Welcome to the CS224W Stock RL GNN Project documentation. This directory contain
 
 ---
 
-## 🔄 Phase Documentation
+## Phase Documentation
 
 Detailed documentation for each phase of the project:
 
@@ -26,7 +26,7 @@ Detailed documentation for each phase of the project:
 
 ---
 
-## 📘 Guides
+## Guides
 
 How-to guides and tutorials:
 
@@ -39,7 +39,7 @@ How-to guides and tutorials:
 
 ---
 
-## 📊 Analysis Reports
+## Analysis Reports
 
 Performance and analysis reports:
 
@@ -52,7 +52,7 @@ Performance and analysis reports:
 
 ---
 
-## 🔧 Implementation Details
+## Implementation Details
 
 Technical implementation documentation:
 
@@ -66,50 +66,58 @@ Technical implementation documentation:
 
 ---
 
-## 📁 Documentation Structure
+## Documentation Structure
 
 ```
 docs/
-├── README.md                    # This file - documentation index
-│
-├── phases/                      # Phase-by-phase documentation
-│   ├── phase1_data_collection.md
-│   ├── phase2_graph_construction.md
-│   ├── phase3_baseline_training.md
-│   ├── phase4_transformer_training.md
-│   ├── phase5_rl_integration.md
-│   ├── phase6_evaluation.md
-│   └── phase7_optimization.md
-│
-├── guides/                      # How-to guides
-│   ├── rl_agent_guide.md
-│   ├── rl_usage.md
-│   ├── RL_TESTING_GUIDE.md
-│   └── TESTING_GUIDE.md
-│
-├── analysis/                    # Analysis reports
-│   ├── PERFORMANCE_EVALUATION.md
-│   ├── GNN_PREDICTION_ANALYSIS.md
-│   ├── PROJECT_SCORE_EVALUATION.md
-│   └── PROJECT_COMPLEXITY_EVALUATION.md
-│
-└── implementation/              # Technical implementation details
-    ├── PEARL_IMPLEMENTATION_STATUS.md
-    ├── MULTI_AGENT_RL_EXPLANATION.md
-    ├── MULTI_AGENT_RL_IMPLEMENTATION.md
-    ├── PHASE6_PHASE7_IMPLEMENTATION.md
-    └── PROPOSAL_IMPLEMENTATION_CHECKLIST.md
+ README.md                    # This file - documentation index
+
+ phases/                      # Phase-by-phase documentation
+    phase1_data_collection.md
+    phase2_graph_construction.md
+    phase3_baseline_training.md
+    phase4_transformer_training.md
+    phase5_rl_integration.md
+    phase6_evaluation.md
+    phase7_optimization.md
+
+ guides/                      # How-to guides
+    rl_agent_guide.md
+    rl_usage.md
+    RL_TESTING_GUIDE.md
+    TESTING_GUIDE.md
+
+ analysis/                    # Analysis reports
+    PERFORMANCE_EVALUATION.md
+    GNN_PREDICTION_ANALYSIS.md
+    PROJECT_SCORE_EVALUATION.md
+    PROJECT_COMPLEXITY_EVALUATION.md
+
+ implementation/              # Technical implementation details
+     PEARL_IMPLEMENTATION_STATUS.md
+     MULTI_AGENT_RL_EXPLANATION.md
+     MULTI_AGENT_RL_IMPLEMENTATION.md
+     PHASE6_PHASE7_IMPLEMENTATION.md
+     PROPOSAL_IMPLEMENTATION_CHECKLIST.md
 ```
 
 ---
 
-## 🎯 Key Project Components
+## Key Project Components
 
 ### Model Architecture
 - **Role-Aware Graph Transformer**: Multi-relational graph transformer with PEARL embeddings
 - **PEARL Positional Embeddings**: Structural role encoding (hubs, bridges, isolated nodes)
 - **Time-Aware Encoding**: Temporal pattern capture
 - **Multi-Relational Attention**: Different aggregation strategies for different edge types
+
+### Reinforcement Learning Agents
+- **Single-Agent RL**: PPO-based portfolio optimization using GNN predictions
+  - See [RL Agent Guide](guides/rl_agent_guide.md) for detailed architecture
+  - See [RL Usage Guide](guides/rl_usage.md) for usage instructions
+- **Multi-Agent RL**: Sector-specialized agents with CTDE architecture and QMIX-style mixing network
+  - See [Multi-Agent RL Explanation](implementation/MULTI_AGENT_RL_EXPLANATION.md) for architecture details
+  - See [Multi-Agent RL Implementation](implementation/MULTI_AGENT_RL_IMPLEMENTATION.md) for implementation guide
 
 ### Data & Graphs
 - **50 Major US Stocks**: Diverse sectors (Technology, Finance, Healthcare, etc.)
@@ -123,7 +131,7 @@ docs/
 
 ---
 
-## 📝 Documentation Standards
+## Documentation Standards
 
 All documentation follows these standards:
 - **Language**: English (except where explicitly noted)
@@ -134,7 +142,7 @@ All documentation follows these standards:
 
 ---
 
-## 🔍 Finding What You Need
+## Finding What You Need
 
 ### For New Users
 1. Start with [Main README](../README.md) for project overview
@@ -153,7 +161,7 @@ All documentation follows these standards:
 
 ---
 
-## 📞 Contributing to Documentation
+## Contributing to Documentation
 
 When adding or updating documentation:
 1. Follow the existing structure and format
@@ -164,7 +172,7 @@ When adding or updating documentation:
 
 ---
 
-## 📚 Related Resources
+## Related Resources
 
 - **Course**: CS224W - Machine Learning with Graphs (Stanford)
 - **Project Repository**: See main [README](../README.md) for repository information

@@ -280,12 +280,12 @@ python -m src.evaluation.evaluation
 - `results/ablation_results.csv`: Ablation study results
 - `results/comprehensive_strategy_comparison.csv`: Baseline comparisons
 
-### A+ Enhancements (Optional)
+### Enhancements (Optional)
 
 For deeper analysis and visualizations, run the enhanced evaluation suite:
 
 ```bash
-python run_aplus_enhancements.py
+python -m src.evaluation.enhanced_evaluation
 ```
 
 This includes:
@@ -499,63 +499,65 @@ results = validate_ticker_data(
   - Modified `phase1_data_collection.py`: `allow_synthetic_fallback=False`
   - Modified `phase1_feature_engineering.py`: Explicit error handling
   -  Guide: [REAL_DATA_COLLECTION_GUIDE.md](REAL_DATA_COLLECTION_GUIDE.md)
-- [x] Trading calendar alignment  `utils_data_validation.py`
-- [x] Stock suspension handling  Implemented
-- [x] Split/dividend adjustments  Implemented
-- [x] Missing value imputation  Multiple methods available
-- [x] Data quality validation  Comprehensive checks
-- [x] Data collection logging  JSON log created
+- [x] Trading calendar alignment - `utils_data_validation.py`
+- [x] Stock suspension handling - Implemented
+- [x] Split/dividend adjustments - Implemented
+- [x] Missing value imputation - Multiple methods available
+- [x] Data quality validation - Comprehensive checks
+- [x] Data collection logging - JSON log created
 
 #### Phase 2 – Graph Construction - [x] Persist ticker metadata in graphs  `tickers` attribute
-- [x] Static edge types (supply_chain, competitor)  Schema validated
-- [x] Normalize edge attributes  Dynamic edges normalized
-- [x] Graph integrity checker  Validation implemented
+- [x] Static edge types (supply_chain, competitor) - Schema validated
+- [x] Normalize edge attributes - Dynamic edges normalized
+- [x] Graph integrity checker - Validation implemented
 
-#### Phase 3 – Baseline Training - [x] Temporal time-based split (70/15/15)  No leakage
-- [x] Class imbalance handling  Focal loss / weighted CE
-- [x] Checkpoint system  Full state saving
-- [x] Early stopping & LR scheduler  Implemented
-- [x] TensorBoard logging  ROC-AUC, confusion matrix
+#### Phase 3 – Baseline Training
+- [x] Temporal time-based split (70/15/15) - No leakage
+- [x] Class imbalance handling - Focal loss / weighted CE
+- [x] Checkpoint system - Full state saving
+- [x] Early stopping & LR scheduler - Implemented
+- [x] TensorBoard logging - ROC-AUC, confusion matrix
 
-#### Phase 4 – Core Transformer  (100% Complete)
-- [x] PEARL embedding component  `components/pearl_embedding.py`
-- [x] Relation-aware aggregation  Edge-type-specific attention
-- [x] Mini-batch training  Neighbor sampling support
-- [x] AMP & gradient clipping  Stability improvements
-- [x] Hyperparameter sweep script  `phase4_hyperparameter_sweep.py`
-- [x] **Complete training**  Trained for 6 epochs (early stopped), Test F1: 0.6725
-- [x] **Model saved**  `models/core_transformer_model.pt`
-- [x] **Baseline comparison**  Compared with Phase 3, results in `results/phase3_vs_phase4_comparison.csv`
+#### Phase 4 – Core Transformer (100% Complete)
+- [x] PEARL embedding component - `components/pearl_embedding.py`
+- [x] Relation-aware aggregation - Edge-type-specific attention
+- [x] Mini-batch training - Neighbor sampling support
+- [x] AMP & gradient clipping - Stability improvements
+- [x] Hyperparameter sweep script - `phase4_hyperparameter_sweep.py`
+- [x] **Complete training** - Trained for 6 epochs (early stopped), Test F1: 0.6725
+- [x] **Model saved** - `models/core_transformer_model.pt`
+- [x] **Baseline comparison** - Compared with Phase 3, results in `results/phase3_vs_phase4_comparison.csv`
 - [ ] **Optional**: Run hyperparameter sweep for further optimization
 
-#### Phase 5 – RL Integration  (100% Complete)
-- [x] Reward shaping with transaction costs  0.1% per trade
-- [x] SB3 (PPO) integration  `phase5_rl_integration.py`
-- [x] Portfolio constraints  Basic position sizing
-- [x] Backtesting framework  Slippage modeling
-- [x] GNN embeddings as state  Model integration
-- [x] Discrete action space  MultiDiscrete([3] * N)
-- [x] Reward function  Return-based (can be enhanced)
-- [x] **RL training completed**  10,000 timesteps, model saved
-- [x] **Performance validated**  Sharpe: 1.98, Return: 45.5%, Max DD: 6.85%
+#### Phase 5 – RL Integration (100% Complete)
+- [x] Reward shaping with transaction costs - 0.1% per trade
+- [x] SB3 (PPO) integration - `phase5_rl_integration.py`
+- [x] Portfolio constraints - Basic position sizing
+- [x] Backtesting framework - Slippage modeling
+- [x] GNN embeddings as state - Model integration
+- [x] Discrete action space - MultiDiscrete([3] * N)
+- [x] Reward function - Return-based (can be enhanced)
+- [x] **RL training completed** - 10,000 timesteps, model saved
+- [x] **Performance validated** - Sharpe: 1.98, Return: 45.5%, Max DD: 6.85%
 - [ ] **Enhancement**: Add `get_embeddings()` method to Phase 4 model
 - [ ] **Enhancement**: Improve reward with Sharpe ratio
 - [ ] **Enhancement**: Advanced portfolio constraints
 
-#### Phase 6 – Evaluation  (90% Complete)
-- [x] Financial metrics calculation  Sharpe, Max Drawdown, Returns
-- [x] Final backtesting  `run_final_backtest()` - Completed with RL agent
-- [x] **Visualization scripts**  `scripts/visualization.py`
-  - [x] t-SNE embedding visualization  Generated
-  - [x] Attention weights heatmap visualization  Generated
-  - [x] Role analysis visualization (Hubs, Role Twins)  Generated
-- [x] **Missing metrics implemented**   - [x] Precision@Top-K  Results: Top-5: 57.55%, Top-10: 55.31%, Top-20: 53.98%
-  - [x] Information Coefficient (IC)  IC Mean: 0.0226, IC IR: 0.0693
-- [x] **Complete evaluation pipeline**  Run successfully
-- [x] **Results saved**  `results/gnn_node_metrics.csv`, `results/final_metrics.csv`
-- [x] **Ablation studies**  Framework implemented and executed
-  - [x] Edge type ablation  Removed correlation/fundamental/sector edges
-  - [x] Results saved  `results/ablation_results.csv`
+#### Phase 6 – Evaluation (90% Complete)
+- [x] Financial metrics calculation - Sharpe, Max Drawdown, Returns
+- [x] Final backtesting - `run_final_backtest()` - Completed with RL agent
+- [x] **Visualization scripts** - `scripts/visualization.py`
+  - [x] t-SNE embedding visualization - Generated
+  - [x] Attention weights heatmap visualization - Generated
+  - [x] Role analysis visualization (Hubs, Role Twins) - Generated
+- [x] **Missing metrics implemented**
+  - [x] Precision@Top-K - Results: Top-5: 57.55%, Top-10: 55.31%, Top-20: 53.98%
+  - [x] Information Coefficient (IC) - IC Mean: 0.0226, IC IR: 0.0693
+- [x] **Complete evaluation pipeline** - Run successfully
+- [x] **Results saved** - `results/gnn_node_metrics.csv`, `results/final_metrics.csv`
+- [x] **Ablation studies** - Framework implemented and executed
+  - [x] Edge type ablation - Removed correlation/fundamental/sector edges
+  - [x] Results saved - `results/ablation_results.csv`
   - [ ] **Note**: Full retraining for each ablation would require more time/resources
 - [x] **Baseline Comparison**  Implemented and executed
   - Buy-and-Hold: Sharpe 2.18, Return 83.13%
@@ -564,13 +566,14 @@ results = validate_ticker_data(
   - Results: `results/comprehensive_strategy_comparison.csv`
 - [ ] **Analysis**: Failure case investigation
 
-#### Data & Infrastructure - [x] Real data pipeline  Network failure handling
-- [x] Data validation system  `utils_data_validation.py`
-- [x] Data versioning  Collection log (JSON)
-- [x] Configuration centralization  `config.yaml` + `utils_config.py`
-- [x] Git artifact management  `.gitignore` configured
-- [x] Reproducibility setup  `setup_reproducibility()`
-- [x] Data collection logging  Transparent tracking
+#### Data & Infrastructure
+- [x] Real data pipeline - Network failure handling
+- [x] Data validation system - `utils_data_validation.py`
+- [x] Data versioning - Collection log (JSON)
+- [x] Configuration centralization - `config.yaml` + `utils_config.py`
+- [x] Git artifact management - `.gitignore` configured
+- [x] Reproducibility setup - `setup_reproducibility()`
+- [x] Data collection logging - Transparent tracking
 - [ ] Structured logging system
 - [ ] Unit tests + CI workflow
 - [ ] Docker/DevContainer
@@ -579,9 +582,10 @@ results = validate_ticker_data(
 
 ---
 
-##  Remaining Tasks (High Priority)
+## Remaining Tasks (High Priority)
 
-### Phase 4 Completion - [x] **Run complete Phase 4 training**  **DONE**
+### Phase 4 Completion
+- [x] **Run complete Phase 4 training** - **DONE**
   - Model trained for 6 epochs (early stopped)
   - Test F1: 0.6725 (matches baseline)
   - Model saved: `models/core_transformer_model.pt`
@@ -593,27 +597,29 @@ results = validate_ticker_data(
   - Find optimal hyperparameters
   - Document best configuration
 
-### Phase 5 Completion - [x] **Run RL training**  **DONE**
+### Phase 5 Completion
+- [x] **Run RL training** - **DONE**
   - Trained for 10,000 timesteps
   - Model saved: `models/rl_ppo_agent_model/ppo_stock_agent.zip`
 
-- [x] **Validate RL agent performance**  **DONE**
+- [x] **Validate RL agent performance** - **DONE**
   - **Final Agent**: Sharpe 2.36 , Return 71.8%, Max DD 9.00%
   - **Original Agent**: Sharpe 1.98, Return 45.5%, Max DD 6.85%
   - ****: Sharpe +0.38, Return +26.3%
   - ** Buy-and-Hold (2.36 vs 2.18)!**
 
-### Phase 6 Completion - [x] **Create visualization scripts**  **DONE**
+### Phase 6 Completion
+- [x] **Create visualization scripts** - **DONE**
   - `scripts/visualization.py` created and tested
   - t-SNE visualization generated
   - Attention weight heatmap generated
   - Role analysis (Hubs, Role Twins) generated
 
-- [x] **Implement missing metrics**  **DONE**
+- [x] **Implement missing metrics** - **DONE**
   - Precision@Top-K: Top-5: 57.55%, Top-10: 55.31%, Top-20: 53.98%
   - Information Coefficient: IC Mean: 0.0226, IC IR: 0.0693
 
-- [x] **Run complete evaluation**  **DONE**
+- [x] **Run complete evaluation** - **DONE**
   - GNN metrics: `results/gnn_node_metrics.csv`
   - RL metrics: `results/final_metrics.csv`
   - All visualizations generated

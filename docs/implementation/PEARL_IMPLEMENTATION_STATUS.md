@@ -102,17 +102,17 @@ PEARL generates different embeddings for different edge types (correlation, sect
 
 ```
 RoleAwareGraphTransformer
-│
-├── PEARL Positional Embedding 
-│ ├── Calculate structural features
-│ ├── MLP transformation
-│ └── Relation-aware attention
-│
-├── Graph Transformer Layers
-│ └── Use PEARL-enhanced features
-│
-└── Output Classifier
- └── Final prediction
+
+ PEARL Positional Embedding 
+  Calculate structural features
+  MLP transformation
+  Relation-aware attention
+
+ Graph Transformer Layers
+  Use PEARL-enhanced features
+
+ Output Classifier
+  Final prediction
 ```
 
 ---
