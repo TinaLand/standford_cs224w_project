@@ -115,7 +115,17 @@ def normalize_edge_attributes(edge_weights, method='min_max', edge_type='unknown
         normalized = edge_weights
     
     new_min, new_max = normalized.min().item(), normalized.max().item()
-    print(f"    {edge_type}: [{original_min:.4f}, {original_max:.4f}] → [{new_min:.4f}, {new_max:.4f}] ({method})")
+    
+    # Only print normalization info for dynamic edges or first occurrence of static edges
+    # Static edges (fund_similarity, sector_industry, etc.) have same values across all graphs
+    # Reduce log spam by only printing once per static edge type
+    if edge_type not in getattr(normalize_edge_attributes, '_printed_static', set()):
+        print(f"    {edge_type}: [{original_min:.4f}, {original_max:.4f}] → [{new_min:.4f}, {new_max:.4f}] ({method})")
+        if edge_type in ['fund_similarity', 'sector_industry', 'supply_competitor']:
+            # Mark static edge types as printed
+            if not hasattr(normalize_edge_attributes, '_printed_static'):
+                normalize_edge_attributes._printed_static = set()
+            normalize_edge_attributes._printed_static.add(edge_type)
     
     return normalized
 

@@ -110,7 +110,7 @@ def calculate_precision_at_topk(predictions: np.ndarray, targets: np.ndarray, k:
     return precision_at_k
 
 
-def calculate_information_coefficient(predictions: np.ndarray, actual_returns: np.ndarray) -> Dict[str, float]:
+def calculate_information_coefficient(predictions: np.ndarray, actual_returns: np.ndarray, use_logits: bool = False) -> Dict[str, float]:
     """
     Calculate Information Coefficient (IC) - correlation between predictions and actual returns.
     
@@ -123,6 +123,7 @@ def calculate_information_coefficient(predictions: np.ndarray, actual_returns: n
     Args:
         predictions: Array of shape (num_days, num_stocks) - predicted class probabilities or logits
         actual_returns: Array of shape (num_days, num_stocks) - actual forward returns (continuous values)
+        use_logits: If True, use raw logits instead of probabilities (better when probabilities have low variance)
     
     Returns:
         Dictionary with:
@@ -134,11 +135,25 @@ def calculate_information_coefficient(predictions: np.ndarray, actual_returns: n
     
     num_days, num_stocks = predictions.shape
     
+    # Check if predictions have variance
+    pred_std = predictions.std()
+    # Use a more lenient threshold for logits (they can have very small but meaningful variance)
+    variance_threshold = 1e-8 if use_logits else 1e-6
+    if pred_std < variance_threshold:
+        # All predictions are essentially identical - cannot calculate meaningful correlation
+        # But still try to calculate IC per day, as individual days might have variance
+        print(f"   ⚠️  Warning: Overall prediction std is very low ({pred_std:.10f}), but will try per-day IC calculation")
+    
     # If predictions are probabilities, convert to expected returns
     # For binary classification: expected_return = prob_up - prob_down
-    if predictions.max() <= 1.0 and predictions.min() >= 0.0:
+    if predictions.max() <= 1.0 and predictions.min() >= 0.0 and not use_logits:
         # Probabilities: convert to expected returns signal
-        pred_returns = predictions * 2 - 1  # Map [0,1] to [-1,1]
+        # But if variance is too low, use logit-like transformation
+        if pred_std < 0.01:  # Very low variance in probabilities
+            # Use a more sensitive transformation
+            pred_returns = (predictions - 0.5) * 10  # Scale to [-5, 5] range
+        else:
+            pred_returns = predictions * 2 - 1  # Map [0,1] to [-1,1]
     else:
         # Logits or raw predictions: use as-is
         pred_returns = predictions
@@ -194,6 +209,7 @@ def evaluate_gnn_metrics(gnn_model, test_dates, targets_class_dict, tickers) -> 
     all_predictions = []
     all_targets = []
     all_probs = []
+    all_logits = []  # Store raw logits for IC calculation
     
     # Collect predictions for all test dates
     import pandas as pd
@@ -212,6 +228,11 @@ def evaluate_gnn_metrics(gnn_model, test_dates, targets_class_dict, tickers) -> 
                 num_nodes = data['stock'].x.shape[0]
                 date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32).to(DEVICE) if hasattr(gnn_model, 'enable_time_aware') and gnn_model.enable_time_aware else None
                 out = gnn_model(data.to(DEVICE), date_tensor=date_tensor)  # Shape: (num_stocks, 2)
+                
+                # Store raw logits (for IC calculation when probabilities have low variance)
+                logits_up = out[:, 1].cpu().numpy()  # Logit for "Up" class
+                all_logits.append(logits_up)
+                
                 probs = F.softmax(out, dim=1)  # Convert logits to probabilities
                 preds = out.argmax(dim=1).cpu().numpy()
             
@@ -227,6 +248,8 @@ def evaluate_gnn_metrics(gnn_model, test_dates, targets_class_dict, tickers) -> 
     predictions_array = np.array(all_predictions)  # Shape: (num_days, num_stocks)
     targets_array = np.array(all_targets)  # Shape: (num_days, num_stocks)
     probs_array = np.array(all_probs)  # Shape: (num_days, num_stocks, 2)
+    logits_array = np.array(all_logits)  # Shape: (num_days, num_stocks) - logits for "Up" class
+    logits_array = np.array(all_logits)  # Shape: (num_days, num_stocks) - logits for "Up" class
     
     # Calculate Precision@Top-K for different K values
     precision_at_k_results = {}
@@ -302,15 +325,30 @@ def evaluate_gnn_metrics(gnn_model, test_dates, targets_class_dict, tickers) -> 
         
         actual_returns_array = actual_returns_array[valid_rows]
         pred_probs_up = probs_array[valid_rows, :, 1]  # Filter predictions to match
+        pred_logits_up = logits_array[valid_rows, :]  # Filter logits to match
         
         print(f"   IC Calculation: {np.sum(valid_rows)}/{len(test_dates)} dates with valid returns")
         print(f"   Prediction shape: {pred_probs_up.shape}, Returns shape: {actual_returns_array.shape}")
-        print(f"   Prediction range: [{pred_probs_up.min():.4f}, {pred_probs_up.max():.4f}]")
+        print(f"   Prob Up range: [{pred_probs_up.min():.4f}, {pred_probs_up.max():.4f}], std={pred_probs_up.std():.6f}")
+        print(f"   Logit Up range: [{pred_logits_up.min():.4f}, {pred_logits_up.max():.4f}], std={pred_logits_up.std():.6f}")
         print(f"   Returns range: [{np.nanmin(actual_returns_array):.4f}, {np.nanmax(actual_returns_array):.4f}]")
         print(f"   Valid returns count: {np.sum(~np.isnan(actual_returns_array))}/{actual_returns_array.size}")
         
-        # Calculate IC using probability of "Up" class as prediction signal
-        ic_results = calculate_information_coefficient(pred_probs_up, actual_returns_array)
+        # Check if predictions have variance
+        # If probabilities have very low variance, use logits instead
+        prob_std = pred_probs_up.std()
+        logit_std = pred_logits_up.std()
+        
+        if prob_std < 0.01:  # Probabilities have very low variance
+            print(f"   ⚠️  Probabilities have low variance (std={prob_std:.6f})")
+            print(f"   🔧 Using raw logits for IC calculation instead (logit std={logit_std:.6f})")
+            # Use logits which have better variance
+            ic_results = calculate_information_coefficient(pred_logits_up, actual_returns_array, use_logits=True)
+            ic_results['method'] = 'logits'  # Mark that we used logits
+        else:
+            # Use probabilities as normal
+            ic_results = calculate_information_coefficient(pred_probs_up, actual_returns_array, use_logits=False)
+            ic_results['method'] = 'probabilities'
         
         print(f"   IC Mean: {ic_results['IC_mean']:.4f}")
         print(f"   IC Std: {ic_results['IC_std']:.4f}")
