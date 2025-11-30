@@ -72,6 +72,10 @@ logs/
 runs/
 *.log
 
+# Status reports
+pipeline_status_report.txt
+*_status_report.txt
+
 # Temporary files
 *.tmp
 *.bak
