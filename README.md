@@ -245,7 +245,6 @@ python -m src.evaluation.enhanced_ablation
 - Professional visualizations (portfolio charts, drawdown analysis)
 - Comprehensive reporting
 
-See `A_PLUS_GRADE_REPORT.md` for detailed enhancement documentation.
 
 **Checkpoint Management:**
 The script automatically saves full training checkpoints (model, optimizer, epoch, metrics):
