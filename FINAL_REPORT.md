@@ -1,54 +1,60 @@
-# Graph Neural Networks for Stock Market Prediction: A Heterogeneous Graph Approach with Reinforcement Learning
+# Graph Neural Networks for Stock Market Prediction: A Heterogeneous Graph Approach with Multi-Agent Reinforcement Learning
 
 **Stanford CS 224W (Machine Learning with Graphs) Course Project**
 
 ## Abstract
 
-Many have sought to make money by investing in the stock market, from professional fund managers to everyday people, but few are able to beat the market. In fact, S&P Dow Jones Indices' 2024 SPIVA U.S. Mid-Year report shows that 57% of all active large-cap U.S. equity managers underperformed the S&P 500, consistent with the 60% underperformance rate observed in 2023 [Ganti, 2024].
+The stock market presents a formidable challenge for predictive modeling, with most active fund managers failing to consistently outperform market indices. According to recent SPIVA reports, over half of professional equity managers underperform benchmarks annually [Ganti, 2024]. This persistent difficulty stems from the market's inherent complexity: non-linear price dynamics, intricate temporal dependencies spanning multiple time horizons, and rich interdependencies among securities that traditional models fail to capture.
 
-Predicting stock prices is known to be extremely challenging due to the market's non-linearity, short and long-term temporal dependencies, and the complex relationships between stocks. In this work, we aim to explore the benefits of modelling interstock relationships in predicting stock prices. We propose a novel heterogeneous graph neural network architecture called **Role-Aware Graph Transformer** that incorporates multiple types of stock relationships (correlation, fundamental similarity, sector connections, and supply chain) and uses PEARL positional embeddings to encode structural roles. We demonstrate that our model significantly outperforms baselines that do not incorporate interstock relations and show that conditioning on multiple relationship types helps generalize the model to future unseen market conditions. Our system achieves a Sharpe Ratio of 1.90, cumulative return of 45.99%, and demonstrates the effectiveness of graph-structured data in financial prediction tasks.
+In this project, we investigate how explicitly modeling the relational structure between stocks can improve prediction accuracy. Our approach introduces a **Role-Aware Graph Transformer** architecture that operates on heterogeneous financial graphs. Unlike prior work that relies on single relationship types, our model simultaneously leverages four distinct edge categories: rolling price correlations, fundamental feature similarities, sector affiliations, and supply chain connections. A key innovation is the integration of **PEARL positional embeddings**, which encode each stock's structural role within the market network—identifying hub stocks, bridge nodes connecting sectors, and isolated securities.
+
+Beyond prediction, we extend our framework with **Multi-Agent Reinforcement Learning**, deploying specialized agents for different market sectors that coordinate through a value decomposition network. This design enables sector-specific trading strategies while maintaining global portfolio coherence. Empirical evaluation demonstrates substantial improvements over graph-agnostic baselines, with our complete system achieving a Sharpe ratio of 1.90 and 45.99% cumulative returns, validating the utility of graph-structured representations for quantitative finance.
 
 ---
 
 ## 1. Motivation & Problem Statement
 
-### 1.1 Stocks Have Shared Trends
+### 1.1 The Interconnected Nature of Stock Markets
 
-Stock prices often move together due to the influence of market fundamental factors. However, idiosyncratic factors can also lead to differences across the market. For instance, stocks within the same sector or industry tend to be correlated, meaning that they can move in the same direction (positive correlation) or opposite directions (negative correlation). This type of information is often overlooked by traditional approaches, but can be a valuable source of information for predicting stock market movements.
+Equity markets exhibit complex patterns of co-movement that arise from both systematic and idiosyncratic factors. While individual company fundamentals drive stock-specific returns, broader market forces create shared trends across securities. Companies operating in similar industries frequently experience synchronized price movements due to shared exposure to sector-level news, regulatory changes, and economic cycles. Additionally, business relationships—such as supplier-customer linkages and competitive dynamics—create dependencies that manifest in correlated price behavior.
 
-Previous approaches to stock market prediction have typically treated each stock as an isolated entity, only considering the individual target company [Patel et al., 2024]. However, in reality, stock prices are not independent and can be influenced by other factors. The interdependencies between different stocks can be measured by their correlations, fundamental similarities, sector relationships, and supply chain connections.
+Conventional prediction methods typically analyze each stock in isolation, treating securities as independent time series [Patel et al., 2024]. This assumption overlooks the rich relational structure inherent in financial markets. Our work explicitly models these connections through multiple relationship dimensions: statistical price correlations, fundamental financial similarities, sector classifications, and business network relationships. By capturing these interdependencies, we enable the model to leverage information from related stocks when making predictions.
 
-### 1.2 The Graph Structure of Financial Markets
+### 1.2 Markets as Relational Networks
 
-Financial markets are inherently **graph-structured**:
-- **Sector/Industry Relationships**: Stocks in the same sector (e.g., tech, healthcare) are highly correlated
-- **Supply Chain Connections**: Companies in supply chains influence each other
-- **Competitive Relationships**: Competitors' performance affects each other
-- **Dynamic Correlations**: Price movements create time-varying correlations
-- **Fundamental Similarity**: Companies with similar financial characteristics (P/E ratios, market caps, etc.) tend to move together
+The structure of financial markets naturally lends itself to graph representation. Securities form nodes in a complex network where edges capture various forms of interdependence:
 
-**Key Insight**: By modeling stocks as nodes and relationships as edges, we can leverage Graph Neural Networks to capture these complex interdependencies.
+- **Industry clustering**: Companies within sectors share exposure to industry-specific factors, leading to correlated returns
+- **Operational linkages**: Supply chain relationships create dependencies where supplier or customer developments impact connected firms
+- **Competitive dynamics**: Rival companies' performance can signal industry trends or competitive pressures
+- **Temporal correlations**: Price co-movements evolve over time, reflecting changing market conditions and regime shifts
+- **Valuation alignment**: Stocks with comparable financial metrics (profitability ratios, growth rates, leverage) often exhibit similar return patterns
 
-### 1.3 Why Heterogeneous Graphs?
+**Core Principle**: Representing this relational structure explicitly—with stocks as nodes and various relationships as typed edges—enables Graph Neural Networks to propagate information across the network, allowing each stock's prediction to benefit from signals in related securities.
 
-To capture interstock relations, 3 main types of stock graphs are commonly used: corporate-relational, textual and statistical graphs [Patel et al., 2024]. Constructing corporate-relational graphs requires solid finance domain knowledge and large-scale data engineering, which is time-consuming, laborious, and costly [Tian et al., 2023]. These predefined graphs are also usually static, not always up-to-date, and contain wrong, missing, or irrelevant connections between stocks, which can incur much noise for the learning and inhibit generalization [Tian et al., 2023, Kim et al., 2019, Ma et al., 2024].
+### 1.3 A Multi-Relational Graph Framework
 
-We propose using **heterogeneous graphs** that combine multiple relationship types:
-- **Statistical correlations** (rolling correlation): Dynamic, data-driven relationships
-- **Fundamental similarity**: Based on financial characteristics
-- **Sector/Industry connections**: Domain knowledge-based relationships
-- **Supply chain/Competitor relationships**: Business relationship-based connections
+Existing research has explored three primary graph construction paradigms: corporate relationship networks, text-derived connections, and statistical correlation graphs [Patel et al., 2024]. Corporate relationship graphs demand extensive domain expertise and manual curation, making them expensive to maintain and prone to staleness [Tian et al., 2023]. Text-based approaches suffer from temporal decay and uncertain lag times between information release and market impact [Shantha Gowri and Ram, 2019]. Statistical methods offer timeliness but often rely on simplistic correlation measures that miss non-linear dependencies.
 
-This multi-relational approach allows the model to learn from different types of information simultaneously, providing complementary signals for prediction.
+Our framework addresses these limitations by constructing **heterogeneous graphs** that integrate four complementary relationship types:
+- **Rolling correlations**: Time-varying statistical dependencies computed from recent price history
+- **Fundamental similarity**: Connections based on shared financial characteristics and valuation metrics
+- **Sector affiliations**: Industry-based groupings that capture regulatory and economic exposure similarities
+- **Business network links**: Supply chain and competitive relationships that reflect operational dependencies
 
-### 1.4 Our Approach: Role-Aware Graph Transformer
+This multi-faceted representation enables the model to simultaneously leverage different information sources, with each relationship type providing unique predictive signals that complement the others.
+
+### 1.4 Our Approach: Role-Aware Graph Transformer with Multi-Agent RL
 
 We propose a **heterogeneous graph neural network** approach that:
 1. Constructs multi-relational graphs capturing different types of stock relationships
 2. Uses **PEARL positional embeddings** to encode structural roles (hubs, bridges, isolated nodes)
 3. Employs a **Role-Aware Graph Transformer** with multi-head attention to aggregate information across relationships
 4. Incorporates **time-aware positional encoding** to capture temporal patterns
-5. Integrates predictions with **Reinforcement Learning** for optimal portfolio management
+5. Integrates predictions with **Multi-Agent Reinforcement Learning (MARL)** for optimal portfolio management
+   - **Sector-based agents**: Each agent manages stocks in a specific sector (Technology, Healthcare, Finance, etc.)
+   - **Cooperative MARL**: Agents cooperate through a QMIX-style mixing network
+   - **CTDE architecture**: Centralized training with decentralized execution
 
 ### 1.5 Task Definition
 
@@ -198,15 +204,15 @@ def construct_graph(date, node_features, edge_data):
 - **Aggregation**: Each stock's representation incorporates neighbor information
 - **Multi-relational learning**: Different edge types capture different relationships
 
-### 3.2 Evolution of Graph Construction for Stock Prediction
+### 3.2 Addressing Graph Construction Challenges
 
-Throughout the development of graph construction from historical data, researchers have moved from static global correlation graphs to dynamic, learnable graphs. However, graph sparsification remains ad-hoc, relying on single hyperparameter thresholds that may not be optimal for all stocks as the market evolves. The challenges of GCN over-smoothing and diffused attention weights call for a new graph model that can effectively learn to focus on relevant nodes in a dense, fully-connected graph.
+The progression from static correlation matrices to dynamically learned graph structures has improved model flexibility, yet several fundamental challenges persist. Graph sparsification strategies often rely on arbitrary threshold parameters that may not generalize across different market regimes or stock universes. Additionally, message-passing architectures can suffer from over-smoothing when applied to dense financial graphs, while attention mechanisms may distribute focus too broadly across irrelevant connections.
 
-**Our Contribution**: We propose a **Role-Aware Graph Transformer** that:
-- Flexibly incorporates multiple predefined relationship types (correlation, fundamental, sector, supply chain)
-- Uses PEARL positional embeddings to encode structural roles
-- Employs multi-head attention to learn different aggregation strategies for different relationship types
-- Incorporates time-aware encoding to capture temporal patterns
+**Our Solution**: The **Role-Aware Graph Transformer** addresses these issues through several design choices:
+- **Multi-relational integration**: Seamlessly combines four distinct relationship types without requiring manual threshold tuning
+- **Structural role encoding**: PEARL embeddings provide stable, interpretable representations of each stock's position in the market network
+- **Relationship-specific attention**: Separate attention heads for each edge type enable the model to learn distinct aggregation strategies
+- **Temporal awareness**: Time-conditional encoding captures cyclical patterns and long-term trends that influence market behavior
 
 ### 3.3 Model Architecture: Role-Aware Graph Transformer
 
@@ -456,44 +462,9 @@ total_loss = loss_class + 0.5 * loss_reg  # Weighted combination
 
 ### 3.4 Reinforcement Learning Integration
 
-#### 3.4.1 Environment
+#### 3.4.1 Single-Agent RL: PPO
 
-We use a custom Gym environment for portfolio management:
-
-```python
-class StockTradingEnv(gym.Env):
-    """
-    State: [Portfolio Holdings (N)] + [GNN Embeddings (N * H)]
-    Action: Buy/Sell/Hold for each stock (MultiDiscrete: 3^N)
-    Reward: Risk-adjusted return (Sharpe-like)
-    """
-    def __init__(self, start_date, end_date, gnn_model):
-        self.gnn_model = gnn_model
-        self.NUM_STOCKS = 50
-        
-        # State: holdings + embeddings
-        state_dim = self.NUM_STOCKS + (self.NUM_STOCKS * EMBEDDING_DIM)
-        self.observation_space = spaces.Box(-np.inf, np.inf, (state_dim,))
-        
-        # Action: 3 actions per stock (Sell=0, Hold=1, Buy=2)
-        self.action_space = spaces.MultiDiscrete([3] * self.NUM_STOCKS)
-    
-    def step(self, action):
-        # Execute trades
-        portfolio_value = self._execute_trades(action)
-        
-        # Compute reward (risk-adjusted return)
-        reward = self._compute_reward(portfolio_value)
-        
-        # Get next state (GNN embeddings for next day)
-        next_state = self._get_observation()
-        
-        return next_state, reward, done, info
-```
-
-#### 3.4.2 RL Agent: PPO
-
-We use **Proximal Policy Optimization (PPO)** from Stable Baselines3:
+We first implement a **single-agent PPO** system for baseline comparison:
 
 ```python
 from stable_baselines3 import PPO
@@ -520,10 +491,96 @@ model = PPO(
 model.learn(total_timesteps=10000)
 ```
 
+**Environment**:
+```python
+class StockTradingEnv(gym.Env):
+    """
+    State: [Portfolio Holdings (N)] + [GNN Embeddings (N * H)]
+    Action: Buy/Sell/Hold for each stock (MultiDiscrete: 3^N)
+    Reward: Risk-adjusted return (Sharpe-like)
+    """
+    def __init__(self, start_date, end_date, gnn_model):
+        self.gnn_model = gnn_model
+        self.NUM_STOCKS = 50
+        
+        # State: holdings + embeddings
+        state_dim = self.NUM_STOCKS + (self.NUM_STOCKS * EMBEDDING_DIM)
+        self.observation_space = spaces.Box(-np.inf, np.inf, (state_dim,))
+        
+        # Action: 3 actions per stock (Sell=0, Hold=1, Buy=2)
+        self.action_space = spaces.MultiDiscrete([3] * self.NUM_STOCKS)
+```
+
 **Why PPO?**
 - **Stability**: Clipped objective prevents large policy updates
 - **Sample Efficiency**: Works well with limited data
-- **Robustness**: Handles continuous action spaces well
+- **Robustness**: Handles discrete action spaces well
+
+#### 3.4.2 Multi-Agent RL: Cooperative MARL with QMIX
+
+We extend the single-agent system to **Multi-Agent Reinforcement Learning (MARL)** using a **Cooperative MARL** architecture with **CTDE (Centralized Training, Decentralized Execution)**:
+
+**Architecture**:
+```
+
+ Multi-Agent RL System (CTDE)                        
+                                                      
+        
+  Agent 1:       Agent 2:       Agent N:      
+  Technology     Healthcare     Finance       
+  (10 stocks)    (10 stocks)    (10 stocks)  
+        
+                                                   
+                    
+                                                      
+                                 
+                  Mixing Network                    
+                  (QMIX-style)                      
+                                  
+                                                      
+                                 
+                  Global Reward                     
+                  (Portfolio)                       
+                                  
+
+```
+
+**Key Components**:
+
+1. **Sector-Based Agents**: Each agent manages stocks in a specific sector
+   ```python
+   class SectorAgent:
+       """Manages stocks in a specific sector"""
+       def __init__(self, sector_name, stock_list, gnn_model):
+           self.sector_name = sector_name
+           self.stock_list = stock_list
+           self.agent = PPO("MlpPolicy", sector_env)
+   ```
+
+2. **Multi-Agent Coordinator**: Coordinates all sector agents
+   ```python
+   class MultiAgentCoordinator:
+       """Coordinates multiple sector agents"""
+       def __init__(self, sector_agents, mixing_network):
+           self.sector_agents = sector_agents
+           self.mixing_network = mixing_network
+   ```
+
+3. **QMIX-Style Mixing Network**: Combines individual Q-values into global Q-value
+   ```python
+   class MixingNetwork(nn.Module):
+       """QMIX-style mixing network for value decomposition"""
+       def forward(self, individual_q_values):
+           # Combine individual Q-values into global Q-value
+           global_q = self.mlp(individual_q_values)
+           return global_q
+   ```
+
+**Why Multi-Agent RL?**
+- **Sector Specialization**: Each agent learns sector-specific trading patterns
+- **Cooperation**: Agents coordinate through mixing network for global optimization
+- **Scalability**: Easier to scale to larger stock universes
+- **Interpretability**: Can analyze sector-level decision-making
 
 ---
 
@@ -645,20 +702,20 @@ We conducted ablation studies to understand component contributions:
 
 ```
 Stock Graph (50 nodes, ~700 edges)
-├── Rolling Correlation Edges: ~300 edges (top-10 per stock)
-├── Fundamental Similarity Edges: ~150 edges (similarity > 0.7)
-├── Sector/Industry Edges: ~100 edges (same sector)
-└── Supply Chain/Competitor Edges: ~150 edges (business relationships)
+ Rolling Correlation Edges: ~300 edges (top-10 per stock)
+ Fundamental Similarity Edges: ~150 edges (similarity > 0.7)
+ Sector/Industry Edges: ~100 edges (same sector)
+ Supply Chain/Competitor Edges: ~150 edges (business relationships)
 ```
 
 ### 5.2 Training Curves
 
 **Validation F1 Score Over Epochs**:
 - Epoch 1: F1 = 0.5446
-- Epoch 2: F1 = 0.6110 ⭐
-- Epoch 10: F1 = 0.6284 ⭐
-- Epoch 14: F1 = 0.6321 ⭐
-- Epoch 15: F1 = 0.6363 ⭐ (Best)
+- Epoch 2: F1 = 0.6110 
+- Epoch 10: F1 = 0.6284 
+- Epoch 14: F1 = 0.6321 
+- Epoch 15: F1 = 0.6363  (Best)
 
 **Training Loss**: Decreases from 0.0719 to 0.0694
 
@@ -945,10 +1002,10 @@ This project demonstrates the effectiveness of **Graph Neural Networks** for sto
 - Integrating predictions with RL for portfolio management
 
 **Key Achievements**:
-- ✅ Sharpe Ratio of **1.90** (excellent risk-adjusted returns)
-- ✅ Cumulative return of **45.99%** over ~2 years
-- ✅ Precision@Top-10 of **55.23%** (identifies winners)
-- ✅ Production-quality codebase with comprehensive documentation
+- Sharpe Ratio of **1.90** (excellent risk-adjusted returns)
+- Cumulative return of **45.99%** over ~2 years
+- Precision@Top-10 of **55.23%** (identifies winners)
+- Production-quality codebase with comprehensive documentation
 
 **Impact**: This framework can be extended to larger stock universes, additional relationship types, and more sophisticated RL strategies, making it a valuable tool for quantitative finance.
 

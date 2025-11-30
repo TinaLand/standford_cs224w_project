@@ -1,26 +1,27 @@
-# Graph Neural Networks for Stock Market Prediction: A Heterogeneous Graph Approach with Reinforcement Learning
+# Graph Neural Networks for Stock Market Prediction: A Heterogeneous Graph Approach with Multi-Agent Reinforcement Learning
 
 **Stanford CS 224W (Machine Learning with Graphs) Course Project**
 
-## 📄 Project Reports
+## Project Reports
 
 - **[FINAL_REPORT.md](FINAL_REPORT.md)** - Complete final project report (Blog post format, 50 points)
 - **[CS224W_Project_Colab.ipynb](CS224W_Project_Colab.ipynb)** - Colab notebook with full implementation (25 points)
 - **[milestone/MILESTONE_REPORT.md](milestone/MILESTONE_REPORT.md)** - Milestone submission report
 
-## 🎯 Project Overview
+## Project Overview
 
-Many have sought to make money by investing in the stock market, from professional fund managers to everyday people, but few are able to beat the market. In fact, S&P Dow Jones Indices' 2024 SPIVA U.S. Mid-Year report shows that 57% of all active large-cap U.S. equity managers underperformed the S&P 500 [Ganti, 2024].
+Quantitative finance faces a persistent challenge: consistently outperforming market benchmarks. Recent SPIVA analysis reveals that the majority of active equity managers fail to beat passive indices, with underperformance rates exceeding 50% annually [Ganti, 2024]. This difficulty stems from the market's complex structure, where individual stock movements are influenced by both company-specific factors and broader market dynamics.
 
-This project explores the benefits of modeling interstock relationships in predicting stock prices using **Graph Neural Networks (GNNs)**. We propose a novel heterogeneous graph neural network architecture called **Role-Aware Graph Transformer** that:
+This project investigates how **Graph Neural Networks (GNNs)** can leverage the relational structure of financial markets to improve prediction accuracy. Our **Role-Aware Graph Transformer** architecture operates on heterogeneous financial graphs that capture multiple relationship dimensions simultaneously. The system integrates:
 
-1. Constructs multi-relational graphs capturing different types of stock relationships (correlation, fundamental similarity, sector connections, supply chain)
-2. Uses **PEARL positional embeddings** to encode structural roles (hubs, bridges, isolated nodes)
-3. Employs multi-head attention to aggregate information across relationships
-4. Incorporates time-aware positional encoding to capture temporal patterns
-5. Integrates predictions with **Reinforcement Learning (RL)** for optimal portfolio management
+1. **Multi-relational graph construction**: Four distinct edge types (price correlations, fundamental similarities, sector links, supply chain connections) provide complementary information sources
+2. **Structural role encoding**: PEARL embeddings identify each stock's position in the market network (central hubs, connecting bridges, peripheral nodes)
+3. **Relationship-aware attention**: Multi-head mechanisms learn distinct aggregation strategies for different connection types
+4. **Temporal modeling**: Time-conditional encoding captures cyclical patterns and market regime changes
+5. **Single-agent RL integration**: PPO-based portfolio optimization using GNN predictions
+6. **Multi-agent RL extension**: Sector-specialized agents coordinate through value decomposition for enhanced trading strategies
 
-## 🏆 Key Results
+## Key Results
 
 ### Node-Level Performance
 - **Accuracy**: 54.62%
@@ -38,7 +39,7 @@ This project explores the benefits of modeling interstock relationships in predi
 - **Multi-relational approach** outperforms single-edge-type GAT: +0.82% accuracy, +2.13% F1
 - **RL Integration** achieves better risk-adjusted returns than simple buy-and-hold
 
-## 📊 Project Structure
+## Project Structure
 
 The project is structured into 6 main phases:
 
@@ -46,67 +47,67 @@ The project is structured into 6 main phases:
 
 ```
 cs224_porject/
-├── data/                              # Data directory
-│   ├── raw/                          # Raw data files
-│   ├── processed/                    # Processed features
-│   ├── edges/                        # Edge parameters
-│   └── graphs/                       # Graph snapshots
-│
-├── models/                           # Trained models
-│   ├── checkpoints/                  # Training checkpoints
-│   ├── plots/                        # Visualization plots
-│   └── *.pt                          # Model weights
-│
-├── results/                          # Results and outputs
-│   └── *.json, *.csv                 # Analysis results
-│
-├── src/                              # Source code (NEW)
-│   ├── data/                         # Data processing
-│   │   ├── collection.py
-│   │   ├── feature_engineering.py
-│   │   ├── edge_parameters.py
-│   │   └── graph_construction.py
-│   │
-│   ├── models/                       # Model definitions
-│   │   ├── components/               # Model components
-│   │   │   ├── pearl_embedding.py
-│   │   │   └── transformer_layer.py
-│   │   └── multi_agent/              # Multi-agent RL
-│   │       └── coordinator.py
-│   │
-│   ├── training/                     # Training scripts
-│   │   ├── baseline_trainer.py
-│   │   └── transformer_trainer.py
-│   │
-│   ├── rl/                           # Reinforcement Learning
-│   │   ├── environment.py
-│   │   ├── agent.py
-│   │   ├── integration.py
-│   │   └── training/                 # RL training
-│   │
-│   ├── evaluation/                   # Evaluation & analysis
-│   │   ├── evaluation.py
-│   │   ├── ablation.py
-│   │   ├── visualization.py
-│   │   └── enhancements/             # A+ enhancements
-│   │
-│   ├── utils/                        # Utility modules
-│   │   ├── data.py
-│   │   └── config.py
-│   │
-│   └── scripts/                      # Main execution scripts
-│       └── run_*.py
-│
-├── docs/                             # Documentation
-│   ├── phases/                       # Phase documentation
-│   ├── guides/                       # How-to guides
-│   ├── analysis/                     # Analysis reports
-│   ├── implementation/               # Implementation details
-│   └── results/                      # Result summaries
-│
-├── tests/                            # Test suite
-├── requirements.txt
-└── README.md
+ data/                              # Data directory
+    raw/                          # Raw data files
+    processed/                    # Processed features
+    edges/                        # Edge parameters
+    graphs/                       # Graph snapshots
+
+ models/                           # Trained models
+    checkpoints/                  # Training checkpoints
+    plots/                        # Visualization plots
+    *.pt                          # Model weights
+
+ results/                          # Results and outputs
+    *.json, *.csv                 # Analysis results
+
+ src/                              # Source code (NEW)
+    data/                         # Data processing
+       collection.py
+       feature_engineering.py
+       edge_parameters.py
+       graph_construction.py
+   
+    models/                       # Model definitions
+       components/               # Model components
+          pearl_embedding.py
+          transformer_layer.py
+       multi_agent/              # Multi-agent RL
+           coordinator.py
+   
+    training/                     # Training scripts
+       baseline_trainer.py
+       transformer_trainer.py
+   
+    rl/                           # Reinforcement Learning
+       environment.py
+       agent.py
+       integration.py
+       training/                 # RL training
+   
+    evaluation/                   # Evaluation & analysis
+       evaluation.py
+       ablation.py
+       visualization.py
+       enhancements/             # A+ enhancements
+   
+    utils/                        # Utility modules
+       data.py
+       config.py
+   
+    scripts/                      # Main execution scripts
+        run_*.py
+
+ docs/                             # Documentation
+    phases/                       # Phase documentation
+    guides/                       # How-to guides
+    analysis/                     # Analysis reports
+    implementation/               # Implementation details
+    results/                      # Result summaries
+
+ tests/                            # Test suite
+ requirements.txt
+ README.md
 ```
 
 ## Getting Started
@@ -136,7 +137,7 @@ cs224_porject/
    pip install -r requirements.txt
    ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Option 1: Run Full Pipeline (Recommended)
 
@@ -231,22 +232,35 @@ python -m src.training.transformer_trainer
 #### Phase 5: Reinforcement Learning Integration
 
 ```bash
+# Single-Agent RL
 python -m src.rl.integration
+
+# Multi-Agent RL (Phase 7)
+python -m src.rl.training.multi_agent_training
 ```
 
-**RL Environment**:
+**Single-Agent RL (PPO)**:
 - **State**: Portfolio holdings + GNN node embeddings
 - **Action**: Buy/Sell/Hold for each stock (MultiDiscrete: 3^N)
 - **Reward**: Risk-adjusted return (Sharpe-like)
 - **Agent**: PPO (Proximal Policy Optimization) from Stable Baselines3
+
+**Multi-Agent RL (Cooperative MARL)**:
+- **Architecture**: CTDE (Centralized Training, Decentralized Execution)
+- **Sector-Based Agents**: Each agent manages stocks in a specific sector
+- **Mixing Network**: QMIX-style network combines individual Q-values
+- **Cooperation**: Agents coordinate for global portfolio optimization
 
 **Key Features**:
 - Transaction costs: 0.1% per trade
 - Dynamic position sizing
 - Risk-adjusted reward function
 - Portfolio constraints
+- Sector specialization in multi-agent setting
 
-- Output: `models/rl_ppo_agent_model/ppo_stock_agent.zip`
+**Outputs**:
+- Single-Agent: `models/rl_ppo_agent_model/ppo_stock_agent.zip`
+- Multi-Agent: `models/multi_agent_results.json`
 
 #### Phase 6: Evaluation & Analysis
 
@@ -384,7 +398,7 @@ python scripts/phase6_evaluation.py
 ```
 Generates evaluation metrics and (optionally) plots.
 
-## 📊 Data Description
+## Data Description
 
 ### Dataset Overview
 - **Stocks**: 50 major US stocks from diverse sectors (Technology, Finance, Healthcare, Consumer, Energy, etc.)
@@ -478,89 +492,85 @@ results = validate_ticker_data(
 - **Phase 5**: RL Integration
 - **Phase 6**: Evaluation
 
-### ✅ Completed Phases
+### Completed Phases
 
-#### Phase 1 – Data Collection ✅
-- [x] **Real data collection** with network fallback prevention ✅ Code updated
+#### Phase 1 – Data Collection
+- [x] **Real data collection** with network fallback prevention - Code updated
   - Modified `phase1_data_collection.py`: `allow_synthetic_fallback=False`
   - Modified `phase1_feature_engineering.py`: Explicit error handling
-  - 📖 Guide: [REAL_DATA_COLLECTION_GUIDE.md](REAL_DATA_COLLECTION_GUIDE.md)
-- [x] Trading calendar alignment ✅ `utils_data_validation.py`
-- [x] Stock suspension handling ✅ Implemented
-- [x] Split/dividend adjustments ✅ Implemented
-- [x] Missing value imputation ✅ Multiple methods available
-- [x] Data quality validation ✅ Comprehensive checks
-- [x] Data collection logging ✅ JSON log created
+  -  Guide: [REAL_DATA_COLLECTION_GUIDE.md](REAL_DATA_COLLECTION_GUIDE.md)
+- [x] Trading calendar alignment  `utils_data_validation.py`
+- [x] Stock suspension handling  Implemented
+- [x] Split/dividend adjustments  Implemented
+- [x] Missing value imputation  Multiple methods available
+- [x] Data quality validation  Comprehensive checks
+- [x] Data collection logging  JSON log created
 
-#### Phase 2 – Graph Construction ✅
-- [x] Persist ticker metadata in graphs ✅ `tickers` attribute
-- [x] Static edge types (supply_chain, competitor) ✅ Schema validated
-- [x] Normalize edge attributes ✅ Dynamic edges normalized
-- [x] Graph integrity checker ✅ Validation implemented
+#### Phase 2 – Graph Construction - [x] Persist ticker metadata in graphs  `tickers` attribute
+- [x] Static edge types (supply_chain, competitor)  Schema validated
+- [x] Normalize edge attributes  Dynamic edges normalized
+- [x] Graph integrity checker  Validation implemented
 
-#### Phase 3 – Baseline Training ✅
-- [x] Temporal time-based split (70/15/15) ✅ No leakage
-- [x] Class imbalance handling ✅ Focal loss / weighted CE
-- [x] Checkpoint system ✅ Full state saving
-- [x] Early stopping & LR scheduler ✅ Implemented
-- [x] TensorBoard logging ✅ ROC-AUC, confusion matrix
+#### Phase 3 – Baseline Training - [x] Temporal time-based split (70/15/15)  No leakage
+- [x] Class imbalance handling  Focal loss / weighted CE
+- [x] Checkpoint system  Full state saving
+- [x] Early stopping & LR scheduler  Implemented
+- [x] TensorBoard logging  ROC-AUC, confusion matrix
 
-#### Phase 4 – Core Transformer ✅ (100% Complete)
-- [x] PEARL embedding component ✅ `components/pearl_embedding.py`
-- [x] Relation-aware aggregation ✅ Edge-type-specific attention
-- [x] Mini-batch training ✅ Neighbor sampling support
-- [x] AMP & gradient clipping ✅ Stability improvements
-- [x] Hyperparameter sweep script ✅ `phase4_hyperparameter_sweep.py`
-- [x] **Complete training** ✅ Trained for 6 epochs (early stopped), Test F1: 0.6725
-- [x] **Model saved** ✅ `models/core_transformer_model.pt`
-- [x] **Baseline comparison** ✅ Compared with Phase 3, results in `results/phase3_vs_phase4_comparison.csv`
+#### Phase 4 – Core Transformer  (100% Complete)
+- [x] PEARL embedding component  `components/pearl_embedding.py`
+- [x] Relation-aware aggregation  Edge-type-specific attention
+- [x] Mini-batch training  Neighbor sampling support
+- [x] AMP & gradient clipping  Stability improvements
+- [x] Hyperparameter sweep script  `phase4_hyperparameter_sweep.py`
+- [x] **Complete training**  Trained for 6 epochs (early stopped), Test F1: 0.6725
+- [x] **Model saved**  `models/core_transformer_model.pt`
+- [x] **Baseline comparison**  Compared with Phase 3, results in `results/phase3_vs_phase4_comparison.csv`
 - [ ] **Optional**: Run hyperparameter sweep for further optimization
 
-#### Phase 5 – RL Integration ✅ (100% Complete)
-- [x] Reward shaping with transaction costs ✅ 0.1% per trade
-- [x] SB3 (PPO) integration ✅ `phase5_rl_integration.py`
-- [x] Portfolio constraints ✅ Basic position sizing
-- [x] Backtesting framework ✅ Slippage modeling
-- [x] GNN embeddings as state ✅ Model integration
-- [x] Discrete action space ✅ MultiDiscrete([3] * N)
-- [x] Reward function ✅ Return-based (can be enhanced)
-- [x] **RL training completed** ✅ 10,000 timesteps, model saved
-- [x] **Performance validated** ✅ Sharpe: 1.98, Return: 45.5%, Max DD: 6.85%
+#### Phase 5 – RL Integration  (100% Complete)
+- [x] Reward shaping with transaction costs  0.1% per trade
+- [x] SB3 (PPO) integration  `phase5_rl_integration.py`
+- [x] Portfolio constraints  Basic position sizing
+- [x] Backtesting framework  Slippage modeling
+- [x] GNN embeddings as state  Model integration
+- [x] Discrete action space  MultiDiscrete([3] * N)
+- [x] Reward function  Return-based (can be enhanced)
+- [x] **RL training completed**  10,000 timesteps, model saved
+- [x] **Performance validated**  Sharpe: 1.98, Return: 45.5%, Max DD: 6.85%
 - [ ] **Enhancement**: Add `get_embeddings()` method to Phase 4 model
 - [ ] **Enhancement**: Improve reward with Sharpe ratio
 - [ ] **Enhancement**: Advanced portfolio constraints
 
-#### Phase 6 – Evaluation ✅ (90% Complete)
-- [x] Financial metrics calculation ✅ Sharpe, Max Drawdown, Returns
-- [x] Final backtesting ✅ `run_final_backtest()` - Completed with RL agent
-- [x] **Visualization scripts** ✅ `scripts/visualization.py`
-  - [x] t-SNE embedding visualization ✅ Generated
-  - [x] Attention weights heatmap visualization ✅ Generated
-  - [x] Role analysis visualization (Hubs, Role Twins) ✅ Generated
-- [x] **Missing metrics implemented** ✅
-  - [x] Precision@Top-K ✅ Results: Top-5: 57.55%, Top-10: 55.31%, Top-20: 53.98%
-  - [x] Information Coefficient (IC) ✅ IC Mean: 0.0226, IC IR: 0.0693
-- [x] **Complete evaluation pipeline** ✅ Run successfully
-- [x] **Results saved** ✅ `results/gnn_node_metrics.csv`, `results/final_metrics.csv`
-- [x] **Ablation studies** ✅ Framework implemented and executed
-  - [x] Edge type ablation ✅ Removed correlation/fundamental/sector edges
-  - [x] Results saved ✅ `results/ablation_results.csv`
+#### Phase 6 – Evaluation  (90% Complete)
+- [x] Financial metrics calculation  Sharpe, Max Drawdown, Returns
+- [x] Final backtesting  `run_final_backtest()` - Completed with RL agent
+- [x] **Visualization scripts**  `scripts/visualization.py`
+  - [x] t-SNE embedding visualization  Generated
+  - [x] Attention weights heatmap visualization  Generated
+  - [x] Role analysis visualization (Hubs, Role Twins)  Generated
+- [x] **Missing metrics implemented**   - [x] Precision@Top-K  Results: Top-5: 57.55%, Top-10: 55.31%, Top-20: 53.98%
+  - [x] Information Coefficient (IC)  IC Mean: 0.0226, IC IR: 0.0693
+- [x] **Complete evaluation pipeline**  Run successfully
+- [x] **Results saved**  `results/gnn_node_metrics.csv`, `results/final_metrics.csv`
+- [x] **Ablation studies**  Framework implemented and executed
+  - [x] Edge type ablation  Removed correlation/fundamental/sector edges
+  - [x] Results saved  `results/ablation_results.csv`
   - [ ] **Note**: Full retraining for each ablation would require more time/resources
-- [x] **Baseline Comparison** ✅ Implemented and executed
+- [x] **Baseline Comparison**  Implemented and executed
   - Buy-and-Hold: Sharpe 2.18, Return 83.13%
   - Equal-Weight (daily/weekly): Sharpe 2.13-2.14, Return 65-66%
   - RL Agent: Sharpe 1.98, Return 45.5%, Max DD 6.85% (better risk control)
   - Results: `results/comprehensive_strategy_comparison.csv`
 - [ ] **Analysis**: Failure case investigation
 
-#### Data & Infrastructure ✅
-- [x] Real data pipeline ✅ Network failure handling
-- [x] Data validation system ✅ `utils_data_validation.py`
-- [x] Data versioning ✅ Collection log (JSON)
-- [x] Configuration centralization ✅ `config.yaml` + `utils_config.py`
-- [x] Git artifact management ✅ `.gitignore` configured
-- [x] Reproducibility setup ✅ `setup_reproducibility()`
-- [x] Data collection logging ✅ Transparent tracking
+#### Data & Infrastructure - [x] Real data pipeline  Network failure handling
+- [x] Data validation system  `utils_data_validation.py`
+- [x] Data versioning  Collection log (JSON)
+- [x] Configuration centralization  `config.yaml` + `utils_config.py`
+- [x] Git artifact management  `.gitignore` configured
+- [x] Reproducibility setup  `setup_reproducibility()`
+- [x] Data collection logging  Transparent tracking
 - [ ] Structured logging system
 - [ ] Unit tests + CI workflow
 - [ ] Docker/DevContainer
@@ -569,10 +579,9 @@ results = validate_ticker_data(
 
 ---
 
-## 🚧 Remaining Tasks (High Priority)
+##  Remaining Tasks (High Priority)
 
-### Phase 4 Completion ✅
-- [x] **Run complete Phase 4 training** ✅ **DONE**
+### Phase 4 Completion - [x] **Run complete Phase 4 training**  **DONE**
   - Model trained for 6 epochs (early stopped)
   - Test F1: 0.6725 (matches baseline)
   - Model saved: `models/core_transformer_model.pt`
@@ -584,29 +593,27 @@ results = validate_ticker_data(
   - Find optimal hyperparameters
   - Document best configuration
 
-### Phase 5 Completion ✅
-- [x] **Run RL training** ✅ **DONE**
+### Phase 5 Completion - [x] **Run RL training**  **DONE**
   - Trained for 10,000 timesteps
   - Model saved: `models/rl_ppo_agent_model/ppo_stock_agent.zip`
 
-- [x] **Validate RL agent performance** ✅ **DONE**
-  - **Final Agent**: Sharpe 2.36 ⭐, Return 71.8%, Max DD 9.00%
+- [x] **Validate RL agent performance**  **DONE**
+  - **Final Agent**: Sharpe 2.36 , Return 71.8%, Max DD 9.00%
   - **Original Agent**: Sharpe 1.98, Return 45.5%, Max DD 6.85%
-  - **改进**: Sharpe +0.38, Return +26.3%
-  - **🏆 风险调整收益超过 Buy-and-Hold (2.36 vs 2.18)!**
+  - ****: Sharpe +0.38, Return +26.3%
+  - ** Buy-and-Hold (2.36 vs 2.18)!**
 
-### Phase 6 Completion ✅
-- [x] **Create visualization scripts** ✅ **DONE**
+### Phase 6 Completion - [x] **Create visualization scripts**  **DONE**
   - `scripts/visualization.py` created and tested
   - t-SNE visualization generated
   - Attention weight heatmap generated
   - Role analysis (Hubs, Role Twins) generated
 
-- [x] **Implement missing metrics** ✅ **DONE**
+- [x] **Implement missing metrics**  **DONE**
   - Precision@Top-K: Top-5: 57.55%, Top-10: 55.31%, Top-20: 53.98%
   - Information Coefficient: IC Mean: 0.0226, IC IR: 0.0693
 
-- [x] **Run complete evaluation** ✅ **DONE**
+- [x] **Run complete evaluation**  **DONE**
   - GNN metrics: `results/gnn_node_metrics.csv`
   - RL metrics: `results/final_metrics.csv`
   - All visualizations generated
@@ -628,7 +635,7 @@ results = validate_ticker_data(
 
 ---
 
-### 🔬 Future Improvements (After Real Data)
+### Future Improvements (After Real Data)
 
 #### Model Performance Optimization
 - [ ] Analyze low ROC-AUC (0.51) - feature importance investigation
@@ -654,40 +661,40 @@ results = validate_ticker_data(
   - `torch-scatter` / `torch-sparse` warnings are optional; PyG falls back to pure PyTorch.
   - For PyTorch ≥ 2.6, ensure `torch.serialization.add_safe_globals([...])` and `weights_only=False` when loading graphs/models.
 
-## 📊 Project Status Summary
+## Project Status Summary
 
 ### Implementation Status by Phase
 
 | Phase | Status | Completion | Key Deliverables |
 |-------|--------|------------|------------------|
-| **Phase 1** | ✅ Complete | 100% | Data collection, feature engineering (1,450+ features), edge parameters |
-| **Phase 2** | ✅ Complete | 100% | 2,317 heterogeneous graphs built, 4 edge types, Top-K sparsification |
-| **Phase 3** | ✅ Complete | 100% | Baseline GAT model trained, Focal Loss, class weights |
-| **Phase 4** | ✅ Complete | 100% | Role-Aware Graph Transformer trained, PEARL embeddings, time-aware encoding |
-| **Phase 5** | ✅ Complete | 100% | RL training completed, PPO agent, **Sharpe: 1.90**, Return: 45.99% |
-| **Phase 6** | ✅ Complete | 100% | Comprehensive evaluation, ablation studies, baseline comparisons |
-| **Phase 7** | ✅ Complete | 100% | Multi-Agent RL, dynamic graph updates, enhanced analysis |
+| **Phase 1** |  Complete | 100% | Data collection, feature engineering (1,450+ features), edge parameters |
+| **Phase 2** |  Complete | 100% | 2,317 heterogeneous graphs built, 4 edge types, Top-K sparsification |
+| **Phase 3** |  Complete | 100% | Baseline GAT model trained, Focal Loss, class weights |
+| **Phase 4** |  Complete | 100% | Role-Aware Graph Transformer trained, PEARL embeddings, time-aware encoding |
+| **Phase 5** |  Complete | 100% | RL training completed, PPO agent, **Sharpe: 1.90**, Return: 45.99% |
+| **Phase 6** |  Complete | 100% | Comprehensive evaluation, ablation studies, baseline comparisons |
+| **Phase 7** |  Complete | 100% | Multi-Agent RL, dynamic graph updates, enhanced analysis |
 
 ### Key Achievements
 
-- ✅ **Heterogeneous Graph Construction**: 4 edge types capturing different stock relationships
-- ✅ **PEARL Positional Embeddings**: Structural role encoding (hubs, bridges, isolated nodes)
-- ✅ **Multi-Relational Attention**: Different aggregation strategies for different relationship types
-- ✅ **Time-Aware Modeling**: Temporal pattern capture (day-of-week, month, year effects)
-- ✅ **RL Integration**: PPO-based portfolio management with risk-adjusted returns
-- ✅ **Comprehensive Evaluation**: Node-level and portfolio-level metrics, ablation studies
+-  **Heterogeneous Graph Construction**: 4 edge types capturing different stock relationships
+-  **PEARL Positional Embeddings**: Structural role encoding (hubs, bridges, isolated nodes)
+-  **Multi-Relational Attention**: Different aggregation strategies for different relationship types
+-  **Time-Aware Modeling**: Temporal pattern capture (day-of-week, month, year effects)
+-  **RL Integration**: PPO-based portfolio management with risk-adjusted returns
+-  **Comprehensive Evaluation**: Node-level and portfolio-level metrics, ablation studies
 
 ### Critical Next Steps
 
-1. ✅ **Phase 4**: Complete training - **DONE** (Test F1: 0.6725)
-2. ✅ **Phase 5**: RL training - **DONE** (Sharpe: 1.98, Return: 45.5%)
-3. ✅ **Phase 6**: Visualization - **DONE** (t-SNE, attention, role analysis)
-4. ✅ **Phase 6**: Evaluation pipeline - **DONE** (Precision@Top-K, IC calculated)
+1.  **Phase 4**: Complete training - **DONE** (Test F1: 0.6725)
+2.  **Phase 5**: RL training - **DONE** (Sharpe: 1.98, Return: 45.5%)
+3.  **Phase 6**: Visualization - **DONE** (t-SNE, attention, role analysis)
+4.  **Phase 6**: Evaluation pipeline - **DONE** (Precision@Top-K, IC calculated)
 
 ### Remaining Optional Tasks
 
 - [ ] **Ablation studies**: Full implementation (framework exists)
-- [x] **Baseline comparison** ✅ Buy-and-hold, equal-weight strategies implemented
+- [x] **Baseline comparison**  Buy-and-hold, equal-weight strategies implemented
 - [ ] **Hyperparameter sweep**: Further optimization
 
 See [Remaining Tasks](#-remaining-tasks-high-priority) section below for detailed checklist.
@@ -763,7 +770,7 @@ See [Remaining Tasks](#-remaining-tasks-high-priority) section below for detaile
 3. Include unit tests for new functions
 4. Update this README when adding new phases
 
-## 📝 Documentation
+## Documentation
 
 ### Project Reports
 - **[FINAL_REPORT.md](FINAL_REPORT.md)** - Complete final project report (Blog post format)
@@ -783,7 +790,7 @@ See [Remaining Tasks](#-remaining-tasks-high-priority) section below for detaile
 - Each major script has comprehensive documentation (12,500+ total lines)
 - Mathematical foundations, design patterns, best practices
 
-## 📝 Notes
+## Notes
 
 - All functions requiring implementation are marked with 'start code' and 'end code' comments
 - Comments and documentation are in English
