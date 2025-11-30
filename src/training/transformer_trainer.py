@@ -31,14 +31,18 @@ HIDDEN_CHANNELS = 512           # Hidden size (INCREASED from 256 to 512 for bet
 NUM_LAYERS = 3                  # Number of layers (INCREASED from 2 to 3 for deeper model)
 NUM_HEADS = 8                   # Number of attention heads (INCREASED from 4 to 8 for better attention)
 OUT_CHANNELS = 2                # Binary classification: Up/Down
-LEARNING_RATE = 0.001           # Learning rate (INCREASED from 0.0005 to 0.001 for faster convergence)
+LEARNING_RATE = 0.0008          # Learning rate (ADJUSTED: slightly reduced for more stable training)
 NUM_EPOCHS = 40                 # Increased epochs (from 30 to 40) for more training
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Class Imbalance Handling Configuration
 LOSS_TYPE = 'focal'  # Options: 'standard', 'focal'
-FOCAL_ALPHA = 0.80   # Weight for minority class (INCREASED from 0.75 to 0.80 for better minority class handling)
-FOCAL_GAMMA = 2.5    # Focusing parameter (INCREASED from 2.0 to 2.5 for harder focus on hard examples)
+# IMPROVED: Adjusted for better Down/Flat class handling
+# Down/Flat class has very low recall (1.86%), need stronger focus
+FOCAL_ALPHA = 0.85   # Weight for minority class (INCREASED from 0.80 to 0.85 for Down/Flat class)
+FOCAL_GAMMA = 3.0    # Focusing parameter (INCREASED from 2.5 to 3.0 for harder focus on hard examples)
+# Use class weights in addition to focal loss for better balance
+USE_CLASS_WEIGHTS = True  # Enable class weights for additional balancing
 
 # Multi-task Learning Configuration (Classification + Regression on returns)
 ENABLE_MULTI_TASK = True
@@ -72,16 +76,24 @@ class FocalLoss(torch.nn.Module):
     
     FL(p_t) = -α_t * (1 - p_t)^γ * log(p_t)
     
+    IMPROVED: Can optionally use class weights for additional balancing.
+    
     Reference: Lin et al. "Focal Loss for Dense Object Detection" (2017)
     """
-    def __init__(self, alpha=0.75, gamma=2.0, reduction='mean'):
+    def __init__(self, alpha=0.75, gamma=2.0, reduction='mean', weight=None):
         super(FocalLoss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction
+        self.weight = weight  # Class weights for additional balancing
     
     def forward(self, inputs, targets):
-        ce_loss = F.cross_entropy(inputs, targets, reduction='none')
+        # Use weighted cross-entropy if class weights provided
+        if self.weight is not None:
+            ce_loss = F.cross_entropy(inputs, targets, reduction='none', weight=self.weight)
+        else:
+            ce_loss = F.cross_entropy(inputs, targets, reduction='none')
+        
         p = F.softmax(inputs, dim=1)
         p_t = p.gather(1, targets.view(-1, 1)).squeeze(1)
         focal_weight = (1 - p_t) ** self.gamma
@@ -99,7 +111,8 @@ class FocalLoss(torch.nn.Module):
 
 def find_optimal_threshold(y_true, y_prob):
     """
-    Find optimal classification threshold using ROC curve (Youden's J statistic).
+    Find optimal classification threshold using F1 score (better for imbalanced data).
+    IMPROVED: Uses F1 score instead of Youden's J for better class balance.
     """
     try:
         if len(np.unique(y_true)) < 2:
@@ -109,27 +122,52 @@ def find_optimal_threshold(y_true, y_prob):
         if np.std(y_prob) < 1e-6:
             return 0.5
         
-        fpr, tpr, thresholds = roc_curve(y_true, y_prob)
+        # Try multiple methods and pick the best
+        best_threshold = 0.5
+        best_f1 = 0.0
         
-        # Filter out inf and nan values
-        valid_mask = np.isfinite(thresholds)
-        if not np.any(valid_mask):
-            return 0.5
+        # Method 1: F1 score optimization (better for imbalanced data)
+        thresholds_to_try = np.linspace(0.3, 0.7, 50)  # Focus on reasonable range
+        for threshold in thresholds_to_try:
+            y_pred = (y_prob >= threshold).astype(int)
+            if len(np.unique(y_pred)) < 2:  # All predictions same
+                continue
+            try:
+                f1 = f1_score(y_true, y_pred, average='macro')  # Use macro F1 for class balance
+                if f1 > best_f1:
+                    best_f1 = f1
+                    best_threshold = threshold
+            except:
+                continue
         
-        valid_thresholds = thresholds[valid_mask]
-        valid_fpr = fpr[valid_mask]
-        valid_tpr = tpr[valid_mask]
-        
-        # Calculate Youden's J statistic
-        j_scores = valid_tpr - valid_fpr
-        optimal_idx = np.argmax(j_scores)
-        optimal_threshold = valid_thresholds[optimal_idx]
+        # Method 2: ROC curve with Youden's J (fallback)
+        try:
+            fpr, tpr, thresholds = roc_curve(y_true, y_prob)
+            valid_mask = np.isfinite(thresholds)
+            if np.any(valid_mask):
+                valid_thresholds = thresholds[valid_mask]
+                valid_fpr = fpr[valid_mask]
+                valid_tpr = tpr[valid_mask]
+                j_scores = valid_tpr - valid_fpr
+                optimal_idx = np.argmax(j_scores)
+                roc_threshold = valid_thresholds[optimal_idx]
+                
+                # Check if ROC threshold gives better F1
+                if np.isfinite(roc_threshold) and 0 <= roc_threshold <= 1:
+                    y_pred_roc = (y_prob >= roc_threshold).astype(int)
+                    if len(np.unique(y_pred_roc)) >= 2:
+                        f1_roc = f1_score(y_true, y_pred_roc, average='macro')
+                        if f1_roc > best_f1:
+                            best_f1 = f1_roc
+                            best_threshold = roc_threshold
+        except:
+            pass
         
         # Ensure threshold is in valid range [0, 1]
-        if not np.isfinite(optimal_threshold) or optimal_threshold < 0 or optimal_threshold > 1:
+        if not np.isfinite(best_threshold) or best_threshold < 0 or best_threshold > 1:
             return 0.5
         
-        return optimal_threshold
+        return float(best_threshold)
     except Exception as e:
         print(f"  ⚠️ Could not find optimal threshold: {e}, using default 0.5")
         return 0.5
@@ -474,7 +512,7 @@ def _backward_step(loss, model, optimizer, scaler=None, max_grad_norm=None):
         optimizer.step()
 
 
-def train(model, optimizer, data, targets_class, targets_reg=None, date_tensor=None, scaler=None, amp_enabled=False, max_grad_norm=None):
+def train(model, optimizer, data, targets_class, targets_reg=None, date_tensor=None, scaler=None, amp_enabled=False, max_grad_norm=None, class_weights=None):
     """Single training step for the Core GNN (HeteroData input).
     
     If ENABLE_MULTI_TASK and targets_reg is provided, uses a combined loss:
@@ -483,6 +521,7 @@ def train(model, optimizer, data, targets_class, targets_reg=None, date_tensor=N
     
     Args:
         date_tensor: Optional tensor of shape [N] with timestamps for time-aware encoding
+        class_weights: Optional tensor of class weights for balancing
     """
     model.train()
     optimizer.zero_grad()
@@ -499,10 +538,14 @@ def train(model, optimizer, data, targets_class, targets_reg=None, date_tensor=N
 
         # --- Classification loss ---
         if LOSS_TYPE == 'focal':
-            criterion = FocalLoss(alpha=FOCAL_ALPHA, gamma=FOCAL_GAMMA)
+            # Use class weights in Focal Loss if available
+            weight_arg = class_weights if USE_CLASS_WEIGHTS and class_weights is not None else None
+            criterion = FocalLoss(alpha=FOCAL_ALPHA, gamma=FOCAL_GAMMA, weight=weight_arg)
             loss_class = criterion(out, targets_class.to(DEVICE))
         else:
-            loss_class = F.cross_entropy(out, targets_class.to(DEVICE))
+            # Use class weights if available (for standard cross-entropy)
+            weight_arg = class_weights if USE_CLASS_WEIGHTS and class_weights is not None else None
+            loss_class = F.cross_entropy(out, targets_class.to(DEVICE), weight=weight_arg)
 
         # --- Optional regression loss (multi-task learning) ---
         if ENABLE_MULTI_TASK and targets_reg is not None:
@@ -570,8 +613,10 @@ def train_with_sampling(model, optimizer, data, targets, loader, scaler=None, am
         batch_targets = batch['stock'].y[:batch_size] if hasattr(batch['stock'], 'y') else targets[:batch_size]
         
         # Use Focal Loss if enabled, otherwise standard cross-entropy
+        # Note: class_weights not passed to train_with_sampling for simplicity
+        # (mini-batch training is less common, full-batch is primary method)
         if LOSS_TYPE == 'focal':
-            criterion = FocalLoss(alpha=FOCAL_ALPHA, gamma=FOCAL_GAMMA)
+            criterion = FocalLoss(alpha=FOCAL_ALPHA, gamma=FOCAL_GAMMA, weight=None)  # No class weights in mini-batch
             loss = criterion(batch_out, batch_targets)
         else:
             loss = F.cross_entropy(batch_out, batch_targets)
@@ -710,9 +755,40 @@ def run_training_pipeline():
     scaler = torch.cuda.amp.GradScaler(enabled=ENABLE_AMP)
     model_path = MODELS_DIR / MODEL_SAVE_NAME
     
+    # Calculate class weights for better imbalance handling
+    class_weights = None
+    if USE_CLASS_WEIGHTS:
+        # Calculate class distribution from training data
+        all_train_targets = []
+        for date in train_dates[:min(100, len(train_dates))]:  # Sample first 100 days for efficiency
+            target = targets_class_dict.get(date)
+            if target is not None:
+                all_train_targets.extend(target.cpu().numpy())
+        
+        if len(all_train_targets) > 0:
+            from collections import Counter
+            class_counts = Counter(all_train_targets)
+            total_samples = sum(class_counts.values())
+            
+            # Calculate inverse frequency weights
+            num_classes = 2
+            class_weights_list = []
+            for i in range(num_classes):
+                count = class_counts.get(i, 1)  # Avoid division by zero
+                weight = total_samples / (num_classes * count)
+                class_weights_list.append(weight)
+            
+            class_weights = torch.tensor(class_weights_list, dtype=torch.float32).to(DEVICE)
+            print(f"📊 Class weights calculated: Down/Flat={class_weights[0]:.3f}, Up={class_weights[1]:.3f}")
+            print(f"   Class distribution: Down/Flat={class_counts.get(0, 0)}, Up={class_counts.get(1, 0)}")
+        else:
+            print("⚠️  Could not calculate class weights, using default")
+    
     # Print loss function configuration
     if LOSS_TYPE == 'focal':
         print(f"✅ Using Focal Loss (alpha={FOCAL_ALPHA}, gamma={FOCAL_GAMMA}) for class imbalance handling")
+        if USE_CLASS_WEIGHTS and class_weights is not None:
+            print(f"   + Class weights enabled for additional balancing")
     else:
         print(f"⚠️  Using Standard Cross-Entropy (consider 'focal' for imbalanced data)")
     
@@ -802,7 +878,8 @@ def run_training_pipeline():
                         date_tensor=date_tensor,
                         scaler=scaler,
                         amp_enabled=scaler.is_enabled(),
-                        max_grad_norm=GRAD_CLIP_NORM
+                        max_grad_norm=GRAD_CLIP_NORM,
+                        class_weights=class_weights
                     )
                 total_loss += loss
                 num_train_batches += 1
