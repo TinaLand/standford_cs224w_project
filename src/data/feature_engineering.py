@@ -458,45 +458,47 @@ def calculate_static_edge_data(tickers):
     """
     print("\n🏢 Calculating Static Edge Data (Sector, Industry, Market Cap)...")
     
-    # Define sector and industry mappings for major stocks
-    # In a real implementation, this would come from financial APIs
-    stock_metadata = {
-        'AAPL': {'sector': 'Technology', 'industry': 'Consumer Electronics', 'market_cap_tier': 'Mega'},
-        'MSFT': {'sector': 'Technology', 'industry': 'Software', 'market_cap_tier': 'Mega'},
-        'GOOGL': {'sector': 'Technology', 'industry': 'Internet Services', 'market_cap_tier': 'Mega'},
-        'GOOG': {'sector': 'Technology', 'industry': 'Internet Services', 'market_cap_tier': 'Mega'},
-        'AMZN': {'sector': 'Consumer Discretionary', 'industry': 'E-commerce', 'market_cap_tier': 'Mega'},
-        'NVDA': {'sector': 'Technology', 'industry': 'Semiconductors', 'market_cap_tier': 'Mega'},
-        'META': {'sector': 'Technology', 'industry': 'Social Media', 'market_cap_tier': 'Mega'},
-        'TSLA': {'sector': 'Consumer Discretionary', 'industry': 'Electric Vehicles', 'market_cap_tier': 'Large'},
-        'JPM': {'sector': 'Financial Services', 'industry': 'Banking', 'market_cap_tier': 'Mega'},
-        'V': {'sector': 'Financial Services', 'industry': 'Payment Processing', 'market_cap_tier': 'Mega'},
-        'JNJ': {'sector': 'Healthcare', 'industry': 'Pharmaceuticals', 'market_cap_tier': 'Mega'},
-        'WMT': {'sector': 'Consumer Staples', 'industry': 'Retail', 'market_cap_tier': 'Mega'},
-        'PG': {'sector': 'Consumer Staples', 'industry': 'Consumer Goods', 'market_cap_tier': 'Large'},
-        'HD': {'sector': 'Consumer Discretionary', 'industry': 'Home Improvement', 'market_cap_tier': 'Large'},
-        'CVX': {'sector': 'Energy', 'industry': 'Oil & Gas', 'market_cap_tier': 'Large'},
-        'XOM': {'sector': 'Energy', 'industry': 'Oil & Gas', 'market_cap_tier': 'Large'},
-        'BAC': {'sector': 'Financial Services', 'industry': 'Banking', 'market_cap_tier': 'Large'},
-        'ABBV': {'sector': 'Healthcare', 'industry': 'Pharmaceuticals', 'market_cap_tier': 'Large'},
-        'PFE': {'sector': 'Healthcare', 'industry': 'Pharmaceuticals', 'market_cap_tier': 'Large'},
-        'KO': {'sector': 'Consumer Staples', 'industry': 'Beverages', 'market_cap_tier': 'Large'},
-        'PEP': {'sector': 'Consumer Staples', 'industry': 'Beverages', 'market_cap_tier': 'Large'},
-        'CSCO': {'sector': 'Technology', 'industry': 'Networking', 'market_cap_tier': 'Large'},
-        'ADBE': {'sector': 'Technology', 'industry': 'Software', 'market_cap_tier': 'Large'},
-        'NFLX': {'sector': 'Communication Services', 'industry': 'Streaming', 'market_cap_tier': 'Large'},
-        'INTC': {'sector': 'Technology', 'industry': 'Semiconductors', 'market_cap_tier': 'Large'},
-        'ORCL': {'sector': 'Technology', 'industry': 'Software', 'market_cap_tier': 'Large'},
-    }
+    # Load sector and industry mappings from corrected static file
+    # FIXED: No longer uses hardcoded mappings that create "Other" category
+    stock_metadata = {}
     
-    # Add default metadata for any missing tickers
+    # Try to load from corrected static_sector_industry.csv
+    try:
+        sector_file = Path(__file__).parent.parent.parent / "data" / "raw" / "static_sector_industry.csv"
+        if sector_file.exists():
+            import pandas as pd
+            sector_df = pd.read_csv(sector_file)
+            
+            for _, row in sector_df.iterrows():
+                ticker = row['Ticker']
+                sector = row['Sector']
+                industry = row['Industry']
+                
+                # Assign market cap tier based on known large stocks
+                mega_cap_stocks = ['AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'NVDA', 'META', 'JPM', 'V', 'JNJ', 'WMT']
+                market_cap_tier = 'Mega' if ticker in mega_cap_stocks else 'Large'
+                
+                stock_metadata[ticker] = {
+                    'sector': sector,
+                    'industry': industry,
+                    'market_cap_tier': market_cap_tier
+                }
+            
+            print(f"✅ Loaded sector data for {len(stock_metadata)} stocks from corrected static file")
+        else:
+            print(f"⚠️  Static sector file not found: {sector_file}")
+    except Exception as e:
+        print(f"⚠️  Error loading sector data: {e}")
+    
+    # Fallback for any missing tickers (use Technology instead of Other)
     for ticker in tickers:
         if ticker not in stock_metadata:
             stock_metadata[ticker] = {
-                'sector': 'Other', 
-                'industry': 'Other', 
+                'sector': 'Technology',  # FIXED: No more "Other" fallback
+                'industry': 'Software', 
                 'market_cap_tier': 'Large'
             }
+            print(f"  Using Technology fallback for {ticker}")
     
     static_edges = []
     

@@ -1357,7 +1357,7 @@ python -m src.training.baseline_trainer
 python -m src.training.transformer_trainer
 
 # Phase 5: RL Integration
-python -m src.rl.integration
+python -m src.rl.training.single_agent
 
 # Phase 6: Evaluation
 python -m src.evaluation.evaluation

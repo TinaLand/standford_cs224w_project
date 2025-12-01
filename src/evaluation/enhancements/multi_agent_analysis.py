@@ -20,7 +20,7 @@ from multi_agent_rl_coordinator import MultiAgentCoordinator, SectorGrouping
 from phase5_rl_integration import load_gnn_model_for_rl
 from rl_environment import StockTradingEnv
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
 RESULTS_DIR = PROJECT_ROOT / "results"
 PLOTS_DIR = MODELS_DIR / "plots"

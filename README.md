@@ -79,11 +79,23 @@ cs224_porject/
        baseline_trainer.py
        transformer_trainer.py
    
-    rl/                           # Reinforcement Learning
-       environment.py
-       agent.py
-       integration.py
-       training/                 # RL training
+    rl/                           # Reinforcement Learning (Optimized)
+       agents/                   # RL agent implementations  
+          base.py                # Abstract base classes
+          single_agent.py        # PPO trading agent
+          sector_agent.py        # Sector-specific agent
+       environments/             # Trading environments
+          base.py                # Base trading environment
+          single_agent.py        # Single-agent environment
+          multi_agent.py         # Multi-agent environment
+       coordination/             # Multi-agent coordination
+          coordinator.py         # CTDE coordinator
+          mixing.py              # QMIX mixing networks
+       training/                 # Training pipelines
+          single_agent.py        # Single-agent training
+          multi_agent.py         # Multi-agent training
+       config.py                 # Centralized configuration
+       integration.py            # Legacy training (backward compatibility)
    
     evaluation/                   # Evaluation & analysis
        evaluation.py
@@ -233,10 +245,10 @@ python -m src.training.transformer_trainer
 
 ```bash
 # Single-Agent RL
-python -m src.rl.integration
+python -m src.rl.training.single_agent
 
-# Multi-Agent RL (Phase 7)
-python -m src.rl.training.multi_agent_training
+# Multi-Agent RL
+python -m src.rl.training.multi_agent
 ```
 
 **Single-Agent RL (PPO)**:

@@ -53,8 +53,9 @@ from src.training.transformer_trainer import (
     NUM_LAYERS,
     NUM_HEADS,
 )
-from src.rl.environment import StockTradingEnv
-from src.rl.agent import StockTradingAgent 
+# Legacy imports - use new structure
+from .environments.single_agent import StockTradingEnv
+from .agents.single_agent import StockTradingAgent 
 
 
 def load_gnn_model_for_rl():

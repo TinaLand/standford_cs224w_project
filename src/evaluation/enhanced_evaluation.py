@@ -177,7 +177,7 @@ def run_enhanced_evaluation():
         # Run backtest
         test_env = make_test_env()
         obs, info = test_env.reset()
-        portfolio_values = [test_env.initial_cash]
+        portfolio_values = [test_env.initial_balance]
         daily_returns = []
         trades_history = []
         done = False
