@@ -149,6 +149,26 @@ cs224_porject/
    pip install -r requirements.txt
    ```
 
+## Generate Report Figures
+
+Before viewing the final report, generate all required figures:
+
+```bash
+python scripts/generate_report_figures.py
+```
+
+This will create 8 high-quality figures in the `figures/` directory:
+- System architecture diagram
+- Training curves
+- Model comparison chart
+- Portfolio performance visualizations
+- Ablation study results
+- Attention heatmap
+- Graph structure visualization
+- Performance across market regimes
+
+These figures are referenced in `FINAL_REPORT.md` and are required for the grading rubric.
+
 ## Quick Start
 
 ### Option 1: Run Full Pipeline (Recommended)
