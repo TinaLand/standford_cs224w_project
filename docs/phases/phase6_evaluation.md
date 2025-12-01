@@ -70,7 +70,22 @@ python scripts/experiment_robustness_checks.py
 * **Purpose**: Validate model robustness to realistic trading conditions
 * **Runtime**: ~30 minutes - 1 hour
 
-### 6.4.4 Statistical Significance Testing
+### 6.4.4 Baseline Model Comparison (Grading Requirement)
+
+Comprehensive comparison of multiple model architectures as required by the grading rubric:
+
+```bash
+python scripts/run_baseline_comparison.py
+```
+
+* **GNN Baselines**: GCN, GAT, GraphSAGE, HGT
+* **Non-Graph Baselines**: Logistic Regression, MLP, LSTM
+* **Output**: `results/baseline_model_comparison.csv`, `results/baseline_model_comparison.json`
+* **Purpose**: Addresses grading rubric requirement "Comparison between multiple model architectures"
+* **Runtime**: ~1-2 hours
+* **Grading**: Required for "Insights + results (10 points)" section
+
+### 6.4.5 Statistical Significance Testing
 
 Integrated into Phase 6 evaluation pipeline:
 

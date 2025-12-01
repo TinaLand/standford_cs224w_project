@@ -759,12 +759,16 @@ results = validate_ticker_data(
 - [ ] Graph design experiments: correlation thresholds, edge variants
   - Easy: parameter sweeps
   - Estimated: 1-2 days
-- [ ] Model comparisons: GCN, GAT, GraphSAGE, HGT
-  - Medium: implement baseline models
-  - Estimated: 1-2 days per baseline
-- [ ] Non-graph baselines: Logistic Regression, MLP, LSTM
-  - Easy: standard sklearn/PyTorch models
-  - Estimated: 1 day per baseline
+- [x] Model comparisons: GCN, GAT, GraphSAGE, HGT
+  - Implemented: `src/training/baseline_comparison.py`
+  - Script: `python scripts/run_baseline_comparison.py`
+  - Results: `results/baseline_model_comparison.csv`
+  - Addresses grading rubric: "Comparison between multiple model architectures"
+- [x] Non-graph baselines: Logistic Regression, MLP, LSTM
+  - Implemented: `src/training/baseline_comparison.py`
+  - Script: `python scripts/run_baseline_comparison.py`
+  - Results: `results/baseline_model_comparison.csv`
+  - Addresses grading rubric: "Comparison between multiple model architectures"
 - [x] Statistical significance testing
   - Implemented: `src/evaluation/statistical_tests.py`
   - Integrated: Automatically runs in Phase 6 evaluation

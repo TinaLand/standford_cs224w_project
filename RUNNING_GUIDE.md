@@ -157,6 +157,28 @@ python -m src.evaluation.evaluation
 
 ---
 
+#### Optional: Baseline Model Comparison (Grading Requirement)
+
+Compare multiple model architectures as required by the grading rubric:
+
+```bash
+python scripts/run_baseline_comparison.py
+```
+
+**Outputs**:
+- `results/baseline_model_comparison.csv` - Comparison table
+- `results/baseline_model_comparison.json` - Detailed metrics
+
+**Models Compared**:
+- **GNN Baselines**: GCN, GAT, GraphSAGE, HGT
+- **Non-Graph Baselines**: Logistic Regression, MLP, LSTM
+
+**Purpose**: Addresses grading rubric requirement "Comparison between multiple model architectures" for "Insights + results (10 points)"
+
+**Runtime**: ~1-2 hours
+
+---
+
 ## A+ Enhancements
 
 Run all enhancement analysis scripts:
