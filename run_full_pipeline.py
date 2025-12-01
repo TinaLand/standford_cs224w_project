@@ -58,6 +58,44 @@ def run_phase(phase_name, module_path, description):
         os.chdir(original_cwd)
         return False
 
+def run_optional_experiment(experiment_name, script_path, description):
+    """Run an optional experiment script."""
+    print("\n" + "="*60)
+    print(f"🔬 Optional Experiment: {experiment_name}")
+    print("="*60)
+    print(f"Description: {description}")
+    print(f"Script: {script_path}")
+    print()
+    
+    try:
+        original_cwd = os.getcwd()
+        os.chdir(PROJECT_ROOT)
+        
+        cmd = [sys.executable, str(script_path)]
+        print(f"Running: {' '.join(cmd)}")
+        
+        result = subprocess.run(
+            cmd,
+            cwd=PROJECT_ROOT,
+            check=False,
+            capture_output=False
+        )
+        
+        os.chdir(original_cwd)
+        
+        if result.returncode == 0:
+            print(f"\n✅ {experiment_name} completed successfully!")
+            return True
+        else:
+            print(f"\n⚠️  {experiment_name} completed with warnings (exit code {result.returncode})")
+            return True  # Don't fail pipeline for optional experiments
+            
+    except Exception as e:
+        print(f"⚠️  Error running {experiment_name}: {e}")
+        print("Continuing pipeline...")
+        os.chdir(original_cwd)
+        return True  # Don't fail pipeline for optional experiments
+
 def main():
     """Main pipeline runner."""
     print("="*60)
@@ -70,6 +108,11 @@ def main():
     print("  Phase 4: Core Transformer Training")
     print("  Phase 5: RL Integration")
     print("  Phase 6: Evaluation")
+    print()
+    print("Optional experiments (proposal-aligned) can be run separately:")
+    print("  - Lookahead Horizon: python scripts/experiment_lookahead_horizons.py")
+    print("  - Graph Sparsification: python scripts/experiment_graph_sparsification.py")
+    print("  - Robustness Checks: python scripts/experiment_robustness_checks.py")
     print()
     
     phases = [
@@ -147,6 +190,31 @@ def main():
     print("  - models/ - Trained models")
     print("  - results/ - Evaluation results")
     print("  - models/plots/ - Visualizations")
+    
+    print("\n" + "="*60)
+    print("🔬 Optional Research Experiments")
+    print("="*60)
+    print("\nThe following experiments are available (proposal-aligned):")
+    print("  1. Lookahead Horizon Analysis")
+    print("     python scripts/experiment_lookahead_horizons.py")
+    print("     - Tests: 1, 3, 5, 7, 10 day horizons")
+    print("     - Results: results/lookahead_horizon_results.csv")
+    print()
+    print("  2. Graph Sparsification Experiments")
+    print("     python scripts/experiment_graph_sparsification.py")
+    print("     - Tests: Various Top-K and correlation thresholds")
+    print("     - Results: results/graph_sparsification_results.csv")
+    print()
+    print("  3. Robustness Checks")
+    print("     python scripts/experiment_robustness_checks.py")
+    print("     - Tests: Transaction costs and slippage sensitivity")
+    print("     - Results: results/robustness_checks_results.csv")
+    print()
+    print("  4. Statistical Significance Testing")
+    print("     - Automatically included in Phase 6 evaluation")
+    print("     - Results: results/statistical_tests.csv")
+    print()
+    print("Note: These experiments are optional but recommended for comprehensive analysis.")
 
 if __name__ == "__main__":
     main()

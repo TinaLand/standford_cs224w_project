@@ -310,6 +310,62 @@ python -m src.evaluation.enhanced_ablation
 - Professional visualizations (portfolio charts, drawdown analysis)
 - Comprehensive reporting
 
+### Research Experiments (Proposal-Aligned)
+
+These experiments address requirements from the project proposal and provide deeper insights:
+
+#### 1. Lookahead Horizon Analysis
+
+Tests different prediction horizons to find optimal lookahead window:
+
+```bash
+python scripts/experiment_lookahead_horizons.py
+```
+
+- **Tests**: 1, 3, 5, 7, 10 day lookahead horizons
+- **Output**: `results/lookahead_horizon_results.csv`
+- **Result**: 10 days optimal (Test F1: 0.3576)
+- **Runtime**: ~1-2 hours
+
+#### 2. Graph Sparsification Experiments
+
+Evaluates different Top-K thresholds and correlation cutoffs:
+
+```bash
+python scripts/experiment_graph_sparsification.py
+```
+
+- **Tests**: Various Top-K values and correlation thresholds
+- **Output**: `results/graph_sparsification_results.csv`
+- **Purpose**: Find optimal graph density for performance
+- **Runtime**: ~1-2 hours
+
+#### 3. Robustness Checks
+
+Tests model performance under different transaction cost and slippage assumptions:
+
+```bash
+python scripts/experiment_robustness_checks.py
+```
+
+- **Tests**: Transaction costs (0% to 0.5%), Slippage (0% to 0.1%)
+- **Output**: `results/robustness_checks_results.csv`
+- **Purpose**: Validate model robustness to realistic trading conditions
+- **Runtime**: ~30 minutes - 1 hour
+
+#### 4. Statistical Significance Testing
+
+Integrated into Phase 6 evaluation pipeline:
+
+```bash
+python -m src.evaluation.evaluation
+```
+
+- **Tests**: Block bootstrap for Sharpe ratio, t-tests for accuracy
+- **Output**: `results/statistical_tests.csv`
+- **Purpose**: Validate statistical significance of performance improvements
+- **Automatic**: Runs as part of Phase 6 evaluation
+
 
 **Checkpoint Management:**
 The script automatically saves full training checkpoints (model, optimizer, epoch, metrics):
@@ -649,26 +705,64 @@ results = validate_ticker_data(
 
 ---
 
-### Future Improvements (After Real Data)
+### Future Improvements and Research Extensions
+
+**Note**: These are research extensions beyond the core project scope. See **[docs/FUTURE_IMPROVEMENTS.md](docs/FUTURE_IMPROVEMENTS.md)** for detailed implementation plans and priorities.
 
 #### Model Performance Optimization
 - [ ] Analyze low ROC-AUC (0.51) - feature importance investigation
-- [ ] Experiment with lookahead horizons (1, 3, 5, 10 days)
+  - Framework exists in `src/evaluation/deep_analysis.py`
+  - Quick win: 2-4 hours for analysis
+- [x] Experiment with lookahead horizons (1, 3, 5, 10 days)
+  - Implemented: `scripts/experiment_lookahead_horizons.py`
+  - Completed: Results show 10 days optimal (Test F1: 0.3576)
+  - Results: `results/lookahead_horizon_results.csv`
 - [ ] Add temporal GNN layers (EvolveGCN, TemporalGCN)
-- [ ] Graph sparsification strategies (Top-K thresholds, correlation cutoffs)
+  - High complexity: requires new architecture
+  - Estimated: 3-5 days
+- [x] Graph sparsification strategies (Top-K thresholds, correlation cutoffs)
+  - Implemented: `scripts/experiment_graph_sparsification.py`
+  - Ready to run: Tests various Top-K and correlation thresholds
+  - Script: `python scripts/experiment_graph_sparsification.py`
 - [ ] Advanced features: order flow, microstructure, alternative data
+  - Medium complexity: requires new data sources
+  - Estimated: 2-3 days per feature type
 - [ ] Ensemble methods: multiple models/graph views
+  - Medium complexity: framework needed
+  - Estimated: 2-3 days
 
 #### Research Extensions (Proposal-Aligned)
 - [ ] Expand datasets: QQQ, sector-specific subsets
+  - Easy: modify data collection script
+  - Estimated: 1-2 days per dataset
 - [ ] Time span analysis: pre/post-COVID, different market regimes
+  - Medium: requires separate training runs
+  - Estimated: 2-3 days
 - [ ] Additional technical indicators
+  - Easy: add to `feature_engineering.py`
+  - Estimated: 1 day per indicator group
 - [ ] Macro features: yields, inflation, unemployment
+  - Medium: requires external data sources
+  - Estimated: 2-3 days
 - [ ] Graph design experiments: correlation thresholds, edge variants
+  - Easy: parameter sweeps
+  - Estimated: 1-2 days
 - [ ] Model comparisons: GCN, GAT, GraphSAGE, HGT
+  - Medium: implement baseline models
+  - Estimated: 1-2 days per baseline
 - [ ] Non-graph baselines: Logistic Regression, MLP, LSTM
-- [ ] Statistical significance testing
-- [ ] Robustness checks: transaction costs, slippage sensitivity
+  - Easy: standard sklearn/PyTorch models
+  - Estimated: 1 day per baseline
+- [x] Statistical significance testing
+  - Implemented: `src/evaluation/statistical_tests.py`
+  - Integrated: Automatically runs in Phase 6 evaluation
+  - Output: `results/statistical_tests.csv`
+- [x] Robustness checks: transaction costs, slippage sensitivity
+  - Implemented: `scripts/experiment_robustness_checks.py`
+  - Ready to run: Tests transaction costs (0-0.5%) and slippage (0-0.1%)
+  - Script: `python scripts/experiment_robustness_checks.py`
+
+**See [docs/FUTURE_IMPROVEMENTS.md](docs/FUTURE_IMPROVEMENTS.md) for detailed implementation plans, code examples, and priority rankings.**
 
 - **Known Issues / Notes**
   - macOS OpenMP shared memory errors: set `export OMP_NUM_THREADS=1` if needed.
@@ -707,9 +801,13 @@ results = validate_ticker_data(
 
 ### Remaining Optional Tasks
 
-- [ ] **Ablation studies**: Full implementation (framework exists)
-- [x] **Baseline comparison**  Buy-and-hold, equal-weight strategies implemented
-- [ ] **Hyperparameter sweep**: Further optimization
+- [x] **Ablation studies**: Enhanced ablation with full retraining implemented
+  - Script: `python -m src.evaluation.enhanced_ablation`
+  - 6 configurations, each retrained from scratch
+- [x] **Baseline comparison**: Buy-and-hold, equal-weight strategies implemented
+- [x] **Hyperparameter sweep**: Script fixed and ready to run
+  - Script: `python -m src.training.hyperparameter_sweep`
+  - 16 combinations, ~8 hours runtime (optional)
 
 See [Remaining Tasks](#-remaining-tasks-high-priority) section below for detailed checklist.
 

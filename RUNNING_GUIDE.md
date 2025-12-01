@@ -1,10 +1,10 @@
-# 🚀 Complete Running Guide
+# Complete Running Guide
 
 Complete guide to run the entire CS224W Stock RL GNN project from scratch.
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 1. **Python 3.8+** installed
 2. **Virtual environment** (recommended)
@@ -25,7 +25,7 @@ Ensure you have:
 
 ---
 
-## 🏃 Running the Full Pipeline
+## Running the Full Pipeline
 
 ### Option 1: Run All Phases at Once (Recommended)
 
@@ -34,12 +34,12 @@ python run_full_pipeline.py
 ```
 
 This will execute all phases in sequence:
-1. ✅ Phase 1: Data Collection & Feature Engineering
-2. ✅ Phase 2: Graph Construction
-3. ✅ Phase 3: Baseline Training
-4. ✅ Phase 4: Transformer Training
-5. ✅ Phase 5: RL Integration
-6. ✅ Phase 6: Evaluation
+1. Phase 1: Data Collection & Feature Engineering
+2. Phase 2: Graph Construction
+3. Phase 3: Baseline Training
+4. Phase 4: Transformer Training
+5. Phase 5: RL Integration
+6. Phase 6: Evaluation
 
 **Expected Time**: ~2-4 hours (depending on hardware)
 
@@ -157,7 +157,7 @@ python -m src.evaluation.evaluation
 
 ---
 
-## 🎯 A+ Enhancements
+## A+ Enhancements
 
 Run all enhancement analysis scripts:
 
@@ -178,7 +178,7 @@ This includes:
 
 ---
 
-## 📊 Expected Outputs Summary
+## Expected Outputs Summary
 
 ### Data Files
 ```
@@ -223,7 +223,7 @@ results/
 
 ---
 
-## ⚠️ Important Notes
+## Important Notes
 
 ### 1. **Import Paths**
 
@@ -260,7 +260,7 @@ All scripts handle PyTorch 2.6+ serialization:
 
 ---
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Import Errors
 
@@ -300,7 +300,7 @@ pip install -r requirements.txt
 
 ---
 
-## 📝 Quick Reference
+## Quick Reference
 
 All essential commands in one place:
 
@@ -324,7 +324,7 @@ python -m src.scripts.run_all_enhancements
 
 ---
 
-## 🎉 Next Steps
+## Next Steps
 
 After running the pipeline:
 

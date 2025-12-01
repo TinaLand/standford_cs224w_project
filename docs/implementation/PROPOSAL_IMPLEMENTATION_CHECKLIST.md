@@ -15,7 +15,7 @@
 | **Phase 3: Baseline GNN** | 100% | 100% | Complete |
 | **Phase 4: Core Transformer** | 100% | 100% | Complete |
 | **Phase 5: RL Integration** | 100% | 100% | Complete |
-| **Phase 6: Evaluation** | 100% | 95% | Mostly Complete |
+| **Phase 6: Evaluation** | 100% | 100% | Complete |
 | **Phase 7: Extensions** | Optional | 0% | Optional |
 | **Overall** | **100%** | **99%** | **Excellent** |
 
@@ -253,7 +253,22 @@
 
 **Implementation**: `scripts/visualization.py`
 
-**Status**: **95% Complete** (Ablation studies framework exists, full retraining optional)
+### 6.4 Research Experiments (Proposal-Aligned)
+
+| Experiment | Required | Status | Implementation | Results |
+|------------|----------|--------|----------------|---------|
+| **Lookahead Horizon Analysis** | | | `scripts/experiment_lookahead_horizons.py` | `results/lookahead_horizon_results.csv` |
+| **Graph Sparsification** | | | `scripts/experiment_graph_sparsification.py` | `results/graph_sparsification_results.csv` |
+| **Robustness Checks** | | | `scripts/experiment_robustness_checks.py` | `results/robustness_checks_results.csv` |
+| **Statistical Significance Testing** | | | `src/evaluation/statistical_tests.py` | `results/statistical_tests.csv` |
+
+**Details**:
+- **Lookahead Horizon**: Tests 1, 3, 5, 7, 10 day horizons. Result: 10 days optimal (F1: 0.3576)
+- **Graph Sparsification**: Evaluates Top-K thresholds and correlation cutoffs
+- **Robustness Checks**: Tests transaction costs (0-0.5%) and slippage (0-0.1%)
+- **Statistical Tests**: Block bootstrap for Sharpe ratio, t-tests for accuracy (integrated in Phase 6)
+
+**Status**: **100% Complete** (All proposal-aligned experiments implemented)
 
 ---
 

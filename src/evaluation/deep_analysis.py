@@ -165,6 +165,133 @@ def analyze_feature_importance(
         }
 
 
+def visualize_feature_importance(
+    feature_importance: Dict[str, Any],
+    feature_names: List[str] = None,
+    results_dir: Path = RESULTS_DIR,
+    top_k: int = 20
+):
+    """
+    Create visualizations for feature importance analysis.
+    
+    Args:
+        feature_importance: Dictionary from analyze_feature_importance()
+        feature_names: Optional list of feature names (if None, uses indices)
+        results_dir: Directory to save plots
+        top_k: Number of top features to visualize
+    """
+    print("\n--- Creating Feature Importance Visualizations ---")
+    
+    plots_dir = results_dir / "plots"
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    
+    if 'feature_importance' not in feature_importance or len(feature_importance['feature_importance']) == 0:
+        print("   ⚠️  No feature importance data to visualize")
+        return
+    
+    importance_array = np.array(feature_importance['feature_importance'])
+    
+    # Get top K features
+    top_indices = np.argsort(importance_array)[-top_k:][::-1]
+    top_importance = importance_array[top_indices]
+    
+    # Create feature labels
+    if feature_names is None or len(feature_names) != len(importance_array):
+        feature_labels = [f'Feature {i}' for i in top_indices]
+    else:
+        feature_labels = [feature_names[i] for i in top_indices]
+    
+    # 1. Horizontal Bar Chart (Top K Features)
+    plt.figure(figsize=(12, max(8, top_k * 0.4)))
+    colors = plt.cm.viridis(np.linspace(0, 1, top_k))
+    bars = plt.barh(range(top_k), top_importance, color=colors)
+    plt.yticks(range(top_k), feature_labels)
+    plt.xlabel('Importance Score (|Gradient|)', fontsize=12, fontweight='bold')
+    plt.title(f'Top {top_k} Most Important Features', fontsize=14, fontweight='bold')
+    plt.gca().invert_yaxis()
+    plt.grid(True, alpha=0.3, axis='x')
+    plt.tight_layout()
+    plt.savefig(plots_dir / 'feature_importance_topk.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"   ✅ Top-{top_k} feature importance chart saved")
+    
+    # 2. Feature Importance Distribution
+    plt.figure(figsize=(10, 6))
+    plt.hist(importance_array, bins=50, alpha=0.7, edgecolor='black', color='steelblue')
+    plt.axvline(importance_array.mean(), color='red', linestyle='--', linewidth=2, 
+                label=f'Mean: {importance_array.mean():.6f}')
+    plt.axvline(importance_array.std(), color='orange', linestyle='--', linewidth=2, 
+                label=f'Std: {importance_array.std():.6f}')
+    plt.xlabel('Importance Score', fontsize=12)
+    plt.ylabel('Frequency', fontsize=12)
+    plt.title('Feature Importance Distribution', fontsize=14, fontweight='bold')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plots_dir / 'feature_importance_distribution.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print("   ✅ Feature importance distribution chart saved")
+    
+    # 3. Cumulative Importance (Top Features)
+    cumulative_importance = np.cumsum(np.sort(importance_array)[::-1])
+    cumulative_pct = cumulative_importance / cumulative_importance[-1] * 100
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(1, min(50, len(cumulative_pct)) + 1), cumulative_pct[:50], 
+             linewidth=2, marker='o', markersize=4)
+    plt.xlabel('Number of Top Features', fontsize=12)
+    plt.ylabel('Cumulative Importance (%)', fontsize=12)
+    plt.title('Cumulative Feature Importance', fontsize=14, fontweight='bold')
+    plt.grid(True, alpha=0.3)
+    plt.axhline(80, color='red', linestyle='--', alpha=0.5, label='80% Threshold')
+    plt.axhline(90, color='orange', linestyle='--', alpha=0.5, label='90% Threshold')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(plots_dir / 'feature_importance_cumulative.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print("   ✅ Cumulative feature importance chart saved")
+    
+    print(f"   📁 All feature importance visualizations saved to: {plots_dir}")
+
+
+def get_feature_names_from_engineering() -> List[str]:
+    """
+    Get feature names from feature engineering module.
+    This is a helper function to map feature indices to meaningful names.
+    """
+    # Common feature groups (approximate order from feature_engineering.py)
+    feature_groups = [
+        # Price features
+        'Close', 'Open', 'High', 'Low', 'Volume',
+        # Returns
+        'Daily_Return', 'Log_Return',
+        # Technical Indicators - Momentum
+        'RSI', 'Momentum', 'ROC',
+        # Technical Indicators - Trend
+        'MACD', 'MACD_Signal', 'MACD_Hist',
+        'SMA_20', 'SMA_50', 'SMA_200',
+        'EMA_12', 'EMA_26',
+        'Price_to_SMA20', 'Price_to_SMA200',
+        'SMA20_to_SMA50', 'EMA12_to_EMA26',
+        # Technical Indicators - Volatility
+        'BB_Upper', 'BB_Middle', 'BB_Lower', 'BB_Width', 'BB_Position',
+        'ATR', 'True_Range', 'Historical_Volatility',
+        # Technical Indicators - Oscillators
+        'Stochastic_K', 'Stochastic_D',
+        'Williams_R', 'CCI', 'ADX',
+        # Technical Indicators - Volume
+        'OBV', 'AD', 'Volume_ROC', 'Volume_to_MA20', 'PVT',
+        # Structural features (if included)
+        'PageRank', 'Degree_Centrality', 'Betweenness_Centrality',
+        'Closeness_Centrality', 'Clustering_Coefficient',
+        'Core_Number', 'Avg_Neighbor_Degree', 'Triangle_Count'
+    ]
+    
+    # Note: Actual feature count may vary. This is a template.
+    # In practice, you'd extract actual feature names from feature_engineering.py
+    return feature_groups
+
+
 def analyze_trading_behavior(
     portfolio_values: List[float],
     trades: List[Dict],

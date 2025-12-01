@@ -26,3 +26,59 @@ Systematically remove or replace components to validate the contribution of key 
  * **Hubs:** Highly connected stocks (high influence).
  * **Bridges:** Stocks connecting different sectors or clusters (high cross-market conductivity).
  * **Role Twins:** Stocks with similar structural profiles and comparable market behavior.
+
+## 6.4 Research Experiments (Proposal-Aligned)
+
+Additional experiments addressing proposal requirements for comprehensive analysis:
+
+### 6.4.1 Lookahead Horizon Analysis
+
+Tests different prediction horizons to find optimal lookahead window:
+
+```bash
+python scripts/experiment_lookahead_horizons.py
+```
+
+* **Tests**: 1, 3, 5, 7, 10 day lookahead horizons
+* **Output**: `results/lookahead_horizon_results.csv`
+* **Result**: 10 days optimal (Test F1: 0.3576)
+* **Runtime**: ~1-2 hours
+
+### 6.4.2 Graph Sparsification Experiments
+
+Evaluates different Top-K thresholds and correlation cutoffs:
+
+```bash
+python scripts/experiment_graph_sparsification.py
+```
+
+* **Tests**: Various Top-K values and correlation thresholds
+* **Output**: `results/graph_sparsification_results.csv`
+* **Purpose**: Find optimal graph density for performance
+* **Runtime**: ~1-2 hours
+
+### 6.4.3 Robustness Checks
+
+Tests model performance under different transaction cost and slippage assumptions:
+
+```bash
+python scripts/experiment_robustness_checks.py
+```
+
+* **Tests**: Transaction costs (0% to 0.5%), Slippage (0% to 0.1%)
+* **Output**: `results/robustness_checks_results.csv`
+* **Purpose**: Validate model robustness to realistic trading conditions
+* **Runtime**: ~30 minutes - 1 hour
+
+### 6.4.4 Statistical Significance Testing
+
+Integrated into Phase 6 evaluation pipeline:
+
+```bash
+python -m src.evaluation.evaluation
+```
+
+* **Tests**: Block bootstrap for Sharpe ratio, t-tests for accuracy
+* **Output**: `results/statistical_tests.csv`
+* **Purpose**: Validate statistical significance of performance improvements
+* **Automatic**: Runs as part of Phase 6 evaluation

@@ -37,6 +37,17 @@ How-to guides and tutorials:
 | [RL Testing Guide](guides/RL_TESTING_GUIDE.md) | Testing and debugging RL components |
 | [Testing Guide](guides/TESTING_GUIDE.md) | General testing and validation procedures |
 
+## Research Experiments
+
+Proposal-aligned research experiments for deeper analysis:
+
+| Experiment | Script | Description |
+|------------|--------|-------------|
+| **Lookahead Horizon** | `scripts/experiment_lookahead_horizons.py` | Tests different prediction horizons (1, 3, 5, 7, 10 days) |
+| **Graph Sparsification** | `scripts/experiment_graph_sparsification.py` | Evaluates Top-K thresholds and correlation cutoffs |
+| **Robustness Checks** | `scripts/experiment_robustness_checks.py` | Tests transaction cost and slippage sensitivity |
+| **Statistical Tests** | Integrated in Phase 6 | Block bootstrap, t-tests for significance validation |
+
 ---
 
 ## Analysis Reports

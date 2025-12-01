@@ -452,6 +452,7 @@ def run_final_backtest(gnn_model, rl_agent_path: Path) -> Dict[str, Any]:
         'strategy': 'Core_GNN_RL',
         'final_value': portfolio_values[-1],
         'total_days': test_env.current_step,
+        'portfolio_history': portfolio_values,  # Include for statistical testing
         **metrics
     }
 
@@ -733,6 +734,7 @@ def main():
     print("📊 Step 2: RL Agent Portfolio-Level Metrics")
     print("=" * 50)
     rl_agent_file = RL_SAVE_PATH / "ppo_stock_agent.zip"
+    portfolio_returns = None
     if rl_agent_file.exists():
         core_metrics = run_final_backtest(gnn_model, rl_agent_file)
         
@@ -741,9 +743,54 @@ def main():
         metrics_df.to_csv(RESULTS_DIR / 'final_metrics.csv', index=False)
         print("\n🏆 RL AGENT PERFORMANCE:")
         print(metrics_df[['Sharpe_Ratio', 'Cumulative_Return', 'Max_Drawdown']].iloc[0])
+        
+        # Extract portfolio returns for statistical testing
+        if 'portfolio_history' in core_metrics:
+            portfolio_values = core_metrics['portfolio_history']
+            if len(portfolio_values) > 1:
+                portfolio_series = pd.Series(portfolio_values)
+                portfolio_returns = portfolio_series.pct_change().dropna().values
     else:
         print("❌ Cannot run final backtest: RL agent not found.")
         metrics_df = pd.DataFrame()
+    
+    # 2.5. Statistical Significance Testing
+    print("\n" + "=" * 50)
+    print("📊 Step 2.5: Statistical Significance Testing")
+    print("=" * 50)
+    try:
+        from src.evaluation.statistical_tests import (
+            block_bootstrap_sharpe_ratio,
+            t_test_accuracy,
+            compare_models_statistical
+        )
+        
+        # Test Sharpe ratio significance if we have returns
+        if portfolio_returns is not None and len(portfolio_returns) > 30:
+            sharpe_result = block_bootstrap_sharpe_ratio(
+                portfolio_returns,
+                risk_free_rate=0.02,
+                n_bootstrap=1000
+            )
+            print(f"\n📈 Sharpe Ratio Statistical Analysis:")
+            print(f"   Sharpe Ratio: {sharpe_result['sharpe_ratio']:.4f}")
+            print(f"   95% CI: [{sharpe_result['ci_lower']:.4f}, {sharpe_result['ci_upper']:.4f}]")
+            print(f"   Significant: {'Yes' if sharpe_result['ci_lower'] > 0 else 'No'}")
+            
+            # Save statistical test results
+            stats_results = {
+                'sharpe_ratio_analysis': sharpe_result
+            }
+            stats_df = pd.DataFrame([sharpe_result])
+            stats_df.to_csv(RESULTS_DIR / 'statistical_tests.csv', index=False)
+            print(f"✅ Statistical test results saved to: results/statistical_tests.csv")
+        else:
+            print("⚠️  Insufficient data for statistical testing (need >30 returns)")
+            
+    except Exception as e:
+        print(f"⚠️  Statistical testing failed: {e}")
+        import traceback
+        traceback.print_exc()
 
     # 3. Run Ablation Studies
     print("\n" + "=" * 50)
