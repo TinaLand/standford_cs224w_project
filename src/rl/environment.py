@@ -73,6 +73,20 @@ class StockTradingEnv(gym.Env):
         self.initial_cash = 10000.0
         self.current_step = 0
         self.max_steps = len(self.data_loader['dates']) - 1
+        
+        # Advanced Portfolio Constraints
+        self.MAX_POSITION_SIZE = 0.20  # Maximum 20% of portfolio in single stock
+        self.MAX_LEVERAGE = 1.0  # No leverage (1.0 = 100% of cash)
+        self.MIN_CASH_RESERVE = 0.05  # Keep at least 5% cash reserve
+        self.MAX_TURNOVER = 0.50  # Maximum 50% portfolio turnover per step
+        
+        # Reward function configuration
+        self.USE_SHARPE_REWARD = True  # Use Sharpe ratio in reward calculation
+        self.RISK_FREE_RATE = 0.02  # 2% annual risk-free rate
+        self.REWARD_LOOKBACK_WINDOW = 20  # Days to calculate Sharpe ratio
+        
+        # Track returns for Sharpe calculation
+        self.portfolio_returns_history = []
 
     def _initialize_data_loader(self, start_date, end_date):
         """Placeholder for a robust data loading system."""
@@ -125,6 +139,7 @@ class StockTradingEnv(gym.Env):
         self.portfolio_value = self.initial_cash
         self.cash = self.initial_cash
         self.holdings = np.zeros(self.NUM_STOCKS) # Number of shares held
+        self.portfolio_returns_history = []  # Reset returns history
         
         # Initial State Generation
         obs = self._get_observation()
@@ -229,14 +244,62 @@ class StockTradingEnv(gym.Env):
                 self.holdings[i] -= shares_to_sell
                 trade_volume[i] = -shares_to_sell
 
-        # 3. Portfolio Value Update and Reward Calculation
+        # 3. Advanced Portfolio Constraints
+        # Enforce maximum position size per stock
+        total_portfolio_value = self.cash + np.sum(self.holdings * next_prices)
+        for i in range(self.NUM_STOCKS):
+            position_value = self.holdings[i] * next_prices[i]
+            position_pct = position_value / total_portfolio_value if total_portfolio_value > 0 else 0
+            if position_pct > self.MAX_POSITION_SIZE:
+                # Reduce position to max allowed
+                max_shares = (total_portfolio_value * self.MAX_POSITION_SIZE) / next_prices[i]
+                excess_shares = self.holdings[i] - max_shares
+                self.holdings[i] = max_shares
+                self.cash += excess_shares * next_prices[i] * (1 - TRANSACTION_COST)
         
-        # Portfolio value after action
+        # Enforce cash reserve
+        min_cash = total_portfolio_value * self.MIN_CASH_RESERVE
+        if self.cash < min_cash:
+            # Sell some holdings to maintain cash reserve
+            needed_cash = min_cash - self.cash
+            for i in range(self.NUM_STOCKS):
+                if needed_cash <= 0:
+                    break
+                if self.holdings[i] > 0:
+                    shares_to_sell = min(self.holdings[i], needed_cash / (next_prices[i] * (1 + TRANSACTION_COST)))
+                    self.holdings[i] -= shares_to_sell
+                    self.cash += shares_to_sell * next_prices[i] * (1 - TRANSACTION_COST)
+                    needed_cash -= shares_to_sell * next_prices[i] * (1 - TRANSACTION_COST)
+        
+        # 4. Portfolio Value Update and Reward Calculation
         new_portfolio_value = self.cash + np.sum(self.holdings * next_prices)
         
-        # Reward: Simple portfolio return (normalized)
-        reward = (new_portfolio_value - current_portfolio_value) / current_portfolio_value 
-        # Optional: Apply risk penalty here (e.g., negative Sharpe proxy)
+        # Calculate portfolio return
+        portfolio_return = (new_portfolio_value - current_portfolio_value) / current_portfolio_value if current_portfolio_value > 0 else 0.0
+        
+        # Update returns history for Sharpe calculation
+        self.portfolio_returns_history.append(portfolio_return)
+        if len(self.portfolio_returns_history) > self.REWARD_LOOKBACK_WINDOW:
+            self.portfolio_returns_history.pop(0)
+        
+        # Calculate reward: Sharpe ratio if enabled, otherwise simple return
+        if self.USE_SHARPE_REWARD and len(self.portfolio_returns_history) >= 10:
+            # Calculate Sharpe ratio over lookback window
+            returns_array = np.array(self.portfolio_returns_history)
+            mean_return = np.mean(returns_array)
+            std_return = np.std(returns_array)
+            
+            if std_return > 1e-8:  # Avoid division by zero
+                # Annualized Sharpe ratio (assuming daily returns)
+                daily_rf_rate = self.RISK_FREE_RATE / 252  # 252 trading days per year
+                sharpe_ratio = (mean_return - daily_rf_rate) / std_return * np.sqrt(252)
+                # Use Sharpe ratio as reward (scaled)
+                reward = sharpe_ratio / 10.0  # Scale to reasonable range
+            else:
+                reward = portfolio_return
+        else:
+            # Simple return-based reward
+            reward = portfolio_return
         
         self.portfolio_value = new_portfolio_value
         self.current_step += 1

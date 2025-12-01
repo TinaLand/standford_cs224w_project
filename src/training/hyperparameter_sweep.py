@@ -22,12 +22,42 @@ import itertools
 import json
 import sys
 
-# Add scripts directory to path for imports
+# Add project root to path for imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / 'scripts'))
+sys.path.insert(0, str(PROJECT_ROOT))
 
-# Import the Phase 4 training pipeline
-import phase4_core_training as core
+# Import the Phase 4 training pipeline from transformer_trainer
+from src.training.transformer_trainer import (
+    RoleAwareGraphTransformer,
+    run_training_pipeline,
+    load_graph_data,
+    create_target_labels,
+    HIDDEN_CHANNELS,
+    LEARNING_RATE,
+    NUM_LAYERS,
+    NUM_HEADS,
+    NUM_EPOCHS,
+    DEVICE,
+    MODELS_DIR as DEFAULT_MODELS_DIR
+)
+
+# Create a mock module-like object for compatibility
+class CoreModule:
+    """Wrapper to make transformer_trainer compatible with sweep script"""
+    HIDDEN_CHANNELS = HIDDEN_CHANNELS
+    LEARNING_RATE = LEARNING_RATE
+    NUM_LAYERS = NUM_LAYERS
+    NUM_HEADS = NUM_HEADS
+    NUM_EPOCHS = NUM_EPOCHS
+    MODELS_DIR = DEFAULT_MODELS_DIR
+    MODEL_SAVE_NAME = "core_transformer_model.pt"
+    
+    @staticmethod
+    def run_training_pipeline():
+        """Wrapper for run_training_pipeline"""
+        return run_training_pipeline()
+
+core = CoreModule()
 SWEEP_ROOT = PROJECT_ROOT / "models" / "sweeps"
 
 
@@ -59,39 +89,46 @@ def build_search_grid():
     return grid
 
 
-def configure_core_module(config, run_dir, run_name):
-    """Temporarily override hyperparameters in the core training module."""
+def configure_training_params(config, run_dir, run_name):
+    """Configure training parameters for this sweep run."""
+    # Store original values
     originals = {
-        "HIDDEN_CHANNELS": core.HIDDEN_CHANNELS,
-        "LEARNING_RATE": core.LEARNING_RATE,
-        "NUM_LAYERS": core.NUM_LAYERS,
-        "NUM_HEADS": core.NUM_HEADS,
-        "NUM_EPOCHS": core.NUM_EPOCHS,
-        "MODELS_DIR": core.MODELS_DIR,
-        "MODEL_SAVE_NAME": core.MODEL_SAVE_NAME,
+        "HIDDEN_CHANNELS": HIDDEN_CHANNELS,
+        "LEARNING_RATE": LEARNING_RATE,
+        "NUM_LAYERS": NUM_LAYERS,
+        "NUM_HEADS": NUM_HEADS,
+        "NUM_EPOCHS": NUM_EPOCHS,
     }
+    
+    # Temporarily modify the transformer_trainer module's constants
+    import src.training.transformer_trainer as trainer_module
+    trainer_module.HIDDEN_CHANNELS = config["hidden_channels"]
+    trainer_module.LEARNING_RATE = config["learning_rate"]
+    trainer_module.NUM_LAYERS = config["num_layers"]
+    trainer_module.NUM_HEADS = config["num_heads"]
+    trainer_module.NUM_EPOCHS = config["num_epochs"]
+    trainer_module.MODELS_DIR = run_dir
+    trainer_module.MODEL_SAVE_NAME = f"{run_name}.pt"
+    
+    run_dir.mkdir(parents=True, exist_ok=True)
+    
+    return originals, trainer_module
 
-    core.HIDDEN_CHANNELS = config["hidden_channels"]
-    core.LEARNING_RATE = config["learning_rate"]
-    core.NUM_LAYERS = config["num_layers"]
-    core.NUM_HEADS = config["num_heads"]
-    core.NUM_EPOCHS = config["num_epochs"]
-    core.MODELS_DIR = run_dir
-    core.MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    core.MODEL_SAVE_NAME = f"{run_name}.pt"
 
-    return originals
-
-
-def restore_core_module(originals):
-    """Restore hyperparameters in the core module to their original values."""
-    for key, value in originals.items():
-        setattr(core, key, value)
+def restore_training_params(originals, trainer_module):
+    """Restore original training parameters."""
+    trainer_module.HIDDEN_CHANNELS = originals["HIDDEN_CHANNELS"]
+    trainer_module.LEARNING_RATE = originals["LEARNING_RATE"]
+    trainer_module.NUM_LAYERS = originals["NUM_LAYERS"]
+    trainer_module.NUM_HEADS = originals["NUM_HEADS"]
+    trainer_module.NUM_EPOCHS = originals["NUM_EPOCHS"]
+    trainer_module.MODELS_DIR = DEFAULT_MODELS_DIR
+    trainer_module.MODEL_SAVE_NAME = "core_transformer_model.pt"
 
 
 def run_single_experiment(config, run_dir, run_name):
     """Execute one training run with the provided configuration."""
-    originals = configure_core_module(config, run_dir, run_name)
+    originals, trainer_module = configure_training_params(config, run_dir, run_name)
     try:
         print("\n" + "=" * 70)
         print(f"🎯 Starting sweep run: {run_name}")
@@ -102,7 +139,7 @@ def run_single_experiment(config, run_dir, run_name):
               f"num_epochs={config['num_epochs']}")
         print("=" * 70)
 
-        results = core.run_training_pipeline()
+        results = trainer_module.run_training_pipeline()
         if results is None:
             results = {}
 
@@ -113,7 +150,7 @@ def run_single_experiment(config, run_dir, run_name):
         }
         return run_summary
     finally:
-        restore_core_module(originals)
+        restore_training_params(originals, trainer_module)
 
 
 def write_summary(summary_records, summary_path):

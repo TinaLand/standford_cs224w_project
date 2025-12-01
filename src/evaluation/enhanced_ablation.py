@@ -73,29 +73,47 @@ ABLATION_CONFIGS = {
 }
 
 
-def filter_graph_edges(data, config: Dict) -> torch.Tensor:
+def filter_graph_edges(data, config: Dict):
     """
     Filter graph edges based on ablation configuration.
+    Returns a new HeteroData with only the specified edge types.
     """
-    edge_index_dict = {}
+    from torch_geometric.data import HeteroData
     
-    if config['use_correlation'] and 'rolling_correlation' in data.edge_index_dict:
-        edge_index_dict['rolling_correlation'] = data.edge_index_dict['rolling_correlation']
+    # Create new HeteroData
+    filtered_data = HeteroData()
     
-    if config['use_fund_similarity'] and 'fund_similarity' in data.edge_index_dict:
-        edge_index_dict['fund_similarity'] = data.edge_index_dict['fund_similarity']
+    # Copy node features
+    filtered_data['stock'].x = data['stock'].x.clone()
+    
+    # Initialize edge_index_dict
+    filtered_data.edge_index_dict = {}
+    
+    # Filter edges based on configuration using edge_index_dict
+    edge_index_dict = data.edge_index_dict if hasattr(data, 'edge_index_dict') else {}
+    
+    if config['use_correlation']:
+        edge_key = ('stock', 'rolling_correlation', 'stock')
+        if edge_key in edge_index_dict:
+            filtered_data.edge_index_dict[edge_key] = edge_index_dict[edge_key].clone()
+    
+    if config['use_fund_similarity']:
+        edge_key = ('stock', 'fund_similarity', 'stock')
+        if edge_key in edge_index_dict:
+            filtered_data.edge_index_dict[edge_key] = edge_index_dict[edge_key].clone()
     
     if config['use_static_edges']:
-        if 'sector_industry' in data.edge_index_dict:
-            edge_index_dict['sector_industry'] = data.edge_index_dict['sector_industry']
-        if 'supply_competitor' in data.edge_index_dict:
-            edge_index_dict['supply_competitor'] = data.edge_index_dict['supply_competitor']
+        edge_key = ('stock', 'sector_industry', 'stock')
+        if edge_key in edge_index_dict:
+            filtered_data.edge_index_dict[edge_key] = edge_index_dict[edge_key].clone()
+        
+        edge_key = ('stock', 'supply_competitor', 'stock')
+        if edge_key in edge_index_dict:
+            filtered_data.edge_index_dict[edge_key] = edge_index_dict[edge_key].clone()
     
-    # Create new HeteroData with filtered edges
-    from torch_geometric.data import HeteroData
-    filtered_data = HeteroData()
-    filtered_data['stock'].x = data['stock'].x
-    filtered_data.edge_index_dict = edge_index_dict
+    # Copy tickers if they exist
+    if 'tickers' in data:
+        filtered_data.tickers = data.tickers
     
     return filtered_data
 
@@ -134,16 +152,135 @@ def train_ablation_model(
             return filter_graph_edges(data, config)
         return None
     
-    # Train model
-    best_model, metrics = run_training_pipeline(
-        model=model,
-        train_dates=train_dates,
-        val_dates=val_dates,
-        targets_class_dict=targets_class_dict,
-        targets_reg_dict=targets_reg_dict,
-        load_graph_data_fn=load_filtered_graph_data,
-        save_path=MODELS_DIR / f"ablation_{config_name.lower()}.pt"
+    # Train model using simplified training loop with filtered graphs
+    from src.training.transformer_trainer import (
+        FocalLoss, FOCAL_ALPHA, FOCAL_GAMMA, USE_CLASS_WEIGHTS
     )
+    import torch.optim as optim
+    from sklearn.metrics import f1_score, accuracy_score
+    from tqdm import tqdm
+    
+    # Calculate class weights if needed
+    all_train_targets = []
+    for date in train_dates:
+        target = targets_class_dict.get(date)
+        if target is not None:
+            all_train_targets.append(target.cpu().numpy())
+    if all_train_targets:
+        all_train_targets_array = np.concatenate(all_train_targets)
+        class_counts = np.bincount(all_train_targets_array)
+        total_samples = class_counts.sum()
+        num_classes = len(class_counts)
+        if num_classes > 0 and USE_CLASS_WEIGHTS:
+            class_weights = total_samples / (num_classes * class_counts)
+            class_weights = torch.tensor(class_weights, dtype=torch.float32).to(DEVICE)
+        else:
+            class_weights = None
+    else:
+        class_weights = None
+    
+    # Create optimizer
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    
+    # Train the model with filtered graphs
+    best_val_f1 = 0.0
+    best_model_state = None
+    REFERENCE_DATE = pd.to_datetime('2015-01-01')
+    
+    print(f"Training {config_name} for {NUM_EPOCHS} epochs...")
+    for epoch in range(1, NUM_EPOCHS + 1):
+        model.train()
+        total_loss = 0.0
+        num_batches = 0
+        
+        for date in tqdm(train_dates, desc=f"Epoch {epoch}/{NUM_EPOCHS}"):
+            data = load_filtered_graph_data(date)
+            target_class = targets_class_dict.get(date)
+            target_reg = targets_reg_dict.get(date) if ENABLE_MULTI_TASK else None
+            
+            if data and target_class is not None:
+                data = data.to(DEVICE)
+                target_class = target_class.to(DEVICE)
+                
+                # Create date tensor if time-aware
+                if ENABLE_TIME_AWARE:
+                    days_since_ref = (date - REFERENCE_DATE).days
+                    num_nodes = data['stock'].x.shape[0]
+                    date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32).to(DEVICE)
+                else:
+                    date_tensor = None
+                
+                optimizer.zero_grad()
+                out = model(data, date_tensor=date_tensor)
+                
+                # Calculate loss
+                criterion = FocalLoss(alpha=FOCAL_ALPHA, gamma=FOCAL_GAMMA)
+                loss = criterion(out, target_class)
+                
+                if ENABLE_MULTI_TASK and target_reg is not None:
+                    target_reg = target_reg.to(DEVICE)
+                    reg_loss = torch.nn.functional.mse_loss(out[:, 1], target_reg)
+                    loss = loss + 0.1 * reg_loss
+                
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item()
+                num_batches += 1
+        
+        # Validation
+        model.eval()
+        val_predictions = []
+        val_targets = []
+        
+        with torch.no_grad():
+            for date in val_dates:
+                data = load_filtered_graph_data(date)
+                target_class = targets_class_dict.get(date)
+                
+                if data and target_class is not None:
+                    data = data.to(DEVICE)
+                    target_class = target_class.to(DEVICE)
+                    
+                    if ENABLE_TIME_AWARE:
+                        days_since_ref = (date - REFERENCE_DATE).days
+                        num_nodes = data['stock'].x.shape[0]
+                        date_tensor = torch.full((num_nodes,), days_since_ref, dtype=torch.float32).to(DEVICE)
+                    else:
+                        date_tensor = None
+                    
+                    out = model(data, date_tensor=date_tensor)
+                    preds = out.argmax(dim=1)
+                    
+                    val_predictions.extend(preds.cpu().numpy())
+                    val_targets.extend(target_class.cpu().numpy())
+        
+        if len(val_targets) > 0:
+            val_accuracy = accuracy_score(val_targets, val_predictions)
+            val_f1 = f1_score(val_targets, val_predictions, average='macro')
+        else:
+            val_accuracy = 0.0
+            val_f1 = 0.0
+        
+        avg_loss = total_loss / num_batches if num_batches > 0 else 0.0
+        print(f"  Epoch {epoch}/{NUM_EPOCHS}: Loss={avg_loss:.4f}, Val Acc={val_accuracy:.4f}, Val F1={val_f1:.4f}")
+        
+        if val_f1 > best_val_f1:
+            best_val_f1 = val_f1
+            best_model_state = model.state_dict().copy()
+    
+    # Load best model
+    if best_model_state:
+        model.load_state_dict(best_model_state)
+    
+    # Save model
+    torch.save(model.state_dict(), MODELS_DIR / f"ablation_{config_name.lower()}.pt")
+    
+    metrics = {
+        'best_val_f1': best_val_f1,
+        'best_val_accuracy': val_accuracy
+    }
+    
+    best_model = model
     
     return best_model, metrics
 
