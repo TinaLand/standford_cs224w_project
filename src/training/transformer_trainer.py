@@ -254,8 +254,8 @@ class TimePositionalEncoding(torch.nn.Module):
         time_features = []
         
         # Sinusoidal encoding for continuous time
-        div_term = torch.exp(torch.arange(0, self.pe_dim, 2).float() * 
-                           -(torch.log(torch.tensor(10000.0)) / self.pe_dim))
+        div_term = torch.exp(torch.arange(0, self.pe_dim, 2, device=date_tensor.device).float() * 
+                           -(torch.log(torch.tensor(10000.0, device=date_tensor.device)) / self.pe_dim))
         time_features.append(torch.sin(normalized_time.unsqueeze(-1) * div_term))
         time_features.append(torch.cos(normalized_time.unsqueeze(-1) * div_term))
         
