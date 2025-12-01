@@ -45,8 +45,9 @@ except ImportError:
 
 # --- Configuration ---
 # Define the project root path
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__)) # Assumes this script is in 'scripts/'
-DATA_RAW_DIR = os.path.join(PROJECT_ROOT, '..', 'data', 'raw')
+# This script is in 'src/data/', so we need to go up 2 levels to reach project root
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DATA_RAW_DIR = os.path.join(PROJECT_ROOT, 'data', 'raw')
 
 # Configuration Dictionary
 CONFIG = {
