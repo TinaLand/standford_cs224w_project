@@ -364,10 +364,8 @@ def create_portfolio_performance():
             linewidth=2, color='#FF6B6B', linestyle='--', alpha=0.8, zorder=2)
     ax1.plot(days, baseline_equal_weight, label='Equal-Weight Baseline', 
             linewidth=2, color='#95E1D3', linestyle=':', alpha=0.8, zorder=1)
-    ax1.axhline(y=initial_capital, color='gray', linestyle=':', alpha=0.5, linewidth=1, 
-               label=f'Initial Capital (${initial_capital:,.0f})', zorder=0)
     
-    # Highlight max drawdown period
+    # Highlight max drawdown period (no label to avoid duplication)
     running_max = np.maximum.accumulate(portfolio_value)
     drawdown = (portfolio_value - running_max) / running_max
     max_dd_idx = np.argmin(drawdown)
@@ -375,36 +373,35 @@ def create_portfolio_performance():
     max_dd_start = max_dd_start[-1] if len(max_dd_start) > 0 else 0
     
     if max_dd_start < max_dd_idx:
-        ax1.axvspan(max_dd_start, max_dd_idx, alpha=0.2, color='red', 
-                   label=f'Max Drawdown Period ({max_drawdown:.1%})', zorder=0)
+        ax1.axvspan(max_dd_start, max_dd_idx, alpha=0.15, color='red', zorder=0)
     
-    # Format metrics for display
+    # Format metrics for display (clean, no duplication) - centered
     metrics_text = (
-        f'Our MARL Strategy:\n'
         f'Sharpe Ratio: {sharpe_ratio:.2f}\n'
         f'Max Drawdown: {max_drawdown:.1%}\n'
         f'Cumulative Return: {cumulative_return:.1%}'
     )
-    ax1.text(0.02, 0.98, metrics_text, transform=ax1.transAxes, 
-            fontsize=10, verticalalignment='top',
-            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+    ax1.text(0.5, 0.5, metrics_text, transform=ax1.transAxes, 
+            fontsize=12, verticalalignment='center', horizontalalignment='center',
+            bbox=dict(boxstyle='round,pad=0.8', facecolor='white', 
+                    edgecolor='#4ECDC4', linewidth=3, alpha=0.95), zorder=10)
     
     ax1.set_xlabel('Trading Days', fontsize=12, fontweight='bold')
     ax1.set_ylabel('Portfolio Value ($)', fontsize=12, fontweight='bold')
     ax1.set_title('Portfolio Performance: MARL Strategy vs Baselines', 
                 fontsize=14, fontweight='bold')
-    ax1.legend(fontsize=10, loc='upper left')
+    ax1.legend(fontsize=10, loc='upper left', framealpha=0.95)
     ax1.grid(True, alpha=0.3)
     
     # Daily returns distribution (use the actual calculated returns)
-    ax2.hist(daily_returns_actual, bins=50, alpha=0.7, color='#4ECDC4', edgecolor='black', linewidth=0.5)
-    ax2.axvline(x=0, color='red', linestyle='--', linewidth=2, label='Zero Return')
+    ax2.hist(daily_returns_actual, bins=50, alpha=0.7, color='#4ECDC4', edgecolor='white', linewidth=1)
+    ax2.axvline(x=0, color='red', linestyle='--', linewidth=2, label='Zero Return', zorder=3)
     ax2.axvline(x=mean_daily_return, color='green', linestyle='--', linewidth=2, 
-               label=f'Mean Return: {mean_daily_return:.4f} ({mean_daily_return*100:.2f}%)')
+               label=f'Mean: {mean_daily_return*100:.2f}%', zorder=3)
     ax2.set_xlabel('Daily Return', fontsize=12, fontweight='bold')
     ax2.set_ylabel('Frequency', fontsize=12, fontweight='bold')
     ax2.set_title('Daily Returns Distribution', fontsize=13, fontweight='bold')
-    ax2.legend(fontsize=10)
+    ax2.legend(fontsize=10, framealpha=0.95, loc='upper right')
     ax2.grid(True, alpha=0.3, axis='y')
     
     # Ensure x-axis shows reasonable range
@@ -649,7 +646,7 @@ def _draw_nodes(ax, stocks, pos, node_colors, size=0.18, fontsize=11):
     for stock in stocks:
         if stock in pos:
             # Main node with better visibility
-            circle = Circle(pos[stock], size, color=node_colors.get(stock, '#95A5A6'), 
+            circle = Circle(pos[stock], size, facecolor=node_colors.get(stock, '#95A5A6'), 
                           alpha=0.95, zorder=3, edgecolor='white', linewidth=3.5)
             ax.add_patch(circle)
             
@@ -661,571 +658,632 @@ def _draw_nodes(ax, stocks, pos, node_colors, size=0.18, fontsize=11):
 
 
 def create_graph_structure_overview():
-    """Figure 7a: Overall graph structure with all edge types - simplified and clean design."""
-    from matplotlib.patches import Circle, FancyBboxPatch, Rectangle
+    """Figure 7a: Overall graph structure with all edge types - modern, clean, professional design."""
+    from matplotlib.patches import Circle, FancyBboxPatch
     from matplotlib.lines import Line2D
     from matplotlib.patheffects import withStroke
+    import networkx as nx
     
     stocks, sectors, G_corr, G_sector, G_fund, pos, node_colors, colors = _get_graph_data_and_layout()
     
-    # Even larger figure with generous margins - increased top space for title
-    fig = plt.figure(figsize=(20, 14), facecolor='white')
-    gs = fig.add_gridspec(2, 2, hspace=0.7, wspace=0.6, 
-                          left=0.10, right=0.94, top=0.90, bottom=0.10)  # More top space, more bottom space
+    # Modern, spacious layout with better proportions
+    fig = plt.figure(figsize=(22, 16), facecolor='white')
     
-    # Main graph (top, spans 2 columns) - simplified, no overlapping elements
-    ax_main = fig.add_subplot(gs[0, :])
-    ax_main.set_facecolor('#FAFAFA')
+    # Single main plot with better spacing
+    ax_main = fig.add_subplot(111)
+    ax_main.set_facecolor('#FFFFFF')
     
-    # Draw all edges - simplified, no labels to avoid clutter
+    # Use a more sophisticated layout algorithm for better node distribution
+    # Create a combined graph for layout
+    G_combined = nx.Graph()
+    G_combined.add_nodes_from(stocks)
+    G_combined.add_edges_from(list(G_corr.edges()) + list(G_sector.edges()) + list(G_fund.edges()))
+    
+    # Use spring layout for natural node positioning
+    pos_spring = nx.spring_layout(G_combined, k=3, iterations=100, seed=42)
+    
+    # Scale and center the layout
+    x_coords = [p[0] for p in pos_spring.values()]
+    y_coords = [p[1] for p in pos_spring.values()]
+    x_range = max(x_coords) - min(x_coords) if max(x_coords) != min(x_coords) else 1
+    y_range = max(y_coords) - min(y_coords) if max(y_coords) != min(y_coords) else 1
+    
+    # Normalize to a larger, centered space
+    scale = 8
+    for stock in pos_spring:
+        pos_spring[stock] = (
+            (pos_spring[stock][0] - min(x_coords)) / x_range * scale - scale/2,
+            (pos_spring[stock][1] - min(y_coords)) / y_range * scale - scale/2
+        )
+    
+    # Draw edges with modern styling - correlation edges first (thickest, most visible)
     for edge in G_corr.edges():
-        if edge[0] in pos and edge[1] in pos:
+        if edge[0] in pos_spring and edge[1] in pos_spring:
             weight = G_corr[edge[0]][edge[1]].get('weight', 0.7)
-            ax_main.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                        [pos[edge[0]][1], pos[edge[1]][1]], 
-                        color='#E74C3C', linewidth=weight*4 + 2, 
-                        alpha=0.7, zorder=1, solid_capstyle='round')
+            ax_main.plot([pos_spring[edge[0]][0], pos_spring[edge[1]][0]], 
+                        [pos_spring[edge[0]][1], pos_spring[edge[1]][1]], 
+                        color='#FF6B6B', linewidth=weight*5 + 1.5, 
+                        alpha=0.5, zorder=1, solid_capstyle='round')
     
+    # Sector edges (medium visibility)
     for edge in G_sector.edges():
-        if edge[0] in pos and edge[1] in pos and edge not in G_corr.edges():
-            ax_main.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                        [pos[edge[0]][1], pos[edge[1]][1]], 
-                        color='#3498DB', linewidth=3, linestyle='--', 
-                        dashes=(10, 5), alpha=0.6, zorder=1)
+        if edge[0] in pos_spring and edge[1] in pos_spring and edge not in G_corr.edges():
+            ax_main.plot([pos_spring[edge[0]][0], pos_spring[edge[1]][0]], 
+                        [pos_spring[edge[0]][1], pos_spring[edge[1]][1]], 
+                        color='#4ECDC4', linewidth=2.5, linestyle='--', 
+                        dashes=(12, 6), alpha=0.4, zorder=1)
     
+    # Fundamental edges (subtle)
     for edge in G_fund.edges():
-        if edge[0] in pos and edge[1] in pos and edge not in G_corr.edges() and edge not in G_sector.edges():
+        if edge[0] in pos_spring and edge[1] in pos_spring and edge not in G_corr.edges() and edge not in G_sector.edges():
             weight = G_fund[edge[0]][edge[1]].get('weight', 0.7)
-            ax_main.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                        [pos[edge[0]][1], pos[edge[1]][1]], 
-                        color='#2ECC71', linewidth=weight*3 + 1.5, 
-                        linestyle=':', dashes=(3, 5), alpha=0.6, zorder=1)
+            ax_main.plot([pos_spring[edge[0]][0], pos_spring[edge[1]][0]], 
+                        [pos_spring[edge[0]][1], pos_spring[edge[1]][1]], 
+                        color='#95E1D3', linewidth=weight*2 + 1, 
+                        linestyle=':', dashes=(4, 6), alpha=0.35, zorder=1)
     
-    _draw_nodes(ax_main, stocks, pos, node_colors, size=0.25, fontsize=13)
+    # Draw nodes with modern, larger design
+    for stock in stocks:
+        if stock in pos_spring:
+            # Outer glow effect
+            circle_outer = Circle(pos_spring[stock], 0.35, facecolor=node_colors.get(stock, '#95A5A6'), 
+                                 alpha=0.15, zorder=2)
+            ax_main.add_patch(circle_outer)
+            
+            # Main node
+            circle = Circle(pos_spring[stock], 0.28, facecolor=node_colors.get(stock, '#95A5A6'), 
+                          alpha=0.95, zorder=3, edgecolor='white', linewidth=4)
+            ax_main.add_patch(circle)
+            
+            # Label with modern styling
+            text = ax_main.text(pos_spring[stock][0], pos_spring[stock][1], stock, 
+                              ha='center', va='center', fontsize=13, 
+                              fontweight='bold', color='white', zorder=5)
+            text.set_path_effects([withStroke(linewidth=5, foreground='black', alpha=0.8)])
     
-    # Expanded limits with more padding
-    ax_main.set_xlim(-5.0, 7.5)
-    ax_main.set_ylim(-5.5, 3.5)
-    ax_main.set_title('Heterogeneous Stock Graph: Complete Multi-Relational Structure', 
-                     fontsize=17, fontweight='bold', pad=40, color=colors['text'])  # Increased pad
+    # Set limits with generous padding
+    all_x = [p[0] for p in pos_spring.values()]
+    all_y = [p[1] for p in pos_spring.values()]
+    padding = 2.5
+    ax_main.set_xlim(min(all_x) - padding, max(all_x) + padding)
+    ax_main.set_ylim(min(all_y) - padding, max(all_y) + padding)
+    
+    # Modern title
+    ax_main.set_title('Heterogeneous Stock Graph: Multi-Relational Structure', 
+                     fontsize=20, fontweight='bold', pad=30, color='#2C3E50')
     ax_main.axis('off')
     
-    # Simplified legend - combined, positioned outside plot area
+    # Modern legend - positioned at bottom center, horizontal layout
     legend_elements = [
-        Line2D([0], [0], color='#E74C3C', linewidth=6, label='Rolling Correlation'),
-        Line2D([0], [0], color='#3498DB', linestyle='--', linewidth=4, dashes=(10, 5), label='Sector/Industry'),
-        Line2D([0], [0], color='#2ECC71', linestyle=':', linewidth=4, dashes=(3, 5), label='Fundamental Similarity'),
-        mpatches.Patch(color=colors['tech'], label='Tech'),
-        mpatches.Patch(color=colors['finance'], label='Finance'),
-        mpatches.Patch(color=colors['healthcare'], label='Healthcare'),
-        mpatches.Patch(color=colors['consumer'], label='Consumer'),
-        mpatches.Patch(color=colors['energy'], label='Energy'),
+        Line2D([0], [0], color='#FF6B6B', linewidth=6, label='Rolling Correlation', alpha=0.7),
+        Line2D([0], [0], color='#4ECDC4', linestyle='--', linewidth=4, dashes=(12, 6), label='Sector/Industry', alpha=0.6),
+        Line2D([0], [0], color='#95E1D3', linestyle=':', linewidth=4, dashes=(4, 6), label='Fundamental Similarity', alpha=0.5),
+        mpatches.Patch(color=colors['tech'], label='Tech', alpha=0.9),
+        mpatches.Patch(color=colors['finance'], label='Finance', alpha=0.9),
+        mpatches.Patch(color=colors['healthcare'], label='Healthcare', alpha=0.9),
+        mpatches.Patch(color=colors['consumer'], label='Consumer', alpha=0.9),
+        mpatches.Patch(color=colors['energy'], label='Energy', alpha=0.9),
     ]
-    legend = ax_main.legend(handles=legend_elements, loc='upper right', fontsize=12, 
+    legend = ax_main.legend(handles=legend_elements, loc='lower center', fontsize=13, 
                            frameon=True, fancybox=True, shadow=True, 
-                           framealpha=0.95, edgecolor='gray', facecolor='white',
-                           bbox_to_anchor=(0.995, 0.995), ncol=2)
+                           framealpha=0.98, edgecolor='#BDC3C7', facecolor='white',
+                           bbox_to_anchor=(0.5, -0.05), ncol=5, columnspacing=2.0, handlelength=2.5)
     legend.get_frame().set_linewidth(2)
     
-    # Statistics - moved to upper right to avoid overlap with bottom subplots
-    stats_text = ('14 Nodes\n34 Edges')
-    stats_box = FancyBboxPatch((0.78, 0.88), 0.20, 0.10, 
-                               boxstyle="round,pad=0.03", 
+    # Statistics box - modern, minimal design at top right
+    stats_text = '14 Nodes  |  34 Edges'
+    stats_box = FancyBboxPatch((0.75, 0.92), 0.23, 0.06, 
+                               boxstyle="round,pad=0.015", 
                                transform=ax_main.transAxes,
                                facecolor='white', edgecolor='#34495E', 
-                               linewidth=2.5, alpha=0.95)
+                               linewidth=2, alpha=0.98)
     ax_main.add_patch(stats_box)
-    ax_main.text(0.88, 0.93, stats_text, transform=ax_main.transAxes, 
-                fontsize=12, verticalalignment='center', horizontalalignment='center',
-                color=colors['text'], fontweight='bold')
+    ax_main.text(0.865, 0.95, stats_text, transform=ax_main.transAxes, 
+                fontsize=13, verticalalignment='center', horizontalalignment='center',
+                color='#2C3E50', fontweight='bold')
     
-    # Detail views (bottom row) - simplified
-    # Detail 1: Technology cluster zoom
-    ax1 = fig.add_subplot(gs[1, 0])
-    ax1.set_facecolor('#FAFAFA')
-    tech_stocks = sectors['tech']
-    tech_pos = {s: pos[s] for s in tech_stocks if s in pos}
-    
-    # Draw tech cluster edges
-    for edge in G_corr.edges():
-        if edge[0] in tech_pos and edge[1] in tech_pos:
-            weight = G_corr[edge[0]][edge[1]].get('weight', 0.7)
-            ax1.plot([tech_pos[edge[0]][0], tech_pos[edge[1]][0]], 
-                    [tech_pos[edge[0]][1], tech_pos[edge[1]][1]], 
-                    color='#E74C3C', linewidth=weight*4 + 1, alpha=0.8, zorder=1)
-    for edge in G_sector.edges():
-        if edge[0] in tech_pos and edge[1] in tech_pos:
-            ax1.plot([tech_pos[edge[0]][0], tech_pos[edge[1]][0]], 
-                    [tech_pos[edge[0]][1], tech_pos[edge[1]][1]], 
-                    color='#3498DB', linewidth=2.5, linestyle='--', 
-                    dashes=(8, 4), alpha=0.7, zorder=1)
-    for edge in G_fund.edges():
-        if edge[0] in tech_pos and edge[1] in tech_pos:
-            weight = G_fund[edge[0]][edge[1]].get('weight', 0.7)
-            ax1.plot([tech_pos[edge[0]][0], tech_pos[edge[1]][0]], 
-                    [tech_pos[edge[0]][1], tech_pos[edge[1]][1]], 
-                    color='#2ECC71', linewidth=weight*3 + 1, linestyle=':', 
-                    dashes=(2, 4), alpha=0.6, zorder=1)
-    
-    for stock in tech_stocks:
-        if stock in tech_pos:
-            circle = Circle(tech_pos[stock], 0.16, color=node_colors[stock], 
-                          alpha=0.95, zorder=3, edgecolor='white', linewidth=3)
-            ax1.add_patch(circle)
-            text = ax1.text(tech_pos[stock][0], tech_pos[stock][1], stock, 
-                          ha='center', va='center', fontsize=10, 
-                          fontweight='bold', color='white', zorder=4)
-            text.set_path_effects([withStroke(linewidth=3, foreground='black')])
-    
-    # Adjust limits for tech cluster with generous padding
-    tech_x = [tech_pos[s][0] for s in tech_stocks if s in tech_pos]
-    tech_y = [tech_pos[s][1] for s in tech_stocks if s in tech_pos]
-    ax1.set_xlim(min(tech_x) - 1.5, max(tech_x) + 1.5)
-    ax1.set_ylim(min(tech_y) - 1.5, max(tech_y) + 1.5)
-    ax1.set_title('Technology Sector Cluster', 
-                 fontsize=14, fontweight='bold', color=colors['text'], pad=25)  # Increased pad
-    ax1.axis('off')
-    
-    # Detail 2: Cross-sector connections
-    ax2 = fig.add_subplot(gs[1, 1])
-    ax2.set_facecolor('#FAFAFA')
-    
-    # Draw all nodes
-    _draw_nodes(ax2, stocks, pos, node_colors, size=0.15, fontsize=9)
-    
-    # Highlight cross-sector edges only
-    cross_sector_edges = []
-    for edge in G_corr.edges():
-        s1, s2 = edge[0], edge[1]
-        s1_sector = next((k for k, v in sectors.items() if s1 in v), None)
-        s2_sector = next((k for k, v in sectors.items() if s2 in v), None)
-        if s1_sector != s2_sector and s1_sector and s2_sector:
-            cross_sector_edges.append(edge)
-            weight = G_corr[edge[0]][edge[1]].get('weight', 0.7)
-            ax2.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                    [pos[edge[0]][1], pos[edge[1]][1]], 
-                    color='#E74C3C', linewidth=weight*5 + 2, alpha=0.9, zorder=1)
-    
-    ax2.set_xlim(-5.0, 7.5)
-    ax2.set_ylim(-5.5, 3.5)
-    ax2.set_title(f'Cross-Sector Connections ({len(cross_sector_edges)} edges)', 
-                 fontsize=14, fontweight='bold', color=colors['text'], pad=25)  # Increased pad
-    ax2.axis('off')
-    
-    plt.suptitle('Figure 7a: Heterogeneous Graph Structure Overview', 
-                fontsize=19, fontweight='bold', y=0.96, color=colors['text'])  # Lowered y position
+    plt.tight_layout()
     plt.savefig(FIGS_DIR / 'figure7a_graph_structure_overview.png', 
-               bbox_inches='tight', dpi=300, facecolor='white')
+                dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
     print(f"✅ Created: figure7a_graph_structure_overview.png")
 
 
 def create_correlation_edges_figure():
-    """Figure 7b: Rolling Correlation Edges - simplified clean design."""
+    """Figure 7b: Rolling Correlation Edges - modern, clean, professional design."""
     from matplotlib.patches import Circle, FancyBboxPatch
-    from matplotlib.lines import Line2D
     from matplotlib.patheffects import withStroke
+    import networkx as nx
     
     stocks, sectors, G_corr, G_sector, G_fund, pos, node_colors, colors = _get_graph_data_and_layout()
     
-    # Larger figure with generous margins
-    fig = plt.figure(figsize=(20, 14), facecolor='white')
-    gs = fig.add_gridspec(2, 2, hspace=0.6, wspace=0.5, 
-                          left=0.08, right=0.95, top=0.94, bottom=0.08)
+    # Modern, spacious single-plot layout
+    fig = plt.figure(figsize=(22, 16), facecolor='white')
+    ax_main = fig.add_subplot(111)
+    ax_main.set_facecolor('#FFFFFF')
     
-    # Main view: All correlation edges (top row, spans 2 columns)
-    ax_main = fig.add_subplot(gs[0, :])
-    ax_main.set_facecolor('#FAFAFA')
+    # Use spring layout for natural node positioning
+    G_corr_only = nx.Graph()
+    G_corr_only.add_nodes_from(stocks)
+    G_corr_only.add_edges_from(G_corr.edges())
     
-    # Draw correlation edges - NO labels to avoid clutter
+    pos_spring = nx.spring_layout(G_corr_only, k=3.5, iterations=100, seed=42)
+    
+    # Scale and center the layout
+    x_coords = [p[0] for p in pos_spring.values()]
+    y_coords = [p[1] for p in pos_spring.values()]
+    x_range = max(x_coords) - min(x_coords) if max(x_coords) != min(x_coords) else 1
+    y_range = max(y_coords) - min(y_coords) if max(y_coords) != min(y_coords) else 1
+    
+    scale = 8
+    for stock in pos_spring:
+        pos_spring[stock] = (
+            (pos_spring[stock][0] - min(x_coords)) / x_range * scale - scale/2,
+            (pos_spring[stock][1] - min(y_coords)) / y_range * scale - scale/2
+        )
+    
+    # Draw correlation edges with gradient based on weight
     edge_weights = []
     for edge in G_corr.edges():
-        if edge[0] in pos and edge[1] in pos:
+        if edge[0] in pos_spring and edge[1] in pos_spring:
             weight = G_corr[edge[0]][edge[1]].get('weight', 0.7)
             edge_weights.append((edge, weight))
-            ax_main.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                        [pos[edge[0]][1], pos[edge[1]][1]], 
-                        color='#E74C3C', linewidth=weight*4 + 2.5, 
-                        alpha=0.7, zorder=1, solid_capstyle='round')
+            # Use gradient colors: stronger correlations are more vibrant
+            alpha_val = 0.3 + weight * 0.4  # 0.3 to 0.7
+            linewidth = weight * 6 + 1.5  # 1.5 to 5.7
+            ax_main.plot([pos_spring[edge[0]][0], pos_spring[edge[1]][0]], 
+                        [pos_spring[edge[0]][1], pos_spring[edge[1]][1]], 
+                        color='#FF6B6B', linewidth=linewidth, 
+                        alpha=alpha_val, zorder=1, solid_capstyle='round')
     
-    _draw_nodes(ax_main, stocks, pos, node_colors, size=0.25, fontsize=13)
+    # Draw nodes with modern styling
+    for stock in stocks:
+        if stock in pos_spring:
+            # Outer glow
+            circle_outer = Circle(pos_spring[stock], 0.35, facecolor=node_colors.get(stock, '#95A5A6'), 
+                                 alpha=0.15, zorder=2)
+            ax_main.add_patch(circle_outer)
+            
+            # Main node
+            circle = Circle(pos_spring[stock], 0.28, facecolor=node_colors.get(stock, '#95A5A6'), 
+                          alpha=0.95, zorder=3, edgecolor='white', linewidth=4)
+            ax_main.add_patch(circle)
+            
+            # Label
+            text = ax_main.text(pos_spring[stock][0], pos_spring[stock][1], stock, 
+                              ha='center', va='center', fontsize=13, 
+                              fontweight='bold', color='white', zorder=5)
+            text.set_path_effects([withStroke(linewidth=5, foreground='black', alpha=0.8)])
     
-    ax_main.set_xlim(-5.0, 7.5)
-    ax_main.set_ylim(-5.5, 3.5)
+    # Set limits with padding
+    all_x = [p[0] for p in pos_spring.values()]
+    all_y = [p[1] for p in pos_spring.values()]
+    padding = 2.5
+    ax_main.set_xlim(min(all_x) - padding, max(all_x) + padding)
+    ax_main.set_ylim(min(all_y) - padding, max(all_y) + padding)
+    
+    # Modern title
     ax_main.set_title('Rolling Correlation Edges: Dynamic Price Co-Movements', 
-                     fontsize=17, fontweight='bold', pad=40, color=colors['text'])  # Increased pad
+                     fontsize=20, fontweight='bold', pad=30, color='#2C3E50')
     ax_main.axis('off')
     
-    # Description - moved to upper right to avoid overlap
-    desc_text = ('Dynamic\n30-day rolling\nTop-K=10\nDaily update')
-    desc_box = FancyBboxPatch((0.75, 0.85), 0.23, 0.14, 
-                             boxstyle="round,pad=0.03", 
-                             transform=ax_main.transAxes,
-                             facecolor='#FFF3E0', edgecolor='#E74C3C', 
-                             linewidth=2.5, alpha=0.95)
-    ax_main.add_patch(desc_box)
-    ax_main.text(0.865, 0.92, desc_text, transform=ax_main.transAxes, 
-                fontsize=11, verticalalignment='center', horizontalalignment='center',
-                color=colors['text'], fontweight='bold')
-    
-    # Detail 1: Strongest correlations (bottom left)
-    ax1 = fig.add_subplot(gs[1, 0])
-    ax1.set_facecolor('#FAFAFA')
-    
-    # Show only top 5 strongest correlations - simplified, no labels
-    sorted_edges = sorted(edge_weights, key=lambda x: x[1], reverse=True)[:5]
-    strong_stocks = set()
-    for (edge, weight) in sorted_edges:
-        strong_stocks.add(edge[0])
-        strong_stocks.add(edge[1])
-        ax1.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                [pos[edge[0]][1], pos[edge[1]][1]], 
-                color='#E74C3C', linewidth=weight*5 + 3, 
-                alpha=0.85, zorder=1)
-    
-    for stock in strong_stocks:
-        if stock in pos:
-            circle = Circle(pos[stock], 0.20, color=node_colors[stock], 
-                          alpha=0.95, zorder=3, edgecolor='white', linewidth=3)
-            ax1.add_patch(circle)
-            text = ax1.text(pos[stock][0], pos[stock][1], stock, 
-                          ha='center', va='center', fontsize=11, 
-                          fontweight='bold', color='white', zorder=4)
-            text.set_path_effects([withStroke(linewidth=4, foreground='black', alpha=0.8)])
-    
-    # Draw other nodes (grayed out)
-    for stock in stocks:
-        if stock in pos and stock not in strong_stocks:
-            circle = Circle(pos[stock], 0.15, color='#BDC3C7', 
-                          alpha=0.3, zorder=2, edgecolor='gray', linewidth=1)
-            ax1.add_patch(circle)
-            ax1.text(pos[stock][0], pos[stock][1], stock, 
-                    ha='center', va='center', fontsize=9, 
-                    color='gray', zorder=3, alpha=0.5)
-    
-    ax1.set_xlim(-5.0, 7.5)
-    ax1.set_ylim(-5.5, 3.5)
-    ax1.set_title('Top 5 Strongest Correlations', 
-                 fontsize=14, fontweight='bold', color=colors['text'], pad=20)
-    ax1.axis('off')
-    
-    # Detail 2: Correlation distribution (bottom right)
-    ax2 = fig.add_subplot(gs[1, 1])
-    ax2.set_facecolor('white')
-    
+    # Statistics and info box - modern, minimal design at top right
     weights = [w for _, w in edge_weights]
-    ax2.hist(weights, bins=15, color='#E74C3C', edgecolor='darkred', 
-            linewidth=1.5, alpha=0.7)
-    ax2.axvline(x=np.mean(weights), color='blue', linestyle='--', 
-               linewidth=2, label=f'Mean: {np.mean(weights):.3f}')
-    ax2.axvline(x=np.median(weights), color='green', linestyle='--', 
-               linewidth=2, label=f'Median: {np.median(weights):.3f}')
-    ax2.set_xlabel('Correlation Coefficient', fontsize=11, fontweight='bold')
-    ax2.set_ylabel('Frequency', fontsize=11, fontweight='bold')
-    ax2.set_title('Correlation Strength Distribution', 
-                 fontsize=12, fontweight='bold', color=colors['text'], pad=10)
-    ax2.legend(fontsize=9)
-    ax2.grid(True, alpha=0.3, axis='y')
+    stats_text = (
+        f'{len(edge_weights)} Edges\n'
+        f'Mean: {np.mean(weights):.3f}\n'
+        f'Range: [{np.min(weights):.3f}, {np.max(weights):.3f}]'
+    )
+    stats_box = FancyBboxPatch((0.72, 0.88), 0.26, 0.10, 
+                               boxstyle="round,pad=0.015", 
+                               transform=ax_main.transAxes,
+                               facecolor='white', edgecolor='#FF6B6B', 
+                               linewidth=2.5, alpha=0.98)
+    ax_main.add_patch(stats_box)
+    ax_main.text(0.85, 0.93, stats_text, transform=ax_main.transAxes, 
+                fontsize=12, verticalalignment='center', horizontalalignment='center',
+                color='#2C3E50', fontweight='bold')
     
-    plt.suptitle('Figure 7b: Rolling Correlation Edges Analysis', 
-                fontsize=19, fontweight='bold', y=0.98, color=colors['text'])
+    # Description box - bottom right
+    desc_text = (
+        'Dynamic 30-day rolling\n'
+        'Top-K=10 per stock\n'
+        'Daily update'
+    )
+    desc_box = FancyBboxPatch((0.72, 0.02), 0.26, 0.10, 
+                             boxstyle="round,pad=0.015", 
+                             transform=ax_main.transAxes,
+                             facecolor='#FFF5F5', edgecolor='#FF6B6B', 
+                             linewidth=2, alpha=0.95)
+    ax_main.add_patch(desc_box)
+    ax_main.text(0.85, 0.07, desc_text, transform=ax_main.transAxes, 
+                fontsize=11, verticalalignment='center', horizontalalignment='center',
+                color='#2C3E50', fontweight='normal')
+    
+    plt.tight_layout()
     plt.savefig(FIGS_DIR / 'figure7b_correlation_edges.png', 
-               bbox_inches='tight', dpi=300, facecolor='white')
+                dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
     print(f"✅ Created: figure7b_correlation_edges.png")
 
 
 def create_sector_edges_figure():
-    """Figure 7c: Sector/Industry Edges - simplified clean design."""
+    """Figure 7c: Sector/Industry Edges - modern, clean, professional design."""
     from matplotlib.patches import Circle, FancyBboxPatch
     from matplotlib.patheffects import withStroke
+    import networkx as nx
     
     stocks, sectors, G_corr, G_sector, G_fund, pos, node_colors, colors = _get_graph_data_and_layout()
     
-    # Larger figure with generous margins
-    fig = plt.figure(figsize=(20, 14), facecolor='white')
-    gs = fig.add_gridspec(2, 2, hspace=0.6, wspace=0.5, 
-                          left=0.08, right=0.95, top=0.94, bottom=0.08)
+    # Modern, spacious single-plot layout
+    fig = plt.figure(figsize=(22, 16), facecolor='white')
+    ax_main = fig.add_subplot(111)
+    ax_main.set_facecolor('#FFFFFF')
     
-    # Main view: All sector edges (top row, spans 2 columns)
-    ax_main = fig.add_subplot(gs[0, :])
-    ax_main.set_facecolor('#FAFAFA')
+    # Use spring layout for natural node positioning
+    G_sector_only = nx.Graph()
+    G_sector_only.add_nodes_from(stocks)
+    G_sector_only.add_edges_from(G_sector.edges())
     
-    # Draw sector edges - simplified
+    pos_spring = nx.spring_layout(G_sector_only, k=3.5, iterations=100, seed=42)
+    
+    # Scale and center the layout
+    x_coords = [p[0] for p in pos_spring.values()]
+    y_coords = [p[1] for p in pos_spring.values()]
+    x_range = max(x_coords) - min(x_coords) if max(x_coords) != min(x_coords) else 1
+    y_range = max(y_coords) - min(y_coords) if max(y_coords) != min(y_coords) else 1
+    
+    scale = 8
+    for stock in pos_spring:
+        pos_spring[stock] = (
+            (pos_spring[stock][0] - min(x_coords)) / x_range * scale - scale/2,
+            (pos_spring[stock][1] - min(y_coords)) / y_range * scale - scale/2
+        )
+    
+    # Draw sector edges with modern styling
     for edge in G_sector.edges():
-        if edge[0] in pos and edge[1] in pos:
-            ax_main.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                        [pos[edge[0]][1], pos[edge[1]][1]], 
-                        color='#3498DB', linewidth=3.5, linestyle='--', 
-                        dashes=(10, 5), alpha=0.7, zorder=1)
+        if edge[0] in pos_spring and edge[1] in pos_spring:
+            ax_main.plot([pos_spring[edge[0]][0], pos_spring[edge[1]][0]], 
+                        [pos_spring[edge[0]][1], pos_spring[edge[1]][1]], 
+                        color='#4ECDC4', linewidth=3, linestyle='--', 
+                        dashes=(12, 6), alpha=0.5, zorder=1)
     
-    _draw_nodes(ax_main, stocks, pos, node_colors, size=0.25, fontsize=13)
+    # Draw nodes with modern styling
+    for stock in stocks:
+        if stock in pos_spring:
+            # Outer glow
+            circle_outer = Circle(pos_spring[stock], 0.35, facecolor=node_colors.get(stock, '#95A5A6'), 
+                                 alpha=0.15, zorder=2)
+            ax_main.add_patch(circle_outer)
+            
+            # Main node
+            circle = Circle(pos_spring[stock], 0.28, facecolor=node_colors.get(stock, '#95A5A6'), 
+                          alpha=0.95, zorder=3, edgecolor='white', linewidth=4)
+            ax_main.add_patch(circle)
+            
+            # Label
+            text = ax_main.text(pos_spring[stock][0], pos_spring[stock][1], stock, 
+                              ha='center', va='center', fontsize=13, 
+                              fontweight='bold', color='white', zorder=5)
+            text.set_path_effects([withStroke(linewidth=5, foreground='black', alpha=0.8)])
     
-    ax_main.set_xlim(-5.0, 7.5)
-    ax_main.set_ylim(-5.5, 3.5)
-    ax_main.set_title('Sector/Industry Edges: Static Domain Knowledge', 
-                     fontsize=17, fontweight='bold', pad=30, color=colors['text'])
-    ax_main.axis('off')
-    
-    # Minimal description
-    desc_text = ('Static\nIndustry-based\nBinary edges\nNever updated')
-    desc_box = FancyBboxPatch((0.01, 0.01), 0.18, 0.14, 
-                             boxstyle="round,pad=0.025", 
-                             transform=ax_main.transAxes,
-                             facecolor='#E3F2FD', edgecolor='#3498DB', 
-                             linewidth=2.5, alpha=0.95)
-    ax_main.add_patch(desc_box)
-    ax_main.text(0.10, 0.08, desc_text, transform=ax_main.transAxes, 
-                fontsize=11, verticalalignment='center', horizontalalignment='center',
-                color=colors['text'], fontweight='bold')
-    
-    # Detail 1: Sector clusters (bottom left)
-    ax1 = fig.add_subplot(gs[1, 0])
-    ax1.set_facecolor('#FAFAFA')
-    
-    # Draw sector edges and highlight sectors
-    for edge in G_sector.edges():
-        if edge[0] in pos and edge[1] in pos:
-            ax1.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                    [pos[edge[0]][1], pos[edge[1]][1]], 
-                    color='#3498DB', linewidth=3, linestyle='--', 
-                    dashes=(10, 5), alpha=0.75, zorder=1)
-    
-    # Draw sector labels
+    # Draw sector labels at cluster centers - positioned to avoid node overlap
     sector_centers = {}
     for sector_name, sector_stocks in sectors.items():
         if len(sector_stocks) > 0:
-            x_coords = [pos[s][0] for s in sector_stocks if s in pos]
-            y_coords = [pos[s][1] for s in sector_stocks if s in pos]
+            x_coords = [pos_spring[s][0] for s in sector_stocks if s in pos_spring]
+            y_coords = [pos_spring[s][1] for s in sector_stocks if s in pos_spring]
             if x_coords and y_coords:
                 center_x = np.mean(x_coords)
                 center_y = np.mean(y_coords)
                 sector_centers[sector_name] = (center_x, center_y)
-                # Draw sector label - positioned clearly above cluster with more space
-                ax1.text(center_x, center_y + 1.2, sector_name.upper(), 
-                        ha='center', va='center', fontsize=14, 
-                        fontweight='bold', color=colors[sector_name],
-                        bbox=dict(boxstyle='round,pad=0.7', 
-                                facecolor='white', alpha=0.95,
-                                edgecolor=colors[sector_name], linewidth=3),
-                        zorder=6)
+                
+                # Calculate label position - move further away from nodes
+                # Find the maximum distance from center to any node in this sector
+                max_dist = 0
+                for stock in sector_stocks:
+                    if stock in pos_spring:
+                        dist = np.sqrt((pos_spring[stock][0] - center_x)**2 + 
+                                      (pos_spring[stock][1] - center_y)**2)
+                        max_dist = max(max_dist, dist)
+                
+                # Position label at a safe distance (further than any node)
+                label_offset = max(max_dist + 1.2, 2.0)  # At least 2.0 units away
+                
+                # Determine best direction (prefer upward)
+                label_y = center_y + label_offset
+                
+                # Draw sector label with modern styling - positioned safely above cluster
+                ax_main.text(center_x, label_y, sector_name.upper(), 
+                            ha='center', va='bottom', fontsize=15, 
+                            fontweight='bold', color=colors[sector_name],
+                            bbox=dict(boxstyle='round,pad=0.6', 
+                                    facecolor='white', alpha=0.95,
+                                    edgecolor=colors[sector_name], linewidth=2.5),
+                            zorder=6)
     
-    _draw_nodes(ax1, stocks, pos, node_colors, size=0.20, fontsize=11)
+    # Set limits with extra padding to accommodate sector labels
+    all_x = [p[0] for p in pos_spring.values()]
+    all_y = [p[1] for p in pos_spring.values()]
+    # Add extra top padding for sector labels
+    padding_x = 2.5
+    padding_y_bottom = 2.5
+    padding_y_top = 3.5  # Extra space at top for labels
+    ax_main.set_xlim(min(all_x) - padding_x, max(all_x) + padding_x)
+    ax_main.set_ylim(min(all_y) - padding_y_bottom, max(all_y) + padding_y_top)
     
-    ax1.set_xlim(-5.0, 7.5)
-    ax1.set_ylim(-5.5, 3.5)
-    ax1.set_title('Sector Clusters', 
-                 fontsize=14, fontweight='bold', color=colors['text'], pad=20)
-    ax1.axis('off')
+    # Modern title
+    ax_main.set_title('Sector/Industry Edges: Static Domain Knowledge', 
+                     fontsize=20, fontweight='bold', pad=30, color='#2C3E50')
+    ax_main.axis('off')
     
-    # Detail 2: Sector statistics (bottom right) - simplified table
-    ax2 = fig.add_subplot(gs[1, 1])
-    ax2.set_facecolor('white')
-    ax2.axis('off')
-    
-    # Create sector statistics table
-    sector_stats = []
+    # Statistics box - modern, minimal design at top right
+    sector_edge_count = len(G_sector.edges())
+    sector_stats_text = []
     for sector_name, sector_stocks in sectors.items():
-        num_stocks = len(sector_stocks)
-        num_edges = len([e for e in G_sector.edges() 
-                        if e[0] in sector_stocks and e[1] in sector_stocks])
-        sector_stats.append({
-            'Sector': sector_name.capitalize(),
-            'Stocks': num_stocks,
-            'Edges': num_edges,
-            'Density': f'{num_edges / (num_stocks * (num_stocks - 1) / 2) * 100:.1f}%' if num_stocks > 1 else 'N/A'
-        })
+        sector_edges = sum(1 for edge in G_sector.edges() 
+                          if edge[0] in sector_stocks and edge[1] in sector_stocks)
+        sector_stats_text.append(f'{sector_name.capitalize()}: {len(sector_stocks)} stocks, {sector_edges} edges')
     
-    # Draw table
-    table_data = [['Sector', 'Stocks', 'Edges', 'Density']]
-    for stat in sector_stats:
-        table_data.append([stat['Sector'], str(stat['Stocks']), 
-                          str(stat['Edges']), stat['Density']])
+    stats_text = (
+        f'{sector_edge_count} Total Edges\n'
+        f'{len(sectors)} Sectors\n'
+        f'Static structure'
+    )
+    stats_box = FancyBboxPatch((0.72, 0.88), 0.26, 0.10, 
+                               boxstyle="round,pad=0.015", 
+                               transform=ax_main.transAxes,
+                               facecolor='white', edgecolor='#4ECDC4', 
+                               linewidth=2.5, alpha=0.98)
+    ax_main.add_patch(stats_box)
+    ax_main.text(0.85, 0.93, stats_text, transform=ax_main.transAxes, 
+                fontsize=12, verticalalignment='center', horizontalalignment='center',
+                color='#2C3E50', fontweight='bold')
     
-    table = ax2.table(cellText=table_data[1:], colLabels=table_data[0],
-                     cellLoc='center', loc='center',
-                     colWidths=[0.3, 0.2, 0.2, 0.3])
-    table.auto_set_font_size(False)
-    table.set_fontsize(12)
-    table.scale(1, 2.5)  # Taller rows
+    # Description box - bottom right
+    desc_text = (
+        'Static industry-based\n'
+        'Binary edges\n'
+        'Never updated'
+    )
+    desc_box = FancyBboxPatch((0.72, 0.02), 0.26, 0.10, 
+                             boxstyle="round,pad=0.015", 
+                             transform=ax_main.transAxes,
+                             facecolor='#F0FDFC', edgecolor='#4ECDC4', 
+                             linewidth=2, alpha=0.95)
+    ax_main.add_patch(desc_box)
+    ax_main.text(0.85, 0.07, desc_text, transform=ax_main.transAxes, 
+                fontsize=11, verticalalignment='center', horizontalalignment='center',
+                color='#2C3E50', fontweight='normal')
     
-    # Style header
-    for i in range(4):
-        table[(0, i)].set_facecolor('#3498DB')
-        table[(0, i)].set_text_props(weight='bold', color='white')
-        table[(0, i)].set_edgecolor('white')
-        table[(0, i)].set_linewidth(2)
-    
-    # Style cells
-    for i in range(1, len(table_data)):
-        for j in range(4):
-            table[(i, j)].set_edgecolor('#BDC3C7')
-            table[(i, j)].set_linewidth(1)
-            if j == 0:  # Sector column
-                sector_name = table_data[i][0].lower()
-                if sector_name in colors:
-                    table[(i, j)].set_facecolor(colors[sector_name] + '40')  # Add transparency
-    
-    ax2.set_title('Sector Connectivity Statistics', 
-                 fontsize=14, fontweight='bold', color=colors['text'], pad=30)
-    
-    plt.suptitle('Figure 7c: Sector/Industry Edges Analysis', 
-                fontsize=19, fontweight='bold', y=0.98, color=colors['text'])
+    plt.tight_layout()
     plt.savefig(FIGS_DIR / 'figure7c_sector_edges.png', 
-               bbox_inches='tight', dpi=300, facecolor='white')
+                dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
     print(f"✅ Created: figure7c_sector_edges.png")
 
 
 def create_fundamental_edges_figure():
-    """Figure 7d: Fundamental Similarity Edges - simplified clean design."""
+    """Figure 7d: Fundamental Similarity Edges - modern, clean, professional design."""
     from matplotlib.patches import Circle, FancyBboxPatch
     from matplotlib.patheffects import withStroke
+    import networkx as nx
     
     stocks, sectors, G_corr, G_sector, G_fund, pos, node_colors, colors = _get_graph_data_and_layout()
     
-    # Larger figure with generous margins
-    fig = plt.figure(figsize=(20, 14), facecolor='white')
-    gs = fig.add_gridspec(2, 2, hspace=0.6, wspace=0.5, 
-                          left=0.08, right=0.95, top=0.94, bottom=0.08)
+    # Modern, spacious single-plot layout
+    fig = plt.figure(figsize=(22, 16), facecolor='white')
+    ax_main = fig.add_subplot(111)
+    ax_main.set_facecolor('#FFFFFF')
     
-    # Main view: All fundamental edges (top row, spans 2 columns)
-    ax_main = fig.add_subplot(gs[0, :])
-    ax_main.set_facecolor('#FAFAFA')
+    # Use spring layout for natural node positioning
+    G_fund_only = nx.Graph()
+    G_fund_only.add_nodes_from(stocks)
+    G_fund_only.add_edges_from(G_fund.edges())
     
-    # Draw fundamental edges - NO labels to avoid clutter
+    pos_spring = nx.spring_layout(G_fund_only, k=3.5, iterations=100, seed=42)
+    
+    # Scale and center the layout
+    x_coords = [p[0] for p in pos_spring.values()]
+    y_coords = [p[1] for p in pos_spring.values()]
+    x_range = max(x_coords) - min(x_coords) if max(x_coords) != min(x_coords) else 1
+    y_range = max(y_coords) - min(y_coords) if max(y_coords) != min(y_coords) else 1
+    
+    scale = 8
+    for stock in pos_spring:
+        pos_spring[stock] = (
+            (pos_spring[stock][0] - min(x_coords)) / x_range * scale - scale/2,
+            (pos_spring[stock][1] - min(y_coords)) / y_range * scale - scale/2
+        )
+    
+    # Draw fundamental edges with gradient based on weight
     edge_weights = []
     for edge in G_fund.edges():
-        if edge[0] in pos and edge[1] in pos:
+        if edge[0] in pos_spring and edge[1] in pos_spring:
             weight = G_fund[edge[0]][edge[1]].get('weight', 0.7)
             edge_weights.append((edge, weight))
-            ax_main.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                        [pos[edge[0]][1], pos[edge[1]][1]], 
-                        color='#2ECC71', linewidth=weight*4 + 2.5, 
-                        linestyle=':', dashes=(3, 5), alpha=0.7, zorder=1)
+            # Use gradient colors: stronger similarities are more visible
+            alpha_val = 0.25 + weight * 0.35  # 0.25 to 0.6
+            linewidth = weight * 3 + 1  # 1 to 3.1
+            ax_main.plot([pos_spring[edge[0]][0], pos_spring[edge[1]][0]], 
+                        [pos_spring[edge[0]][1], pos_spring[edge[1]][1]], 
+                        color='#95E1D3', linewidth=linewidth, 
+                        linestyle=':', dashes=(4, 6), alpha=alpha_val, zorder=1)
     
-    _draw_nodes(ax_main, stocks, pos, node_colors, size=0.25, fontsize=13)
+    # Draw nodes with modern styling
+    for stock in stocks:
+        if stock in pos_spring:
+            # Outer glow
+            circle_outer = Circle(pos_spring[stock], 0.35, facecolor=node_colors.get(stock, '#95A5A6'), 
+                                 alpha=0.15, zorder=2)
+            ax_main.add_patch(circle_outer)
+            
+            # Main node
+            circle = Circle(pos_spring[stock], 0.28, facecolor=node_colors.get(stock, '#95A5A6'), 
+                          alpha=0.95, zorder=3, edgecolor='white', linewidth=4)
+            ax_main.add_patch(circle)
+            
+            # Label
+            text = ax_main.text(pos_spring[stock][0], pos_spring[stock][1], stock, 
+                              ha='center', va='center', fontsize=13, 
+                              fontweight='bold', color='white', zorder=5)
+            text.set_path_effects([withStroke(linewidth=5, foreground='black', alpha=0.8)])
     
-    ax_main.set_xlim(-5.0, 7.5)
-    ax_main.set_ylim(-5.5, 3.5)
+    # Set limits with padding
+    all_x = [p[0] for p in pos_spring.values()]
+    all_y = [p[1] for p in pos_spring.values()]
+    padding = 2.5
+    ax_main.set_xlim(min(all_x) - padding, max(all_x) + padding)
+    ax_main.set_ylim(min(all_y) - padding, max(all_y) + padding)
+    
+    # Modern title
     ax_main.set_title('Fundamental Similarity Edges: Long-Term Value Alignment', 
-                     fontsize=17, fontweight='bold', pad=30, color=colors['text'])
+                     fontsize=20, fontweight='bold', pad=30, color='#2C3E50')
     ax_main.axis('off')
     
-    # Minimal description
-    desc_text = ('Static\nCosine similarity\nP/E, ROE\nThreshold: >0.7\nQuarterly')
-    desc_box = FancyBboxPatch((0.01, 0.01), 0.18, 0.16, 
-                             boxstyle="round,pad=0.025", 
-                             transform=ax_main.transAxes,
-                             facecolor='#E8F5E9', edgecolor='#2ECC71', 
-                             linewidth=2.5, alpha=0.95)
-    ax_main.add_patch(desc_box)
-    ax_main.text(0.10, 0.09, desc_text, transform=ax_main.transAxes, 
-                fontsize=11, verticalalignment='center', horizontalalignment='center',
-                color=colors['text'], fontweight='bold')
-    
-    # Detail 1: Fundamental similarity network (bottom left)
-    ax1 = fig.add_subplot(gs[1, 0])
-    ax1.set_facecolor('#FAFAFA')
-    
-    # Draw all fundamental edges - NO labels
-    for edge, weight in edge_weights:
-        if edge[0] in pos and edge[1] in pos:
-            ax1.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                    [pos[edge[0]][1], pos[edge[1]][1]], 
-                    color='#2ECC71', linewidth=weight*4 + 2.5, 
-                    linestyle=':', dashes=(3, 5), alpha=0.75, zorder=1)
-    
-    _draw_nodes(ax1, stocks, pos, node_colors, size=0.20, fontsize=11)
-    
-    ax1.set_xlim(-5.0, 7.5)
-    ax1.set_ylim(-5.5, 3.5)
-    ax1.set_title('Fundamental Similarity Network', 
-                 fontsize=14, fontweight='bold', color=colors['text'], pad=20)
-    ax1.axis('off')
-    
-    # Detail 2: Similarity distribution (bottom right)
-    ax2 = fig.add_subplot(gs[1, 1])
-    ax2.set_facecolor('white')
-    
+    # Statistics and info box - modern, minimal design at top right
     weights = [w for _, w in edge_weights]
-    ax2.hist(weights, bins=12, color='#2ECC71', edgecolor='darkgreen', 
-            linewidth=1.5, alpha=0.7)
-    ax2.axvline(x=np.mean(weights), color='blue', linestyle='--', 
-               linewidth=2, label=f'Mean: {np.mean(weights):.3f}')
-    ax2.axvline(x=0.7, color='red', linestyle='--', 
-               linewidth=2, label='Threshold: 0.7')
-    ax2.set_xlabel('Fundamental Similarity', fontsize=11, fontweight='bold')
-    ax2.set_ylabel('Frequency', fontsize=11, fontweight='bold')
-    ax2.set_title('Fundamental Similarity Distribution', 
-                 fontsize=12, fontweight='bold', color=colors['text'], pad=10)
-    ax2.legend(fontsize=9)
-    ax2.grid(True, alpha=0.3, axis='y')
+    stats_text = (
+        f'{len(edge_weights)} Edges\n'
+        f'Mean: {np.mean(weights):.3f}\n'
+        f'Range: [{np.min(weights):.3f}, {np.max(weights):.3f}]'
+    )
+    stats_box = FancyBboxPatch((0.72, 0.88), 0.26, 0.10, 
+                               boxstyle="round,pad=0.015", 
+                               transform=ax_main.transAxes,
+                               facecolor='white', edgecolor='#95E1D3', 
+                               linewidth=2.5, alpha=0.98)
+    ax_main.add_patch(stats_box)
+    ax_main.text(0.85, 0.93, stats_text, transform=ax_main.transAxes, 
+                fontsize=12, verticalalignment='center', horizontalalignment='center',
+                color='#2C3E50', fontweight='bold')
     
-    plt.suptitle('Figure 7d: Fundamental Similarity Edges Analysis', 
-                fontsize=19, fontweight='bold', y=0.98, color=colors['text'])
+    # Description box - bottom right
+    desc_text = (
+        'Static cosine similarity\n'
+        'P/E, ROE metrics\n'
+        'Threshold: >0.7\n'
+        'Quarterly update'
+    )
+    desc_box = FancyBboxPatch((0.72, 0.02), 0.26, 0.12, 
+                             boxstyle="round,pad=0.015", 
+                             transform=ax_main.transAxes,
+                             facecolor='#F0FDFA', edgecolor='#95E1D3', 
+                             linewidth=2, alpha=0.95)
+    ax_main.add_patch(desc_box)
+    ax_main.text(0.85, 0.08, desc_text, transform=ax_main.transAxes, 
+                fontsize=11, verticalalignment='center', horizontalalignment='center',
+                color='#2C3E50', fontweight='normal')
+    
+    plt.tight_layout()
     plt.savefig(FIGS_DIR / 'figure7d_fundamental_edges.png', 
-               bbox_inches='tight', dpi=300, facecolor='white')
+                dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
     print(f"✅ Created: figure7d_fundamental_edges.png")
 
 
 def create_edge_comparison_figure():
-    """Figure 7e: Edge Type Comparison - simplified clean design."""
+    """Figure 7e: Edge Type Comparison - modern, clean, professional design."""
     from matplotlib.patches import Circle, FancyBboxPatch
-    from matplotlib.lines import Line2D
     from matplotlib.patheffects import withStroke
+    import networkx as nx
     
     stocks, sectors, G_corr, G_sector, G_fund, pos, node_colors, colors = _get_graph_data_and_layout()
     
-    # Larger figure with generous margins - increased spacing
-    fig = plt.figure(figsize=(22, 14), facecolor='white')
-    gs = fig.add_gridspec(2, 3, hspace=0.7, wspace=0.6, 
-                          left=0.08, right=0.96, top=0.90, bottom=0.10)  # More space
+    # Modern layout with better spacing - increased top space for suptitle
+    fig = plt.figure(figsize=(24, 16), facecolor='white')
+    gs = fig.add_gridspec(2, 3, hspace=0.5, wspace=0.4, 
+                          left=0.06, right=0.97, top=0.88, bottom=0.08)
     
-    # Comparison: All three edge types side by side
-    axes = []
+    # Use spring layout for consistent node positioning across all three graphs
+    G_combined = nx.Graph()
+    G_combined.add_nodes_from(stocks)
+    G_combined.add_edges_from(list(G_corr.edges()) + list(G_sector.edges()) + list(G_fund.edges()))
+    
+    pos_spring = nx.spring_layout(G_combined, k=3.5, iterations=100, seed=42)
+    
+    # Scale and center the layout
+    x_coords = [p[0] for p in pos_spring.values()]
+    y_coords = [p[1] for p in pos_spring.values()]
+    x_range = max(x_coords) - min(x_coords) if max(x_coords) != min(x_coords) else 1
+    y_range = max(y_coords) - min(y_coords) if max(y_coords) != min(y_coords) else 1
+    
+    scale = 8
+    for stock in pos_spring:
+        pos_spring[stock] = (
+            (pos_spring[stock][0] - min(x_coords)) / x_range * scale - scale/2,
+            (pos_spring[stock][1] - min(y_coords)) / y_range * scale - scale/2
+        )
+    
+    # Comparison: All three edge types side by side (top row)
     edge_types = [
-        (G_corr, '#E74C3C', 'Rolling Correlation', 'Dynamic'),
-        (G_sector, '#3498DB', 'Sector/Industry', 'Static'),
-        (G_fund, '#2ECC71', 'Fundamental Similarity', 'Static')
+        (G_corr, '#FF6B6B', 'Rolling Correlation', 'Dynamic'),
+        (G_sector, '#4ECDC4', 'Sector/Industry', 'Static'),
+        (G_fund, '#95E1D3', 'Fundamental Similarity', 'Static')
     ]
     
+    axes = []
     for idx, (G, edge_color, edge_name, edge_type) in enumerate(edge_types):
-        ax = fig.add_subplot(gs[0, idx])  # Top row for each edge type
-        ax.set_facecolor('#FAFAFA')
+        ax = fig.add_subplot(gs[0, idx])
+        ax.set_facecolor('#FFFFFF')
         
-        # Draw edges
+        # Draw edges with modern styling
         if edge_name == 'Rolling Correlation':
             for edge in G.edges():
-                if edge[0] in pos and edge[1] in pos:
+                if edge[0] in pos_spring and edge[1] in pos_spring:
                     weight = G[edge[0]][edge[1]].get('weight', 0.7)
-                    ax.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                           [pos[edge[0]][1], pos[edge[1]][1]], 
-                           color=edge_color, linewidth=weight*5 + 1, 
-                           alpha=0.8, zorder=1, solid_capstyle='round')
+                    alpha_val = 0.3 + weight * 0.4
+                    linewidth = weight * 6 + 1.5
+                    ax.plot([pos_spring[edge[0]][0], pos_spring[edge[1]][0]], 
+                           [pos_spring[edge[0]][1], pos_spring[edge[1]][1]], 
+                           color=edge_color, linewidth=linewidth, 
+                           alpha=alpha_val, zorder=1, solid_capstyle='round')
         elif edge_name == 'Sector/Industry':
             for edge in G.edges():
-                if edge[0] in pos and edge[1] in pos:
-                    ax.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                           [pos[edge[0]][1], pos[edge[1]][1]], 
+                if edge[0] in pos_spring and edge[1] in pos_spring:
+                    ax.plot([pos_spring[edge[0]][0], pos_spring[edge[1]][0]], 
+                           [pos_spring[edge[0]][1], pos_spring[edge[1]][1]], 
                            color=edge_color, linewidth=3, linestyle='--', 
-                           dashes=(10, 5), alpha=0.75, zorder=1)
+                           dashes=(12, 6), alpha=0.5, zorder=1)
         else:  # Fundamental
             for edge in G.edges():
-                if edge[0] in pos and edge[1] in pos:
+                if edge[0] in pos_spring and edge[1] in pos_spring:
                     weight = G[edge[0]][edge[1]].get('weight', 0.7)
-                    ax.plot([pos[edge[0]][0], pos[edge[1]][0]], 
-                           [pos[edge[0]][1], pos[edge[1]][1]], 
-                           color=edge_color, linewidth=weight*4 + 1.5, 
-                           linestyle=':', dashes=(3, 5), alpha=0.75, zorder=1)
+                    linewidth = weight * 3 + 1
+                    ax.plot([pos_spring[edge[0]][0], pos_spring[edge[1]][0]], 
+                           [pos_spring[edge[0]][1], pos_spring[edge[1]][1]], 
+                           color=edge_color, linewidth=linewidth, 
+                           linestyle=':', dashes=(4, 6), alpha=0.4, zorder=1)
         
-        _draw_nodes(ax, stocks, pos, node_colors, size=0.22, fontsize=11)
+        # Draw nodes with modern styling
+        for stock in stocks:
+            if stock in pos_spring:
+                # Outer glow
+                circle_outer = Circle(pos_spring[stock], 0.30, facecolor=node_colors.get(stock, '#95A5A6'), 
+                                     alpha=0.12, zorder=2)
+                ax.add_patch(circle_outer)
+                
+                # Main node
+                circle = Circle(pos_spring[stock], 0.24, facecolor=node_colors.get(stock, '#95A5A6'), 
+                              alpha=0.95, zorder=3, edgecolor='white', linewidth=3.5)
+                ax.add_patch(circle)
+                
+                # Label
+                text = ax.text(pos_spring[stock][0], pos_spring[stock][1], stock, 
+                              ha='center', va='center', fontsize=11, 
+                              fontweight='bold', color='white', zorder=5)
+                text.set_path_effects([withStroke(linewidth=4, foreground='black', alpha=0.8)])
         
-        ax.set_xlim(-5.0, 7.5)
-        ax.set_ylim(-5.5, 3.5)
+        # Set limits with padding
+        all_x = [p[0] for p in pos_spring.values()]
+        all_y = [p[1] for p in pos_spring.values()]
+        padding = 2.0
+        ax.set_xlim(min(all_x) - padding, max(all_x) + padding)
+        ax.set_ylim(min(all_y) - padding, max(all_y) + padding)
+        
+        # Modern title - reduced pad to avoid overlap with suptitle
         ax.set_title(f'{edge_name}\n({edge_type})', 
-                    fontsize=15, fontweight='bold', color=colors['text'], pad=35)  # Increased pad
+                    fontsize=16, fontweight='bold', pad=15, color='#2C3E50')
         ax.axis('off')
         axes.append(ax)
     
@@ -1234,46 +1292,52 @@ def create_edge_comparison_figure():
     ax_stats.set_facecolor('white')
     ax_stats.axis('off')
     
-    # Create comparison table
+    # Create comparison table with accurate counts
+    corr_count = len(G_corr.edges())
+    sector_count = len(G_sector.edges())
+    fund_count = len(G_fund.edges())
+    total_count = corr_count + sector_count + fund_count
+    
     comparison_data = [
         ['Edge Type', 'Count', 'Type', 'Updates', 'Weighted', 'Purpose'],
-        ['Rolling Correlation', '12', 'Dynamic', 'Daily', 'Yes', 'Short-term co-movements'],
-        ['Sector/Industry', '13', 'Static', 'Never', 'No', 'Industry-level factors'],
-        ['Fundamental Similarity', '9', 'Static', 'Quarterly', 'Yes', 'Long-term value alignment'],
-        ['Total', '34', 'Mixed', 'Mixed', 'Mixed', 'Multi-relational learning']
+        ['Rolling Correlation', str(corr_count), 'Dynamic', 'Daily', 'Yes', 'Short-term co-movements'],
+        ['Sector/Industry', str(sector_count), 'Static', 'Never', 'No', 'Industry-level factors'],
+        ['Fundamental Similarity', str(fund_count), 'Static', 'Quarterly', 'Yes', 'Long-term value alignment'],
+        ['Total', str(total_count), 'Mixed', 'Mixed', 'Mixed', 'Multi-relational learning']
     ]
     
     table = ax_stats.table(cellText=comparison_data[1:], colLabels=comparison_data[0],
                            cellLoc='center', loc='center',
                            colWidths=[0.24, 0.12, 0.12, 0.12, 0.12, 0.28])
     table.auto_set_font_size(False)
-    table.set_fontsize(12)
-    table.scale(1, 3.5)  # Even taller rows for better readability
+    table.set_fontsize(13)
+    table.scale(1, 3.0)
     
     # Style header
     for i in range(6):
         table[(0, i)].set_facecolor('#34495E')
-        table[(0, i)].set_text_props(weight='bold', color='white')
+        table[(0, i)].set_text_props(weight='bold', color='white', size=13)
         table[(0, i)].set_edgecolor('white')
-        table[(0, i)].set_linewidth(2)
+        table[(0, i)].set_linewidth(2.5)
     
-    # Style rows
-    row_colors = ['#FFEBEE', '#E3F2FD', '#E8F5E9', '#FFF9E6']
+    # Style rows with modern colors
+    row_colors = ['#FFF5F5', '#F0FDFC', '#F0FDFA', '#F8F9FA']
     for i in range(1, len(comparison_data)):
         for j in range(6):
             table[(i, j)].set_edgecolor('#BDC3C7')
-            table[(i, j)].set_linewidth(1)
+            table[(i, j)].set_linewidth(1.5)
             if i < len(comparison_data) - 1:
                 table[(i, j)].set_facecolor(row_colors[i-1])
+                table[(i, j)].set_text_props(size=12)
             else:  # Total row
                 table[(i, j)].set_facecolor('#F5F5F5')
-                table[(i, j)].set_text_props(weight='bold')
+                table[(i, j)].set_text_props(weight='bold', size=12)
     
     ax_stats.set_title('Edge Type Comparison: Key Characteristics', 
-                      fontsize=16, fontweight='bold', color=colors['text'], pad=40)  # Increased pad
+                      fontsize=17, fontweight='bold', color='#2C3E50', pad=20)
     
     plt.suptitle('Figure 7e: Edge Type Comparison and Analysis', 
-                fontsize=19, fontweight='bold', y=0.96, color=colors['text'])  # Lowered y
+                fontsize=20, fontweight='bold', y=0.98, color='#2C3E50')
     plt.savefig(FIGS_DIR / 'figure7e_edge_comparison.png', 
                bbox_inches='tight', dpi=300, facecolor='white')
     plt.close()
@@ -1300,9 +1364,9 @@ def create_gnn_architecture_diagram():
     from matplotlib.patheffects import withStroke
     import matplotlib.patches as mpatches
     
-    fig = plt.figure(figsize=(18, 12), facecolor='white')
-    gs = fig.add_gridspec(2, 2, hspace=0.35, wspace=0.3, 
-                          left=0.05, right=0.95, top=0.95, bottom=0.05)
+    fig = plt.figure(figsize=(20, 14), facecolor='white')
+    gs = fig.add_gridspec(2, 2, hspace=0.45, wspace=0.35, 
+                          left=0.06, right=0.96, top=0.89, bottom=0.07)
     
     colors = {
         'node': '#3498DB',
@@ -1355,7 +1419,7 @@ def create_gnn_architecture_diagram():
                     color=colors['text'], fontweight='bold', zorder=3)
     
     # Draw center node (larger, with PEARL and Time encoding)
-    center_circle = Circle(center_pos, 0.5, color=colors['node_center'], 
+    center_circle = Circle(center_pos, 0.5, facecolor=colors['node_center'], 
                           alpha=0.95, zorder=5, edgecolor='white', linewidth=4)
     ax_main.add_patch(center_circle)
     
@@ -1370,9 +1434,11 @@ def create_gnn_architecture_diagram():
     pearl_y = center_pos[1] + 0.6 * np.sin(theta)
     ax_main.plot(pearl_x, pearl_y, color=colors['pearl'], linewidth=3, 
                 linestyle=':', dashes=(4, 4), zorder=4, alpha=0.8)
-    ax_main.text(center_pos[0], center_pos[1] - 0.75, 'PEARL\nEmbedding', 
+    ax_main.text(center_pos[0], center_pos[1] - 0.95, 'PEARL\nEmbedding', 
                 ha='center', va='top', fontsize=10, fontweight='bold',
-                color=colors['pearl'], zorder=6)
+                color=colors['pearl'], zorder=6,
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', 
+                         alpha=0.9, edgecolor=colors['pearl'], linewidth=1.5))
     
     # Time encoding indicator
     time_ring = Circle(center_pos, 0.7, fill=False, edgecolor=colors['time'], 
@@ -1383,9 +1449,11 @@ def create_gnn_architecture_diagram():
     time_y = center_pos[1] + 0.7 * np.sin(theta)
     ax_main.plot(time_x, time_y, color=colors['time'], linewidth=2, 
                 linestyle='--', dashes=(6, 3), zorder=4, alpha=0.8)
-    ax_main.text(center_pos[0] - 0.9, center_pos[1], 'Time\nEncoding', 
+    ax_main.text(center_pos[0] - 1.1, center_pos[1], 'Time\nEncoding', 
                 ha='right', va='center', fontsize=10, fontweight='bold',
-                color=colors['time'], zorder=6)
+                color=colors['time'], zorder=6,
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', 
+                         alpha=0.9, edgecolor=colors['time'], linewidth=1.5))
     
     # Center node label
     text = ax_main.text(center_pos[0], center_pos[1], 'Stock i\n(hub)', 
@@ -1396,44 +1464,44 @@ def create_gnn_architecture_diagram():
     # Draw neighbor nodes
     for x, y, name, sector, weight in neighbor_positions:
         node_color = colors['node']
-        circle = Circle((x, y), 0.35, color=node_color, alpha=0.9, 
+        circle = Circle((x, y), 0.35, facecolor=node_color, alpha=0.9, 
                        zorder=5, edgecolor='white', linewidth=2.5)
         ax_main.add_patch(circle)
         text = ax_main.text(x, y, name, ha='center', va='center', 
                            fontsize=9, fontweight='bold', color='white', zorder=6)
         text.set_path_effects([withStroke(linewidth=2, foreground='black')])
     
-    # Aggregation annotation
-    ax_main.annotate('', xy=(0.8, 0.8), xytext=(0.3, 0.3),
+    # Aggregation annotation - repositioned to avoid overlap
+    ax_main.annotate('', xy=(1.0, 1.0), xytext=(0.4, 0.4),
                     arrowprops=dict(arrowstyle='->', lw=3, color=colors['attention']),
                     zorder=8)
-    ax_main.text(0.9, 0.9, 'Attention\nAggregation', 
+    ax_main.text(1.2, 1.2, 'Attention\nAggregation', 
                 ha='left', va='bottom', fontsize=10, fontweight='bold',
                 bbox=dict(boxstyle='round,pad=0.5', facecolor='white', 
                          alpha=0.95, edgecolor=colors['attention'], linewidth=2),
                 color=colors['text'], zorder=9)
     
-    # Dynamic graph indicator
-    ax_main.text(3.2, 2.8, 'Dynamic Graph A_t\n(Time-Varying)', 
+    # Dynamic graph indicator - repositioned to avoid overlap
+    ax_main.text(3.5, 3.2, 'Dynamic Graph A_t\n(Time-Varying)', 
                 ha='right', va='top', fontsize=10, fontweight='bold',
                 bbox=dict(boxstyle='round,pad=0.5', facecolor='#FFF3E0', 
                          alpha=0.95, edgecolor=colors['corr_edge'], linewidth=2),
                 color=colors['text'], zorder=9)
     
-    # Multi-relational indicator
-    ax_main.text(-3.2, 2.8, 'Multi-Relational\n(4 Edge Types)', 
+    # Multi-relational indicator - repositioned to avoid overlap
+    ax_main.text(-3.5, 3.2, 'Multi-Relational\n(3 Edge Types)', 
                 ha='left', va='top', fontsize=10, fontweight='bold',
                 bbox=dict(boxstyle='round,pad=0.5', facecolor='#E3F2FD', 
                          alpha=0.95, edgecolor=colors['sector_edge'], linewidth=2),
                 color=colors['text'], zorder=9)
     
-    ax_main.set_xlim(-4, 4)
-    ax_main.set_ylim(-3.5, 3.5)
+    ax_main.set_xlim(-4.5, 4.5)
+    ax_main.set_ylim(-4, 4)
     ax_main.set_title('Role-Aware Graph Transformer: Message Passing with Multi-Relational Attention', 
-                     fontsize=15, fontweight='bold', pad=20, color=colors['text'])
+                     fontsize=16, fontweight='bold', pad=20, color=colors['text'])
     ax_main.axis('off')
     
-    # Legend
+    # Legend - moved to avoid overlap
     legend_elements = [
         mpatches.Patch(color=colors['corr_edge'], label='Rolling Correlation (Dynamic)'),
         mpatches.Patch(color=colors['sector_edge'], label='Sector/Industry (Static)'),
@@ -1442,9 +1510,10 @@ def create_gnn_architecture_diagram():
         mpatches.Patch(color=colors['time'], label='Time-Aware Encoding'),
         Line2D([0], [0], color=colors['attention'], linewidth=3, label='Attention Weight α'),
     ]
-    ax_main.legend(handles=legend_elements, loc='lower left', fontsize=9, 
+    ax_main.legend(handles=legend_elements, loc='lower right', fontsize=10, 
                   frameon=True, fancybox=True, shadow=True, 
-                  framealpha=0.95, edgecolor='gray', facecolor='white')
+                  framealpha=0.95, edgecolor='gray', facecolor='white',
+                  bbox_to_anchor=(0.98, 0.02), ncol=2)
     
     # Subplot 1: Multi-task output
     ax1 = fig.add_subplot(gs[1, 0])
@@ -1485,34 +1554,32 @@ def create_gnn_architecture_diagram():
     ax1.set_xlim(0, 1)
     ax1.set_ylim(0, 1)
     ax1.set_title('Multi-Task Learning: Dual Output Heads', 
-                 fontsize=12, fontweight='bold', color=colors['text'], pad=10)
+                 fontsize=13, fontweight='bold', color=colors['text'], pad=10)
     
     # Subplot 2: Role-aware mechanism
     ax2 = fig.add_subplot(gs[1, 1])
     ax2.set_facecolor(colors['bg'])
     ax2.axis('off')
     
-    # Draw different node roles
+    # Draw different node roles - repositioned to avoid overlap
     roles = [
-        (0.2, 0.7, 'Hub Stock\n(AAPL, MSFT)', colors['node_center'], 0.4),
-        (0.5, 0.7, 'Bridge Stock\n(GOOGL)', '#F39C12', 0.35),
-        (0.8, 0.7, 'Regular Stock', colors['node'], 0.3),
-        (0.2, 0.3, 'Sector Cluster\n(Tech)', '#3498DB', 0.35),
-        (0.5, 0.3, 'Isolated Stock', '#95A5A6', 0.3),
+        (0.2, 0.75, 'Hub Stock\n(AAPL, MSFT)', colors['node_center'], 0.35),
+        (0.5, 0.75, 'Bridge Stock\n(GOOGL)', '#F39C12', 0.30),
+        (0.8, 0.75, 'Regular Stock', colors['node'], 0.25),
+        (0.2, 0.35, 'Sector Cluster\n(Tech)', '#3498DB', 0.30),
+        (0.5, 0.35, 'Isolated Stock', '#95A5A6', 0.25),
     ]
     
     for x, y, label, color, size in roles:
-        circle = Circle((x, y), size, color=color, alpha=0.8, 
+        circle = Circle((x, y), size, facecolor=color, alpha=0.8, 
                        edgecolor='black', linewidth=2, zorder=2)
         ax2.add_patch(circle)
-        ax2.text(x, y, label, ha='center', va='center', fontsize=8, 
-                fontweight='bold', color='white', zorder=3)
         text = ax2.text(x, y, label, ha='center', va='center', fontsize=8, 
                        fontweight='bold', color='white', zorder=3)
         text.set_path_effects([withStroke(linewidth=2, foreground='black')])
     
-    # PEARL encoding explanation
-    ax2.text(0.5, 0.1, 'PEARL Encodes Structural Roles:\n• Hub: High PageRank\n• Bridge: Connects Sectors\n• Cluster: Sector Member', 
+    # PEARL encoding explanation - repositioned
+    ax2.text(0.5, 0.08, 'PEARL Encodes Structural Roles:\n• Hub: High PageRank\n• Bridge: Connects Sectors\n• Cluster: Sector Member', 
             ha='center', va='bottom', fontsize=9,
             bbox=dict(boxstyle='round,pad=0.5', facecolor='white', 
                      alpha=0.95, edgecolor=colors['pearl'], linewidth=2),
@@ -1521,10 +1588,10 @@ def create_gnn_architecture_diagram():
     ax2.set_xlim(0, 1)
     ax2.set_ylim(0, 1)
     ax2.set_title('Role-Aware Encoding: PEARL Embeddings', 
-                 fontsize=12, fontweight='bold', color=colors['text'], pad=10)
+                 fontsize=13, fontweight='bold', color=colors['text'], pad=10)
     
     plt.suptitle('Figure 9: GNN Architecture and Message Passing Mechanism', 
-                fontsize=17, fontweight='bold', y=0.98, color=colors['text'])
+                fontsize=18, fontweight='bold', y=0.99, color=colors['text'])
     plt.savefig(FIGS_DIR / 'figure9_gnn_architecture.png', 
                bbox_inches='tight', dpi=300, facecolor='white')
     plt.close()

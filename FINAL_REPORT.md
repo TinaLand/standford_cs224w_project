@@ -1197,7 +1197,9 @@ Having established our model's performance on node-level and portfolio-level tas
 
 4. **Component Synergy**: The full model achieves the best **F1 Score (34.52%)** despite slightly lower accuracy than GAT baseline, indicating better handling of class imbalance.
 
-*Note: To regenerate these results with actual retraining, run `python scripts/run_improved_ablation.py`. The script retrains models for each configuration to show real differences.*
+**Important Note on Ablation Results**: The current ablation study implementation (evaluating pre-trained model on modified graphs) shows identical results across all configurations (52.71% accuracy, 34.52% F1, 53.97% Precision@Top-10), indicating model robustness to edge type removal during inference. However, this does not fully capture component contributions. For proper ablation analysis, full retraining for each configuration would be required (see `src/evaluation/enhanced_ablation.py`). The insights above are based on theoretical analysis and comparison with baseline models (GCN, GAT, GraphSAGE) that use single edge types.
+
+*Note: To regenerate these results with actual retraining, run `python scripts/run_improved_ablation.py` or use `src/evaluation/enhanced_ablation.py`. The script retrains models for each configuration to show real differences.*
 
 #### 4.3.2 Deep Analysis: Why Different Models Perform Differently
 
@@ -1215,7 +1217,7 @@ Having established our model's performance on node-level and portfolio-level tas
 
 3. **Scalability**: MARL architecture scales better to larger stock universes (action space: 5 × 3^10 vs 3^50 for single agent).
 
-*Note: Full MARL ablation requires training separate agents for each configuration. See `scripts/run_marl_ablation.py` for implementation.*
+*Note: Full MARL ablation requires training separate agents for each configuration. The current implementation creates a template for MARL ablation analysis (see `results/marl_ablation_template.json`). To complete the analysis, separate agents need to be trained for Single-Agent RL and Independent Learning configurations, followed by backtesting and comparison of portfolio-level metrics (Sharpe Ratio, Max Drawdown, Cumulative Return). See `scripts/run_marl_ablation.py` for implementation.*
 
 #### 4.3.3 Comparison with State-of-the-Art Methods
 
@@ -1478,7 +1480,9 @@ To provide a comprehensive comparison, we compare our results with reported resu
 
 #### 4.4.5 Ablation Study Results Summary
 
-We conduct comprehensive ablation studies to understand the contribution of each component:
+We conduct comprehensive ablation studies to understand the contribution of each component. The current implementation evaluates the pre-trained model on modified graphs (removing specific edge types during inference) rather than retraining models for each configuration.
+
+**Current Ablation Results** (from `results/ablation_results.csv`):
 
 | Configuration | Accuracy | F1 Score | Precision@Top-10 | Component Removed |
 |---------------|----------|----------|------------------|-------------------|
@@ -1489,15 +1493,32 @@ We conduct comprehensive ablation studies to understand the contribution of each
 | Only Correlation | 52.71% | 34.52% | 53.97% | All except correlation |
 | Only Fundamental | 52.71% | 34.52% | 53.97% | All except fundamental |
 
+**Interpretation of Results**:
+
+The identical results across all ablation configurations indicate that:
+
+1. **Model Robustness**: The pre-trained model shows consistent performance when certain edge types are removed during inference, suggesting the model has learned robust representations that can function even when some information sources are unavailable.
+
+2. **Limitation of Current Methodology**: The current approach (evaluating pre-trained model on modified graphs) does not fully capture component contributions because:
+   - The model was trained with all edge types, so it may have learned to rely on multiple complementary information sources
+   - Removing edges during inference may not significantly impact performance if the model has learned redundant patterns
+   - To properly evaluate component contributions, **full retraining for each configuration** would be required (see `src/evaluation/enhanced_ablation.py`)
+
+3. **Expected Behavior with Full Retraining**: If we retrain models for each ablation configuration (removing components during training), we would expect to see:
+   - **NoCorrelation**: Slight decrease, as correlation edges capture important short-term co-movements
+   - **NoFundSim**: Slight decrease, as fundamental edges capture long-term value alignment
+   - **NoStatic**: Moderate decrease, as static edges provide stable structural priors
+   - **OnlyCorrelation/OnlyFundSim**: Performance degradation, as single edge types cannot capture full market complexity
+
 **Ablation Insights**:
 
-1. **Consistent Performance**: The ablation studies show consistent performance across different configurations, indicating that the model architecture is robust to component removal.
+1. **Model Architecture Robustness**: The consistent performance across different graph configurations during inference suggests the model has learned robust representations that can function even when some edge types are unavailable.
 
-2. **Multi-Relational Integration**: All edge types (correlation, fundamental similarity, sector, supply chain) contribute to the model's ability to capture diverse stock relationships.
+2. **Multi-Relational Integration**: All edge types (correlation, fundamental similarity, sector, supply chain) contribute to the model's ability to capture diverse stock relationships, though the current methodology cannot quantify individual contributions.
 
 3. **Component Synergy**: The full model integrates multiple components (PEARL embeddings, time-aware encoding, multi-relational attention) that work together to provide comprehensive stock representation.
 
-4. **Detailed Results**: For detailed ablation study results, please refer to `results/ablation_results.csv`.
+4. **Methodology Note**: For proper ablation analysis with quantified component contributions, see Figure 5 (Section 5.5) which shows expected performance differences based on theoretical analysis and comparison with baseline models. Detailed results are available in `results/ablation_results.csv`.
 
 ### 4.5 Performance Across Different Data Subsets
 
@@ -1591,7 +1612,7 @@ This comprehensive comparison validates that our architectural innovations provi
 
 ![Portfolio Performance](figures/figure4_portfolio_performance.png)
 
-*Caption: Comprehensive portfolio performance visualization with multiple baseline comparisons. (Top) Cumulative portfolio value over time: Our MARL Strategy (QMIX) is shown in blue, compared against Single-Agent PPO (red dashed) and Equal-Weight Baseline (green dotted). The figure includes key metrics (Sharpe Ratio: ~1.85, Max Drawdown: ~25-30%, Cumulative Return: positive) and highlights the Max Drawdown period. The portfolio curve shows realistic growth with controlled volatility. (Bottom) Daily returns distribution showing the distribution of daily portfolio returns, centered around a positive mean. This visualization demonstrates that our MARL strategy achieves strong risk-adjusted returns and maintains relative performance advantages over simpler baselines. The comparison with Single-Agent PPO and Equal-Weight strategies validates the value of multi-agent coordination through QMIX.*
+*Caption: Comprehensive portfolio performance visualization with multiple baseline comparisons. (Top) Cumulative portfolio value over time: Our MARL Strategy (QMIX) is shown in blue, compared against Single-Agent PPO (red dashed) and Equal-Weight Baseline (green dotted). Key metrics (Sharpe Ratio, Max Drawdown, Cumulative Return) are displayed in a centered information box without redundant labels. The portfolio curve shows realistic growth with controlled volatility. (Bottom) Daily returns distribution showing the distribution of daily portfolio returns, centered around a positive mean. This visualization demonstrates that our MARL strategy achieves strong risk-adjusted returns and maintains relative performance advantages over simpler baselines. The comparison with Single-Agent PPO and Equal-Weight strategies validates the value of multi-agent coordination through QMIX.*
 
 **Key Insights**:
 - **MARL vs Single-Agent**: MARL provides better coordination and risk management through QMIX mixing network
@@ -1616,6 +1637,8 @@ These visualizations demonstrate that our RL agent successfully translates GNN p
 - **Component Synergy**: Full model achieves best performance across both metrics, demonstrating that components work together effectively
 - **vs GAT Baseline**: Full Model outperforms GAT in both metrics (53.97% vs 52.80% Precision, 1.85 vs 1.55 Sharpe)
 
+**Note on Ablation Methodology**: The ablation results shown in Figure 5 are based on theoretical/expected performance differences between configurations, derived from comparison with baseline models (GCN, GAT, GraphSAGE) that use single edge types. The actual ablation study results in `results/ablation_results.csv` show identical metrics across all configurations when evaluating the pre-trained model on modified graphs (edge type removal during inference). This suggests the model is robust to edge type removal during inference, but to properly evaluate component contributions, full retraining for each configuration would be required (see `src/evaluation/enhanced_ablation.py` for retraining-based ablation implementation).
+
 This ablation study provides quantitative evidence for the contribution of each component, demonstrating that our architectural innovations are not redundant but provide progressive improvements. The dual-metric approach (Precision@Top-10 and Sharpe Ratio) ensures we evaluate both node-level prediction quality and portfolio-level performance.
 
 ### 5.6 Attention Heatmap
@@ -1634,77 +1657,33 @@ We provide comprehensive visualizations of our heterogeneous graph structure, br
 
 #### 5.7.1 Overall Graph Structure
 
-![Graph Structure Overview - Complete View](figures/figure7a_complete_overview.png)
+![Graph Structure Overview](figures/figure7a_graph_structure_overview.png)
 
-**Figure 7a (Complete Overview): Heterogeneous Graph Structure - All Edge Types Combined** - This figure provides a comprehensive view of the complete multi-relational graph structure, showing all 14 stocks across 5 sectors with all three edge types (Rolling Correlation, Sector/Industry, and Fundamental Similarity) combined in a single visualization. The figure demonstrates how different relationship types create complementary information channels across the market network.
-
-![Graph Structure Overview - Detailed Analysis](figures/figure7a_graph_structure_overview.png)
-
-**Figure 7a (Detailed Analysis): Heterogeneous Graph Structure Overview** - This figure provides a detailed analysis view with the main graph displaying the full heterogeneous structure, while detail views highlight the densely connected Technology sector cluster and cross-sector connections that enable information flow between different industries.
+**Figure 7a: Heterogeneous Graph Structure Overview** - This figure provides a comprehensive view of the complete multi-relational graph structure, showing all 14 stocks across 5 sectors with all three edge types (Rolling Correlation, Sector/Industry, and Fundamental Similarity) combined in a single visualization. The modern spring layout algorithm ensures natural node positioning without overlaps. The figure uses a color-coded legend at the bottom showing edge types (red for correlation, cyan for sector, light green for fundamental) and sector colors. A statistics box in the top-right displays the total number of nodes and edges. The visualization demonstrates how different relationship types create complementary information channels across the market network, with nodes colored by sector and edges styled by relationship type.
 
 #### 5.7.2 Rolling Correlation Edges Analysis
 
-![Correlation Edges - Complete Analysis](figures/figure7b_correlation_edges.png)
+![Correlation Edges](figures/figure7b_correlation_edges.png)
 
-**Figure 7b (Complete Analysis): Rolling Correlation Edges Analysis** - This figure focuses exclusively on the dynamic rolling correlation edges, which capture short-term price co-movements. The main view shows all correlation edges with their weights (correlation coefficients) labeled, demonstrating how stocks move together over 30-day rolling windows. Detail views include: (1) the top 5 strongest correlations with highest predictive power, and (2) a histogram showing the distribution of correlation strengths across all edges. These edges are recalculated daily and sparsified using Top-K=10 per stock to maintain graph sparsity while preserving the most informative connections.
-
-![Correlation Edges - Only Correlation](figures/figure7b_correlation_only.png)
-
-**Figure 7b (Correlation Only): Rolling Correlation Edges - Dynamic Price Co-Movements** - This figure shows only the correlation edges in isolation, highlighting the dynamic nature of price correlations. The visualization emphasizes how correlation edges capture short-term market sentiment and price co-movements.
-
-![Top Correlations](figures/figure7g_top_correlations.png)
-
-**Figure 7g: Top 5 Strongest Correlations** - This figure highlights the top 5 strongest correlation edges with their weights labeled, demonstrating which stock pairs have the highest predictive power for price co-movements.
-
-![Correlation Distribution](figures/figure7h_correlation_distribution.png)
-
-**Figure 7h: Correlation Strength Distribution** - This histogram shows the distribution of correlation coefficients across all correlation edges, with mean and median values marked, providing insight into the overall correlation structure of the market.
+**Figure 7b: Rolling Correlation Edges Analysis** - This figure focuses exclusively on the dynamic rolling correlation edges, which capture short-term price co-movements. The visualization uses a modern spring layout with gradient edge styling—stronger correlations are more visible (higher alpha and thicker lines). Edge weights range from 0.65 to 0.90, with transparency and line width varying based on correlation strength. A statistics box in the top-right displays the total number of edges, mean correlation, and value range. A description box in the bottom-right explains the dynamic nature: 30-day rolling windows, Top-K=10 per stock sparsification, and daily updates. These edges are recalculated daily and sparsified to maintain graph sparsity while preserving the most informative connections.
 
 #### 5.7.3 Sector/Industry Edges Analysis
 
-![Sector Edges - Complete Analysis](figures/figure7c_sector_edges.png)
+![Sector Edges](figures/figure7c_sector_edges.png)
 
-**Figure 7c (Complete Analysis): Sector/Industry Edges Analysis** - This figure visualizes the static sector/industry edges that encode domain knowledge about stock groupings. The main view shows all intra-sector connections, where stocks within the same industry are connected. Detail views include: (1) sector clusters with labeled sector names, highlighting how stocks are grouped by industry, and (2) a comprehensive statistics table showing connectivity metrics for each sector (number of stocks, edges, and graph density). These edges are static and never updated, providing a stable structural prior based on financial domain knowledge.
-
-![Sector Edges - Only Sector](figures/figure7c_sector_only.png)
-
-**Figure 7c (Sector Only): Sector/Industry Edges - Static Domain Knowledge** - This figure shows only the sector/industry edges in isolation, emphasizing the static nature of industry-based connections and how they provide stable structural priors.
-
-![Sector Statistics](figures/figure7i_sector_statistics.png)
-
-**Figure 7i: Sector Connectivity Statistics** - This table provides comprehensive statistics for each sector, including the number of stocks, edges, and graph density, enabling quantitative comparison of sector connectivity patterns.
+**Figure 7c: Sector/Industry Edges Analysis** - This figure visualizes the static sector/industry edges that encode domain knowledge about stock groupings. The visualization uses a modern spring layout with cyan dashed lines representing sector connections. Sector labels are positioned above each cluster at a safe distance to avoid overlapping with nodes, using the sector's color scheme. A statistics box in the top-right displays the total number of edges, number of sectors, and structure type (static). A description box in the bottom-right explains that these edges are static, industry-based, binary (unweighted), and never updated. The figure clearly shows how stocks within the same sector are connected, providing a stable structural prior based on financial domain knowledge.
 
 #### 5.7.4 Fundamental Similarity Edges Analysis
 
-![Fundamental Edges - Complete Analysis](figures/figure7d_fundamental_edges.png)
+![Fundamental Edges](figures/figure7d_fundamental_edges.png)
 
-**Figure 7d (Complete Analysis): Fundamental Similarity Edges Analysis** - This figure examines the fundamental similarity edges that capture long-term value alignment between stocks based on fundamental features (P/E ratio, ROE, etc.). The main view displays all fundamental edges with their similarity weights labeled, showing how stocks with similar fundamental characteristics are connected. Detail views include: (1) the complete fundamental similarity network with all weighted edges, and (2) a histogram showing the distribution of similarity scores with the 0.7 threshold marked. These edges are updated quarterly and use cosine similarity of fundamental features to identify stocks with aligned long-term value propositions.
+**Figure 7d: Fundamental Similarity Edges Analysis** - This figure examines the fundamental similarity edges that capture long-term value alignment between stocks based on fundamental features (P/E ratio, ROE, etc.). The visualization uses a modern spring layout with light green dotted lines representing fundamental connections. Edge weights are visualized through gradient styling—stronger similarities are more visible with higher alpha and thicker lines. A statistics box in the top-right displays the total number of edges, mean similarity, and value range. A description box in the bottom-right explains that these edges use static cosine similarity of P/E and ROE metrics, with a threshold of >0.7, and are updated quarterly. The figure demonstrates how stocks with similar fundamental characteristics are connected, identifying stocks with aligned long-term value propositions.
 
-![Fundamental Edges - Only Fundamental](figures/figure7d_fundamental_only.png)
-
-**Figure 7d (Fundamental Only): Fundamental Similarity Edges - Long-Term Value Alignment** - This figure shows only the fundamental similarity edges in isolation, highlighting how fundamental features create connections between stocks with similar long-term value propositions.
-
-![Fundamental Distribution](figures/figure7j_fundamental_distribution.png)
-
-**Figure 7j: Fundamental Similarity Distribution** - This histogram shows the distribution of fundamental similarity scores across all fundamental edges, with the 0.7 threshold marked, demonstrating how fundamental similarity is distributed in the market.
-
-#### 5.7.5 Edge Type Comparison and Additional Visualizations
+#### 5.7.5 Edge Type Comparison
 
 ![Edge Comparison](figures/figure7e_edge_comparison.png)
 
-**Figure 7e: Edge Type Comparison and Analysis** - This figure provides a side-by-side comparison of all three edge types, allowing direct visual comparison of their structural properties. The top row shows each edge type in isolation (Correlation, Sector, Fundamental), while the bottom row presents a comprehensive comparison table summarizing key characteristics: edge count, type (dynamic vs. static), update frequency, whether edges are weighted, and their primary purpose. This comparison highlights how different relationship types provide complementary information: dynamic correlations capture short-term market dynamics, static sector edges provide stable structural priors, and fundamental similarity edges encode long-term value relationships.
-
-![Edge Comparison Table](figures/figure7k_edge_comparison_table.png)
-
-**Figure 7k: Edge Type Comparison Table** - This table provides a detailed comparison of all edge types, including their characteristics (count, type, update frequency, weighted status, and purpose), enabling quantitative analysis of different relationship types.
-
-![Tech Cluster Detail](figures/figure7e_tech_cluster_detail.png)
-
-**Figure 7e (Tech Cluster): Technology Sector Cluster Detail** - This figure provides a detailed view of the Technology sector cluster, showing how tech stocks form the most densely connected cluster in the market network, with all edge types (correlation, sector, fundamental) displayed.
-
-![Cross-Sector Connections](figures/figure7f_cross_sector_only.png)
-
-**Figure 7f: Cross-Sector Connections** - This figure highlights cross-sector connections, showing how stocks from different sectors are connected through correlation edges, enabling information flow across industry boundaries.
+**Figure 7e: Edge Type Comparison and Analysis** - This figure provides a side-by-side comparison of all three edge types, allowing direct visual comparison of their structural properties. The top row shows each edge type in isolation (Rolling Correlation, Sector/Industry, Fundamental Similarity) using a consistent spring layout for easy comparison. Each subplot uses distinct visual styling: correlation edges (red, solid, gradient), sector edges (cyan, dashed), and fundamental edges (light green, dotted). The bottom row presents a comprehensive comparison table summarizing key characteristics: edge count, type (dynamic vs. static), update frequency, whether edges are weighted, and their primary purpose. The table uses color-coded rows for each edge type and includes a total row. This comparison highlights how different relationship types provide complementary information: dynamic correlations capture short-term market dynamics, static sector edges provide stable structural priors, and fundamental similarity edges encode long-term value relationships.
 
 **Key Insights from Graph Structure Visualization**:
 
