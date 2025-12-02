@@ -57,10 +57,10 @@ class PEARLPositionalEmbedding(nn.Module):
         
         # Relation-aware attention mechanism
         self.relation_attention = nn.ModuleDict()
-        self.relation_weights = nn.Parameter(torch.ones(5))  # 5 edge types
+        self.relation_weights = nn.Parameter(torch.ones(4))  # 4 edge types
         
         # Create separate attention for each relation type
-        self.edge_type_names = ['sector_industry', 'competitor', 'supply_chain', 'rolling_correlation', 'fund_similarity']
+        self.edge_type_names = ['sector_industry', 'supply_competitor', 'rolling_correlation', 'fund_similarity']
         for edge_type in self.edge_type_names:
             self.relation_attention[edge_type] = nn.MultiheadAttention(pe_dim, num_heads=2, batch_first=True)
         

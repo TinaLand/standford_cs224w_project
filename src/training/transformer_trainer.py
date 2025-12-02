@@ -294,8 +294,7 @@ class RoleAwareGraphTransformer(torch.nn.Module):
         # Defined based on Phase 2 graph construction
         metadata = [
             ('stock', 'sector_industry', 'stock'),
-            ('stock', 'competitor', 'stock'),
-            ('stock', 'supply_chain', 'stock'),
+            ('stock', 'supply_competitor', 'stock'),
             ('stock', 'rolling_correlation', 'stock'),
             ('stock', 'fund_similarity', 'stock')
         ]
