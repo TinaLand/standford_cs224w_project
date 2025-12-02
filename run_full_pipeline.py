@@ -149,7 +149,7 @@ def main():
         },
         {
             'name': 'Phase 5: RL Integration',
-            'module': 'src.rl.integration',
+            'module': 'src.rl.training.single_agent',
             'description': 'Integrate GNN with RL agent'
         },
         {

@@ -122,7 +122,7 @@ python -m src.training.transformer_trainer
 #### Phase 5: RL Integration
 
 ```bash
-python -m src.rl.integration
+python -m src.rl.training.single_agent
 ```
 
 **Outputs**:
