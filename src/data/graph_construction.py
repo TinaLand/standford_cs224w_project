@@ -270,19 +270,42 @@ def pre_calculate_static_edges(tickers, sector_df, supply_comp_df, ticker_to_idx
     
     static_edge_dict = {}
     
-    # 1. Sector/Industry Edges
+    # 1. Sector/Industry Edges - Generate from sector assignments
     if sector_df is not None and not sector_df.empty:
         sector_edges = []
         sector_weights = []
         
-        for _, row in sector_df.iterrows():
-            if 'ticker1' in row and 'ticker2' in row:
-                ticker1, ticker2 = row['ticker1'], row['ticker2']
-                if ticker1 in ticker_to_idx and ticker2 in ticker_to_idx:
-                    idx1, idx2 = ticker_to_idx[ticker1], ticker_to_idx[ticker2]
-                    sector_edges.extend([[idx1, idx2], [idx2, idx1]])  # Undirected
-                    weight = float(row.get('weight', 1.0))
-                    sector_weights.extend([weight, weight])
+        # Check if this is the sector mapping format (Ticker, Sector, Industry)
+        if 'Ticker' in sector_df.columns and 'Sector' in sector_df.columns:
+            print("   Creating sector edges from Ticker-Sector mappings...")
+            
+            # Group by sector to create intra-sector edges
+            sector_groups = sector_df.groupby('Sector')['Ticker'].apply(list).to_dict()
+            
+            sector_edge_count = 0
+            for sector_name, sector_tickers in sector_groups.items():
+                # Connect all stocks within the same sector
+                for i, ticker1 in enumerate(sector_tickers):
+                    for ticker2 in sector_tickers[i+1:]:  # Avoid self-loops and duplicates
+                        if ticker1 in ticker_to_idx and ticker2 in ticker_to_idx:
+                            idx1, idx2 = ticker_to_idx[ticker1], ticker_to_idx[ticker2]
+                            # Add bidirectional edges for undirected graph
+                            sector_edges.extend([[idx1, idx2], [idx2, idx1]])
+                            sector_weights.extend([1.0, 1.0])  # Equal weight for sector connections
+                            sector_edge_count += 2
+            
+            print(f"     Generated {sector_edge_count} intra-sector edges from {len(sector_groups)} sectors")
+            
+        else:
+            # Legacy format with ticker1, ticker2 columns
+            for _, row in sector_df.iterrows():
+                if 'ticker1' in row and 'ticker2' in row:
+                    ticker1, ticker2 = row['ticker1'], row['ticker2']
+                    if ticker1 in ticker_to_idx and ticker2 in ticker_to_idx:
+                        idx1, idx2 = ticker_to_idx[ticker1], ticker_to_idx[ticker2]
+                        sector_edges.extend([[idx1, idx2], [idx2, idx1]])  # Undirected
+                        weight = float(row.get('weight', 1.0))
+                        sector_weights.extend([weight, weight])
         
         if sector_edges:
             static_edge_dict['sector_industry'] = (
@@ -295,14 +318,34 @@ def pre_calculate_static_edges(tickers, sector_df, supply_comp_df, ticker_to_idx
         supply_edges = []
         supply_weights = []
         
-        for _, row in supply_comp_df.iterrows():
-            if 'ticker1' in row and 'ticker2' in row:
-                ticker1, ticker2 = row['ticker1'], row['ticker2']
+        # Check column names in supply/competitor data
+        if 'Ticker1' in supply_comp_df.columns and 'Ticker2' in supply_comp_df.columns:
+            print("   Creating supply/competitor edges from edge list...")
+            edge_count = 0
+            
+            for _, row in supply_comp_df.iterrows():
+                ticker1, ticker2 = row['Ticker1'], row['Ticker2']
                 if ticker1 in ticker_to_idx and ticker2 in ticker_to_idx:
                     idx1, idx2 = ticker_to_idx[ticker1], ticker_to_idx[ticker2]
-                    supply_edges.extend([[idx1, idx2], [idx2, idx1]])  # Undirected
-                    weight = float(row.get('weight', 1.0))
-                    supply_weights.extend([weight, weight])
+                    weight = float(row.get('Weight', 1.0))
+                    
+                    # Add the edge as specified (may be directed for supply chain)
+                    supply_edges.append([idx1, idx2])
+                    supply_weights.append(weight)
+                    edge_count += 1
+            
+            print(f"     Generated {edge_count} supply/competitor edges")
+            
+        else:
+            # Legacy format with ticker1, ticker2 columns  
+            for _, row in supply_comp_df.iterrows():
+                if 'ticker1' in row and 'ticker2' in row:
+                    ticker1, ticker2 = row['ticker1'], row['ticker2']
+                    if ticker1 in ticker_to_idx and ticker2 in ticker_to_idx:
+                        idx1, idx2 = ticker_to_idx[ticker1], ticker_to_idx[ticker2]
+                        supply_edges.extend([[idx1, idx2], [idx2, idx1]])  # Undirected
+                        weight = float(row.get('weight', 1.0))
+                        supply_weights.extend([weight, weight])
         
         if supply_edges:
             static_edge_dict['supply_competitor'] = (

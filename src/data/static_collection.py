@@ -6,7 +6,7 @@ from pathlib import Path
 import random
 
 # --- Configuration ---
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent  # Go up 3 levels from src/data/
 DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"
 # Ensure the raw data directory exists
 DATA_RAW_DIR.mkdir(parents=True, exist_ok=True)
