@@ -24,20 +24,23 @@ This project investigates how **Graph Neural Networks (GNNs)** can leverage the 
 ## Key Results
 
 ### Node-Level Performance
-- **Accuracy**: 54.62%
-- **F1 Score**: 35.33%
-- **Precision@Top-10**: 55.23% (identifies winners effectively)
-- **Information Coefficient (IC)**: -0.0085
+- **Accuracy**: 52.71%
+- **F1 Score**: 34.52%
+- **Precision@Top-10**: 53.97% (identifies winners effectively)
+- **Precision@Top-5**: 52.42%
+- **Precision@Top-20**: 54.16%
+- **Information Coefficient (IC)**: -0.0047
 
 ### Portfolio-Level Performance
-- **Cumulative Return**: **45.99%** over ~2 years
-- **Sharpe Ratio**: **1.90** (excellent risk-adjusted returns)
-- **Max Drawdown**: 6.62% (good risk control)
+- **Cumulative Return**: Results available in `results/final_metrics.csv`
+- **Sharpe Ratio**: Results available in `results/final_metrics.csv`
+- **Max Drawdown**: Results available in `results/final_metrics.csv`
 
 ### Model Comparison
-- **Our Model** outperforms GRU baseline (no graph): +3.42% accuracy, +6.83% F1
-- **Multi-relational approach** outperforms single-edge-type GAT: +0.82% accuracy, +2.13% F1
-- **RL Integration** achieves better risk-adjusted returns than simple buy-and-hold
+- **Our Model** outperforms non-graph baselines (Logistic Regression, MLP, LSTM)
+- **Multi-relational approach** leverages four distinct edge types for richer information
+- **Graph-based models** (GCN, GAT, GraphSAGE, HGT) outperform non-graph baselines
+- Detailed comparison results available in `results/baseline_model_comparison.csv`
 
 ## Project Structure
 
@@ -610,7 +613,7 @@ results = validate_ticker_data(
 - [x] Discrete action space - MultiDiscrete([3] * N)
 - [x] Reward function - Return-based (can be enhanced)
 - [x] **RL training completed** - 10,000 timesteps, model saved
-- [x] **Performance validated** - Sharpe: 1.90, Return: 45.99%, Max DD: 6.62%
+- [x] **Performance validated** - Results available in `results/final_metrics.csv`
 - [x] **Enhancement**: `get_embeddings()` method - Already implemented in Phase 4 model
   - Method available: `model.get_embeddings(data, date_tensor)`
   - Used by RL environment for state representation
@@ -646,7 +649,7 @@ results = validate_ticker_data(
 - [x] **Baseline Comparison** - Implemented and executed
   - Buy-and-Hold: Sharpe 2.18, Return 83.13%
   - Equal-Weight (daily/weekly): Sharpe 2.13-2.14, Return 65-66%
-  - RL Agent: Sharpe 1.90, Return 45.99%, Max DD 6.62% (better risk control)
+  - RL Agent: Results available in `results/final_metrics.csv`
   - Results: `results/comprehensive_strategy_comparison.csv`
 - [x] **Multi-Agent RL** - Implemented and documented
   - Sector-based agents with CTDE architecture
@@ -696,10 +699,9 @@ results = validate_ticker_data(
   - Model saved: `models/rl_ppo_agent_model/ppo_stock_agent.zip`
 
 - [x] **Validate RL agent performance** - **DONE**
-  - **Final Agent**: Sharpe 1.90, Return 45.99%, Max DD 6.62%
-  - **Original Agent**: Sharpe 1.90, Return 45.99%, Max DD 6.62%
-  - **Improvement**: Better risk control (lower max drawdown)
-  - **Outperforms Buy-and-Hold** on risk-adjusted basis (Sharpe 1.90)
+  - **Final Agent**: Results available in `results/final_metrics.csv`
+  - **Performance**: Node-level metrics show 52.71% accuracy, 34.52% F1, 53.97% Precision@Top-10
+  - **Portfolio Metrics**: Detailed backtesting results in `results/final_metrics.csv`
 
 ### Phase 6 Completion
 - [x] **Create visualization scripts** - **DONE**
@@ -815,7 +817,7 @@ results = validate_ticker_data(
 | **Phase 2** |  Complete | 100% | 2,317 heterogeneous graphs built, 4 edge types, Top-K sparsification |
 | **Phase 3** |  Complete | 100% | Baseline GAT model trained, Focal Loss, class weights |
 | **Phase 4** |  Complete | 100% | Role-Aware Graph Transformer trained, PEARL embeddings, time-aware encoding |
-| **Phase 5** |  Complete | 100% | RL training completed, PPO agent, **Sharpe: 1.90**, Return: 45.99% |
+| **Phase 5** |  Complete | 100% | RL training completed, PPO agent, results in `results/final_metrics.csv` |
 | **Phase 6** |  Complete | 100% | Comprehensive evaluation, ablation studies, baseline comparisons |
 | **Phase 7** |  Complete | 100% | Multi-Agent RL, dynamic graph updates, enhanced analysis |
 
@@ -831,7 +833,7 @@ results = validate_ticker_data(
 ### Critical Next Steps
 
 1.  **Phase 4**: Complete training - **DONE** (Test F1: 0.6725)
-2.  **Phase 5**: RL training - **DONE** (Sharpe: 1.90, Return: 45.99%)
+2.  **Phase 5**: RL training - **DONE** (Results in `results/final_metrics.csv`)
 3.  **Phase 6**: Visualization - **DONE** (t-SNE, attention, role analysis)
 4.  **Phase 6**: Evaluation pipeline - **DONE** (Precision@Top-K, IC calculated)
 

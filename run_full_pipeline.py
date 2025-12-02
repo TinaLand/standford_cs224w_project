@@ -186,11 +186,33 @@ def main():
         status_icon = "✅" if status == "Success" else "❌" if status == "Failed" else "⚠️"
         print(f"  {status_icon} {phase_name}: {status}")
     
+    # Generate report figures (if Phase 6 completed successfully)
+    if results.get('Phase 6: Evaluation') == 'Success':
+        print("\n" + "="*60)
+        print("📊 Generating Report Figures")
+        print("="*60)
+        try:
+            original_cwd = os.getcwd()
+            os.chdir(PROJECT_ROOT)
+            cmd = [sys.executable, "scripts/generate_report_figures.py"]
+            print(f"Running: {' '.join(cmd)}")
+            result = subprocess.run(cmd, cwd=PROJECT_ROOT, check=False, capture_output=False)
+            os.chdir(original_cwd)
+            if result.returncode == 0:
+                print("\n✅ Report figures generated successfully!")
+            else:
+                print("\n⚠️  Figure generation completed with warnings")
+        except Exception as e:
+            print(f"⚠️  Error generating figures: {e}")
+            print("Continuing...")
+            os.chdir(original_cwd)
+    
     print("\n✅ Full pipeline execution complete!")
     print("\n📁 Check results in:")
     print("  - models/ - Trained models")
     print("  - results/ - Evaluation results")
     print("  - models/plots/ - Visualizations")
+    print("  - figures/ - Report figures (Figure 1-10)")
     
     print("\n" + "="*60)
     print("🔬 Optional Research Experiments")
