@@ -247,7 +247,7 @@ Our complete system follows a modular pipeline architecture that integrates grap
 │  [Node Features] + [PEARL Embeddings] + [Time Encoding]       │
 │       ↓                                                         │
 │  Multi-Relational Graph Transformer Layers                     │
-│  - Edge-type-specific attention (4 attention heads)            │
+│  - Edge-type-specific attention (8 attention heads)            │
 │  - Message passing across relationship types                   │
 │  - Temporal pattern capture                                    │
 │       ↓                                                         │
