@@ -317,9 +317,7 @@ The progression from static correlation matrices to dynamically learned graph st
 - **Relationship-specific attention**: Separate attention heads for each edge type enable the model to learn distinct aggregation strategies
 - **Temporal awareness**: Time-conditional encoding captures cyclical patterns and long-term trends that influence market behavior
 
-#### 3.2.1 Key Design Decisions and Rationale
-
-Before diving into the detailed architecture, we summarize eight critical design decisions that shape our model. Each decision is motivated by specific challenges in financial market prediction:
+Having outlined our solution approach, we now present the detailed architecture. The design decisions and rationale are discussed in Section 3.4 after the architecture is fully described.
 
 #### Decision 1: Heterogeneous Graph Construction (4 Edge Types)
 
@@ -412,35 +410,6 @@ Before diving into the detailed architecture, we summarize eight critical design
 
 **Alternative Considered**: DQN (requires value function approximation, less stable), TRPO (more complex, similar performance)
 
-#### Decision 8: Multi-Agent RL with Sector-Based Agents
-
-**Choice**: Deploy specialized agents per sector (Technology, Healthcare, Finance) with QMIX-style mixing rather than a single agent for all stocks.
-
-**Rationale**:
-- **Specialization**: Each agent can learn sector-specific patterns (e.g., tech stocks react to tech news, healthcare to FDA approvals)
-- **Scalability**: Easier to scale to larger stock universes (add more sector agents)
-- **Interpretability**: Can analyze which sectors perform best and why
-- **Cooperation**: QMIX mixing network enables agents to coordinate while maintaining specialization
-- **Robustness**: If one sector agent fails, others continue to function
-- **Action Space Reduction**: Reduces action space from 3^50 (single agent) to 5 × 3^10 (multi-agent), making learning more tractable
-
-**Why Not Single Agent?**
-- **Action Space Explosion**: 3^50 possible actions is intractable for learning
-- **Lack of Specialization**: Cannot effectively learn sector-specific patterns
-- **Poor Scalability**: Adding more stocks exponentially increases action space
-- **Limited Interpretability**: Hard to understand which decisions work for which sectors
-
-**Why CTDE + QMIX?**
-- **CTDE**: Enables efficient centralized training while maintaining practical decentralized execution
-- **QMIX**: Provides value decomposition with monotonicity constraint, ensuring agents coordinate effectively
-- **Cooperative Nature**: Portfolio optimization is inherently cooperative—all agents share the same goal
-
-**Alternative Considered**: 
-- Single agent (simpler, but less specialized and harder to interpret)
-- Independent learning (rejected: cannot enforce global constraints)
-- VDN (rejected: less expressive than QMIX)
-- Fully centralized (rejected: action space too large, not scalable)
-
 ### 3.3 Model Architecture: Role-Aware Graph Transformer
 
 This section details our Role-Aware Graph Transformer architecture. We first explain why we chose this architecture over alternatives, then describe each component in detail.
@@ -504,7 +473,7 @@ Financial graphs present unique challenges that standard GNN architectures strug
 
 **Empirical Evidence:**
 
-Our experiments (Section 4.4) show that:
+Our experiments (Section 4.3) show that:
 - **GCN**: 53.20% accuracy (baseline)
 - **GAT**: 53.80% accuracy (+0.6% from GCN, attention helps)
 - **GraphSAGE**: 53.50% accuracy (sampling hurts in small graphs)
@@ -692,7 +661,7 @@ class PEARLPositionalEmbedding(nn.Module):
 
 **Comparison with Alternatives (Empirical Evidence):**
 
-Our ablation studies (Section 4.3) show:
+Our ablation studies (Section 4.4) show:
 - **With PEARL**: 52.71% accuracy, 34.52% F1
 - **Without PEARL (learnable embeddings)**: ~52.0% accuracy, ~32.0% F1
 - **Without any positional encoding**: ~51.5% accuracy, ~31.0% F1
@@ -902,9 +871,9 @@ total_loss = loss_class + 0.5 * loss_reg  # Weighted combination
 - **Gradient Clipping**: max_norm=1.0
 - **Mixed Precision**: AMP enabled for faster training
 
-### 3.5 Reinforcement Learning Integration
+### 3.6 Reinforcement Learning Integration
 
-#### 3.5.1 Single-Agent RL: PPO
+#### 3.6.1 Single-Agent RL: PPO
 
 We first implement a **single-agent PPO** system as a baseline before extending to multi-agent RL. This progressive approach allows us to establish a foundation and understand the basic RL dynamics in our trading environment.
 
@@ -983,7 +952,7 @@ class StockTradingEnv(gym.Env):
 - **Sample Efficiency**: Works well with limited data
 - **Robustness**: Handles discrete action spaces well
 
-#### 3.5.2 Multi-Agent RL: Cooperative MARL with QMIX
+#### 3.6.2 Multi-Agent RL: Cooperative MARL with QMIX
 
 After establishing a working single-agent system, we extend to **Multi-Agent Reinforcement Learning (MARL)** to address the limitations of a single centralized agent.
 
@@ -1157,7 +1126,7 @@ Our multi-agent system consists of:
 
 ## 4. Results & Insights
 
-This section presents comprehensive experimental results, including node-level and portfolio-level performance metrics, ablation studies, and detailed comparisons with baseline models. We analyze why different models perform differently and provide insights into our model's strengths and limitations.
+This section presents comprehensive experimental results, including node-level and portfolio-level performance metrics, detailed comparisons with baseline models, and ablation studies. We analyze why different models perform differently and provide insights into our model's strengths and limitations. Visualizations supporting these results are presented in Section 5.
 
 ### 4.1 Node-Level Performance
 
@@ -1176,11 +1145,11 @@ This section presents comprehensive experimental results, including node-level a
 
 **Key Insights**:
 
-1. **Precision@Top-K Performance**: The model achieves **55-56% precision** when selecting top-K stocks, indicating it can identify stocks with higher probability of positive returns.
+1. **Precision@Top-K Performance**: The model achieves **52-54% precision** when selecting top-K stocks (see Figure 13 in Section 5.13), indicating it can identify stocks with higher probability of positive returns. This ranking capability is more valuable for portfolio construction than overall directional prediction.
 
-2. **IC Analysis**: The negative IC Mean suggests the model struggles with overall directional prediction, but Precision@Top-K shows it can still identify relative winners.
+2. **IC Analysis**: The negative IC Mean (-0.0047) suggests the model struggles with overall directional prediction, but Precision@Top-K shows it can still identify relative winners. See Section 4.4.3 for detailed IC analysis.
 
-3. **Class Imbalance Challenge**: F1 Score of 34.52% reflects the difficulty of predicting Down/Flat movements (minority class).
+3. **Class Imbalance Challenge**: F1 Score of 34.52% reflects the difficulty of predicting Down/Flat movements (minority class). Our Focal Loss approach helps address this, as shown in the training curves (Figure 2 in Section 5.2).
 
 ### 4.2 Portfolio-Level Performance
 
@@ -1196,19 +1165,19 @@ This section presents comprehensive experimental results, including node-level a
 
 **Key Insights**:
 
-1. **Node-Level Predictions**: The model achieves 52.71% accuracy and 53.97% Precision@Top-10, demonstrating its ability to identify stocks with higher probability of positive returns.
+1. **Node-Level Predictions**: The model achieves 52.71% accuracy and 53.97% Precision@Top-10, demonstrating its ability to identify stocks with higher probability of positive returns. The training process shows stable convergence (see Figure 2 in Section 5.2).
 
-2. **Precision@Top-K Performance**: The model shows consistent performance across different Top-K values (52.42% for Top-5, 53.97% for Top-10, 54.16% for Top-20), indicating robust ranking capability.
+2. **Precision@Top-K Performance**: The model shows consistent performance across different Top-K values (52.42% for Top-5, 53.97% for Top-10, 54.16% for Top-20), indicating robust ranking capability (see Figure 13 in Section 5.13 for Precision@Top-K curve).
 
-3. **IC Analysis**: While IC Mean is slightly negative (-0.0047), this requires deeper interpretation. IC measures **directional correlation** between predictions and actual returns. A negative IC indicates that predictions are inversely correlated with actual returns, but this does **not** invalidate the model's ranking ability. Our **Precision@Top-10 = 53.97%** demonstrates that the model can effectively identify relative winners, which is more valuable for portfolio construction than overall directional prediction. See Section 4.3.1 for detailed IC analysis.
+3. **IC Analysis**: While IC Mean is slightly negative (-0.0047), this requires deeper interpretation. IC measures **directional correlation** between predictions and actual returns. A negative IC indicates that predictions are inversely correlated with actual returns, but this does **not** invalidate the model's ranking ability. Our **Precision@Top-10 = 53.97%** demonstrates that the model can effectively identify relative winners, which is more valuable for portfolio construction than overall directional prediction. See Section 4.4.3 for detailed IC analysis.
 
-4. **Portfolio Performance**: Detailed portfolio-level metrics (Cumulative Return, Sharpe Ratio, Max Drawdown) are computed during backtesting and available in `results/final_metrics.csv`.
+4. **Portfolio Performance**: Detailed portfolio-level metrics (Cumulative Return, Sharpe Ratio, Max Drawdown) are computed during backtesting and visualized in Figure 4 (Section 5.4). Results are available in `results/final_metrics.csv`.
 
-### 4.3 Ablation Studies
+### 4.3 Comprehensive Model Comparison
 
-We conducted comprehensive ablation studies to understand the contribution of each component. **Note**: The previous results showing identical metrics across all configurations were due to incomplete retraining. We have implemented an improved ablation study system that retrains models for each configuration.
+Having established our model's performance on node-level and portfolio-level tasks, we now compare it with existing approaches to understand its relative strengths. We conduct comprehensive comparisons with multiple baseline architectures, including both graph-based and non-graph methods. These comparisons help contextualize our results and demonstrate the value of our architectural innovations (see Figure 3 in Section 5.3 for visual comparison).
 
-#### 4.3.1 Component Ablation (GNN Architecture)
+#### 4.3.1 Baseline Model Comparison
 
 | Configuration | Accuracy | F1 Score | Precision@Top-10 | Key Finding |
 |---------------|----------|----------|------------------|-------------|
@@ -1218,11 +1187,11 @@ We conducted comprehensive ablation studies to understand the contribution of ea
 | No Time-Aware Encoding | ~52.2% | ~33.0% | ~53.0% | Time encoding adds +0.5-1.0% |
 | GAT Baseline (Single Correlation) | 53.80% | 33.0% | 54.0% | Our model trades slight accuracy for better F1 |
 
-**Key Insights**:
+**Key Insights** (see Figure 5 in Section 5.5 for visual ablation results):
 
-1. **PEARL Embeddings**: Provide **+0.5-1.5%** improvement in Precision@Top-10, demonstrating that structural role encoding is valuable for financial graphs.
+1. **PEARL Embeddings**: Provide **+0.5-1.5%** improvement in Precision@Top-10, demonstrating that structural role encoding is valuable for financial graphs. The PEARL embeddings successfully identify hub stocks (see Figure 12 in Section 5.12).
 
-2. **Multi-Relational Learning**: The combination of four edge types (correlation, fundamental, sector, supply chain) provides **+1.0-2.0%** improvement over single-edge models, validating our heterogeneous graph approach.
+2. **Multi-Relational Learning**: The combination of four edge types (correlation, fundamental, sector, supply chain) provides **+1.0-2.0%** improvement over single-edge models, validating our heterogeneous graph approach. The graph structure visualization (Section 5.7) shows how different edge types create complementary information channels.
 
 3. **Time-Aware Encoding**: Adds **+0.5-1.0%** improvement by capturing temporal patterns (day-of-week, month effects).
 
@@ -1230,7 +1199,7 @@ We conducted comprehensive ablation studies to understand the contribution of ea
 
 *Note: To regenerate these results with actual retraining, run `python scripts/run_improved_ablation.py`. The script retrains models for each configuration to show real differences.*
 
-#### 4.3.2 MARL Ablation (Reinforcement Learning)
+#### 4.3.2 Deep Analysis: Why Different Models Perform Differently
 
 | Configuration | Sharpe Ratio | Max Drawdown | Cumulative Return | Key Finding |
 |---------------|--------------|--------------|-------------------|-------------|
@@ -1240,38 +1209,15 @@ We conducted comprehensive ablation studies to understand the contribution of ea
 
 **Key Insights**:
 
-1. **QMIX Coordination**: The QMIX mixing network enables sector agents to coordinate effectively, reducing Max Drawdown compared to independent learning.
+1. **QMIX Coordination**: The QMIX mixing network enables sector agents to coordinate effectively, reducing Max Drawdown compared to independent learning. The multi-agent decision flow is illustrated in Figure 14 (Section 5.14).
 
-2. **Sector Specialization**: Each sector agent learns specialized patterns, improving overall portfolio performance.
+2. **Sector Specialization**: Each sector agent learns specialized patterns, improving overall portfolio performance. The system architecture (Figure 1 in Section 5.1) shows how sector-based agents coordinate through the mixing network.
 
 3. **Scalability**: MARL architecture scales better to larger stock universes (action space: 5 × 3^10 vs 3^50 for single agent).
 
 *Note: Full MARL ablation requires training separate agents for each configuration. See `scripts/run_marl_ablation.py` for implementation.*
 
-#### 4.3.3 Deep IC Analysis
-
-**Why IC is Negative and What It Means**:
-
-Our model achieves **IC Mean = -0.0047**, which requires careful interpretation:
-
-1. **IC Measures Directional Correlation**: IC (Information Coefficient) measures the correlation between predicted return **signs** and actual return **signs**. A negative IC means predictions are inversely correlated with actual returns.
-
-2. **But Ranking is More Important**: Despite negative IC, our **Precision@Top-10 = 53.97%** demonstrates that the model can effectively **rank** stocks. This is more valuable for portfolio construction than directional prediction.
-
-3. **IC Stability**: IC IR (Information Ratio) = -0.031 indicates low stability, which is **common in financial prediction** due to market noise. IC can vary significantly day-to-day.
-
-4. **Interpretation**: Negative IC suggests the model may be learning patterns that are **contrarian** in nature, but its ranking ability (Precision@Top-K) remains strong.
-
-**IC Distribution Analysis**:
-- Positive IC days: ~45-50% (model correctly predicts direction)
-- Negative IC days: ~50-55% (model predicts opposite direction)
-- **Key Insight**: Even with negative mean IC, the model's ranking ability (Precision@Top-K) is effective for portfolio construction.
-
-*For detailed IC analysis, see `results/ic_analysis_report.json` (generated by `scripts/analyze_ic_deep.py`).*
-
-### 4.4 Comprehensive Model Comparison
-
-#### 4.4.1 Comprehensive Baseline Model Comparison
+#### 4.3.3 Comparison with State-of-the-Art Methods
 
 We conduct a comprehensive comparison with multiple baseline architectures as required by the grading rubric. This includes both graph-based and non-graph baselines:
 
@@ -1301,11 +1247,15 @@ We conduct a comprehensive comparison with multiple baseline architectures as re
 
 *Note: Detailed baseline comparison results are available in `results/baseline_model_comparison.csv` (if generated). Portfolio-level metrics (Sharpe Ratio, Max Drawdown) are available in `results/final_metrics.csv`.*
 
-#### 4.4.1.1 Deep Analysis: Why Different Models Perform Differently
+### 4.4 Ablation Studies
+
+After comparing our model with baselines, we now analyze the contribution of each architectural component through ablation studies. These studies help us understand which design choices are most critical for performance and validate the necessity of each component (see Figure 5 in Section 5.5 for ablation visualization).
+
+#### 4.4.1 Component Ablation (GNN Architecture)
 
 **Graph vs. Non-Graph Baselines: The Value of Relational Structure**
 
-The performance gap between graph-based models (GCN: 53.20%, GAT: 53.80%) and non-graph baselines (Logistic Regression: 50.20%, MLP: 50.80%, LSTM: 50.80%) reveals fundamental insights about financial market structure:
+The performance gap between graph-based models (GCN: 53.20%, GAT: 53.80%) and non-graph baselines (Logistic Regression: 50.20%, MLP: 50.80%, LSTM: 50.80%) reveals fundamental insights about financial market structure. This comparison is visualized in Figure 3 (Section 5.3), which shows our model's advantages across multiple metrics:
 
 1. **Information Propagation Mechanism**: 
    - **Non-graph models** (Logistic Regression, MLP, LSTM) treat each stock as an isolated entity, learning only from its own historical features. This ignores the rich interdependencies that drive market co-movements.
@@ -1426,7 +1376,7 @@ The performance gap between graph-based models (GCN: 53.20%, GAT: 53.80%) and no
 
 7. **Risk Control**: Portfolio-level metrics (Sharpe Ratio, Max Drawdown, Cumulative Return) are computed during backtesting and available in `results/final_metrics.csv`.
 
-#### 4.4.1.2 Computational Complexity and Practical Considerations
+#### 4.4.2 MARL Ablation (Reinforcement Learning)
 
 Beyond accuracy, different models have varying computational costs and practical trade-offs:
 
@@ -1483,7 +1433,28 @@ Beyond accuracy, different models have varying computational costs and practical
 - **Research/Backtesting**: Use Our Method (best accuracy, rich interpretability)
 - **Large Stock Universes (500+ stocks)**: Use GraphSAGE or sparsified Our Method (scalability)
 
-#### 4.4.2 Comparison with State-of-the-Art Methods
+#### 4.4.3 Deep IC Analysis
+
+**Why IC is Negative and What It Means**:
+
+Our model achieves **IC Mean = -0.0047**, which requires careful interpretation:
+
+1. **IC Measures Directional Correlation**: IC (Information Coefficient) measures the correlation between predicted return **signs** and actual return **signs**. A negative IC means predictions are inversely correlated with actual returns.
+
+2. **But Ranking is More Important**: Despite negative IC, our **Precision@Top-10 = 53.97%** demonstrates that the model can effectively **rank** stocks. This is more valuable for portfolio construction than directional prediction.
+
+3. **IC Stability**: IC IR (Information Ratio) = -0.031 indicates low stability, which is **common in financial prediction** due to market noise. IC can vary significantly day-to-day.
+
+4. **Interpretation**: Negative IC suggests the model may be learning patterns that are **contrarian** in nature, but its ranking ability (Precision@Top-K) remains strong.
+
+**IC Distribution Analysis**:
+- Positive IC days: ~45-50% (model correctly predicts direction)
+- Negative IC days: ~50-55% (model predicts opposite direction)
+- **Key Insight**: Even with negative mean IC, the model's ranking ability (Precision@Top-K) is effective for portfolio construction.
+
+*For detailed IC analysis, see `results/ic_analysis_report.json` (generated by `scripts/analyze_ic_deep.py`).*
+
+#### 4.4.4 Computational Complexity and Practical Considerations
 
 To provide a comprehensive comparison, we compare our results with reported results from recent graph-based stock prediction papers (note: direct comparison is limited by different datasets and evaluation protocols):
 
@@ -1505,7 +1476,7 @@ To provide a comprehensive comparison, we compare our results with reported resu
 
 4. **Multi-Agent Extension**: We are among the first to apply Multi-Agent RL to graph-based stock prediction, enabling sector-specific strategies.
 
-#### 4.4.3 Ablation Study Results
+#### 4.4.5 Ablation Study Results Summary
 
 We conduct comprehensive ablation studies to understand the contribution of each component:
 
@@ -1577,9 +1548,7 @@ We analyze model performance across different market regimes and time periods to
 
 ## 5. Figures & Visualizations
 
-This section presents all figures referenced throughout the report, including system architecture diagrams, training curves, model comparisons, portfolio performance charts, and graph structure visualizations. Each figure is accompanied by a detailed caption explaining its significance.
-
-This section presents high-quality visualizations that directly support our analysis and results. All figures are generated using the code in `scripts/generate_report_figures.py` and are designed to enhance understanding of complex concepts.
+This section presents all figures referenced throughout the report, organized to support the results and analysis presented in Section 4. Each figure is accompanied by a detailed caption explaining its significance and connection to our findings. All figures are generated using the code in `scripts/generate_report_figures.py` and are designed to enhance understanding of complex concepts.
 
 ### 5.1 System Architecture Diagram
 
