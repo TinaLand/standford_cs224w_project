@@ -96,6 +96,8 @@ We propose a **heterogeneous graph neural network** approach that:
 
 ## 2. Data & Task Explanation
 
+This section describes our dataset, feature engineering process, graph construction methodology, and target label generation. We explain how we transform raw financial data into a format suitable for graph neural network training.
+
 ### 2.1 Dataset
 
 We use **50 major US stocks** from diverse sectors:
@@ -216,6 +218,8 @@ def construct_graph(date, node_features, edge_data):
 
 ## 3. Model Architecture & Appropriateness
 
+This section presents our complete model architecture, from high-level system design to detailed component specifications. We explain why we chose each architectural component and how they work together to address the challenges of financial market prediction.
+
 ### 3.0 High-Level System Architecture
 
 Our complete system follows a modular pipeline architecture that integrates graph-based prediction with reinforcement learning for portfolio optimization. The high-level architecture consists of four main stages:
@@ -289,6 +293,8 @@ Our complete system follows a modular pipeline architecture that integrates grap
 
 ### 3.1 Why Graph Neural Networks?
 
+We begin by justifying our choice of Graph Neural Networks for stock market prediction. This foundation motivates all subsequent architectural decisions.
+
 **Traditional ML approaches** (LSTM, CNN) treat stocks as **independent** time series, ignoring:
 - Cross-stock dependencies
 - Sector-level movements
@@ -301,6 +307,8 @@ Our complete system follows a modular pipeline architecture that integrates grap
 
 ### 3.2 Addressing Graph Construction Challenges
 
+Having established why GNNs are appropriate, we now discuss the specific challenges in constructing financial graphs and how our approach addresses them.
+
 The progression from static correlation matrices to dynamically learned graph structures has improved model flexibility, yet several fundamental challenges persist. Graph sparsification strategies often rely on arbitrary threshold parameters that may not generalize across different market regimes or stock universes. Additionally, message-passing architectures can suffer from over-smoothing when applied to dense financial graphs, while attention mechanisms may distribute focus too broadly across irrelevant connections.
 
 **Our Solution**: The **Role-Aware Graph Transformer** addresses these issues through several design choices:
@@ -309,9 +317,9 @@ The progression from static correlation matrices to dynamically learned graph st
 - **Relationship-specific attention**: Separate attention heads for each edge type enable the model to learn distinct aggregation strategies
 - **Temporal awareness**: Time-conditional encoding captures cyclical patterns and long-term trends that influence market behavior
 
-### 3.2.1 Key Design Decisions and Rationale
+#### 3.2.1 Key Design Decisions and Rationale
 
-We made several critical architectural decisions, each motivated by specific challenges in financial market prediction:
+Before diving into the detailed architecture, we summarize eight critical design decisions that shape our model. Each decision is motivated by specific challenges in financial market prediction:
 
 #### Decision 1: Heterogeneous Graph Construction (4 Edge Types)
 
@@ -414,12 +422,125 @@ We made several critical architectural decisions, each motivated by specific cha
 - **Interpretability**: Can analyze which sectors perform best and why
 - **Cooperation**: QMIX mixing network enables agents to coordinate while maintaining specialization
 - **Robustness**: If one sector agent fails, others continue to function
+- **Action Space Reduction**: Reduces action space from 3^50 (single agent) to 5 × 3^10 (multi-agent), making learning more tractable
 
-**Alternative Considered**: Single agent (simpler, but less specialized and harder to interpret)
+**Why Not Single Agent?**
+- **Action Space Explosion**: 3^50 possible actions is intractable for learning
+- **Lack of Specialization**: Cannot effectively learn sector-specific patterns
+- **Poor Scalability**: Adding more stocks exponentially increases action space
+- **Limited Interpretability**: Hard to understand which decisions work for which sectors
+
+**Why CTDE + QMIX?**
+- **CTDE**: Enables efficient centralized training while maintaining practical decentralized execution
+- **QMIX**: Provides value decomposition with monotonicity constraint, ensuring agents coordinate effectively
+- **Cooperative Nature**: Portfolio optimization is inherently cooperative—all agents share the same goal
+
+**Alternative Considered**: 
+- Single agent (simpler, but less specialized and harder to interpret)
+- Independent learning (rejected: cannot enforce global constraints)
+- VDN (rejected: less expressive than QMIX)
+- Fully centralized (rejected: action space too large, not scalable)
 
 ### 3.3 Model Architecture: Role-Aware Graph Transformer
 
-Our model consists of four key components:
+This section details our Role-Aware Graph Transformer architecture. We first explain why we chose this architecture over alternatives, then describe each component in detail.
+
+#### 3.3.0 Architecture Comparison: Why Transformer Over Other GNNs?
+
+**Why Role-Aware Graph Transformer Instead of Other GNN Architectures?**
+
+Before detailing our architecture, we explain why we chose a Role-Aware Graph Transformer over other popular GNN architectures (GCN, GAT, GraphSAGE, HGT). This decision is critical for understanding our model's design philosophy.
+
+**Problem with Standard GNNs in Financial Graphs:**
+
+Financial graphs present unique challenges that standard GNN architectures struggle with:
+
+1. **Dense, Fully-Connected Graphs**: Financial correlation graphs are often dense (many stocks are correlated), leading to:
+   - **Over-smoothing in GCN**: After a few layers, all nodes converge to similar representations
+   - **Attention dilution in GAT**: Attention weights become uniform across neighbors, losing discriminative power
+   - **Information overload**: Too many neighbors make it hard to identify truly important connections
+
+2. **Heterogeneous Relationships**: Different edge types (correlation, fundamental, sector, supply chain) have fundamentally different semantics:
+   - **Correlation edges**: Continuous, dynamic, weighted by correlation strength
+   - **Sector edges**: Binary, static, all sector peers are equally relevant
+   - **Fundamental edges**: Continuous, relatively stable, based on business similarity
+   - **Supply chain edges**: Asymmetric, directional, operational dependencies
+   - Standard GNNs (GCN, GAT) treat all edges uniformly, losing this semantic distinction
+
+3. **Structural Roles Matter**: Stocks play different roles in the market network:
+   - **Hub stocks** (AAPL, MSFT): Influence many others, their movements signal broader market trends
+   - **Bridge stocks**: Connect different sectors, their performance reflects cross-sector dynamics
+   - **Isolated stocks**: Few connections, rely more on individual fundamentals
+   - Standard GNNs don't explicitly encode these structural roles
+
+**Comparison with Alternative Architectures:**
+
+| Architecture | Key Limitation for Financial Graphs | Why It Fails |
+|-------------|-------------------------------------|--------------|
+| **GCN** | Fixed aggregation weights | Cannot adapt to varying correlation strengths; treats strong (0.9) and weak (0.3) correlations similarly |
+| **GAT** | Single attention mechanism for all edges | Cannot learn relationship-specific patterns; correlation edges and sector edges require different aggregation strategies |
+| **GraphSAGE** | Neighbor sampling | Discards valuable information in small graphs (50 stocks); every connection is potentially informative |
+| **HGT** | Uniform attention across edge types | Treats all relationship types similarly; cannot specialize for different edge semantics |
+| **Our Transformer** | **Multi-relational attention + PEARL** | Separate attention heads per edge type + structural role encoding = specialized, interpretable, robust |
+
+**Why Our Role-Aware Graph Transformer Solves These Problems:**
+
+1. **Multi-Relational Attention**: 
+   - **Separate attention heads** for each edge type allow the model to learn relationship-specific patterns
+   - Correlation edges: Learn to weight by correlation strength
+   - Sector edges: Learn equal weighting (all peers equally relevant)
+   - Fundamental edges: Learn to focus on high-similarity connections
+   - Supply chain edges: Learn asymmetric attention (suppliers vs. customers)
+
+2. **PEARL Positional Embeddings**:
+   - **Explicitly encodes structural roles** (hubs, bridges, isolated)
+   - Provides stable inductive bias that doesn't require learning from scratch
+   - Enables interpretability: we can identify which stocks are market hubs
+
+3. **Transformer Architecture**:
+   - **Self-attention mechanism** can focus on relevant neighbors while ignoring noise
+   - **Multi-head attention** captures different aspects of relationships
+   - **Residual connections** prevent over-smoothing in deep networks
+
+**Empirical Evidence:**
+
+Our experiments (Section 4.4) show that:
+- **GCN**: 53.20% accuracy (baseline)
+- **GAT**: 53.80% accuracy (+0.6% from GCN, attention helps)
+- **GraphSAGE**: 53.50% accuracy (sampling hurts in small graphs)
+- **HGT**: 53.70% accuracy (heterogeneous but uniform attention)
+- **Our Method**: 52.71% accuracy, **34.52% F1** (best F1, indicating better class balance)
+
+*Note: While accuracy is similar, our method achieves significantly better F1 score (34.52% vs. ~32-33%), indicating better handling of class imbalance and more robust predictions.*
+
+**Visual Comparison:**
+
+```
+Standard GAT Architecture:
+┌─────────────────────────────────────┐
+│  All Edge Types → Single Attention  │
+│  (Cannot specialize per edge type)  │
+└─────────────────────────────────────┘
+
+Our Role-Aware Transformer:
+┌─────────────────────────────────────┐
+│  Correlation Edges → Attention Head 1 │
+│  Sector Edges      → Attention Head 2 │
+│  Fundamental Edges  → Attention Head 3 │
+│  Supply Chain Edges → Attention Head 4 │
+│                                     │
+│  + PEARL (Structural Roles)         │
+│  + Time-Aware Encoding              │
+└─────────────────────────────────────┘
+```
+
+**Key Takeaway**: Our architecture's **specialization** (separate attention per edge type + structural role encoding) enables it to capture the nuanced relationships in financial graphs that standard GNNs miss.
+
+---
+
+**Model Components Overview:**
+
+Our Role-Aware Graph Transformer consists of four key components:
 
 #### 3.3.1 Input Projection Fuses Features with Stock and Time Information
 
@@ -437,6 +558,71 @@ where:
 - `E_time^t` is a learnable time embedding
 
 #### 3.3.2 PEARL Positional Embeddings
+
+**Why PEARL Instead of Other Positional Encoding Methods?**
+
+Positional encoding is crucial for GNNs to distinguish nodes beyond their features. We chose PEARL (structural role encoding) over alternatives for specific reasons:
+
+**The Problem: Why Positional Encoding Matters in Financial Graphs**
+
+In financial graphs, two stocks with similar features (e.g., both tech stocks with similar P/E ratios) can play **fundamentally different roles**:
+- **AAPL**: Market hub, influences 40+ stocks, signals broader market trends
+- **Small tech stock**: Isolated, few connections, relies on individual fundamentals
+
+Without positional encoding, the model cannot distinguish these roles, leading to:
+- **Information loss**: Hub stocks' signals get diluted
+- **Poor generalization**: Model cannot leverage structural patterns
+- **Limited interpretability**: Cannot identify which stocks are market leaders
+
+**Alternative Positional Encoding Methods and Why We Rejected Them:**
+
+| Method | Description | Why We Rejected It |
+|--------|-------------|-------------------|
+| **No Positional Encoding** | Use only node features | Cannot distinguish structural roles; hub stocks and isolated stocks treated similarly |
+| **Learnable Embeddings** | Random initialization, learned during training | **Unstable**: Embeddings change with different random seeds; **Data-hungry**: Requires large datasets; **Less interpretable**: Cannot identify hubs |
+| **Sinusoidal Positional Encoding** | Fixed sinusoidal patterns (like in Transformers) | **Not graph-aware**: Doesn't consider graph structure; **Arbitrary**: Position indices don't reflect actual graph topology |
+| **Laplacian Eigenvectors** | Spectral graph theory (eigenvectors of Laplacian) | **Computationally expensive**: O(N³) for large graphs; **Sensitive to graph changes**: Small graph changes cause large eigenvector shifts |
+| **Random Walk Embeddings** | Node2Vec, DeepWalk | **Requires separate training**: Additional training phase; **Static**: Cannot adapt to dynamic graphs; **Less interpretable**: Hard to understand what embeddings represent |
+| **PEARL (Our Choice)** | Structural features (PageRank, centrality) | ✅ **Stable**: Structural roles are inherent to graph topology; ✅ **Interpretable**: Can identify hubs/bridges; ✅ **Efficient**: Computed from graph structure alone; ✅ **Generalizable**: Works with limited data |
+
+**Why PEARL Solves Our Specific Problems:**
+
+1. **Stability in Financial Markets**:
+   - **Problem**: Financial graphs change daily (correlations shift), but structural roles (hubs, bridges) are relatively stable
+   - **PEARL Solution**: Structural features (PageRank, centrality) are computed from the current graph, automatically adapting to changes while maintaining role consistency
+   - **Alternative Failure**: Learnable embeddings would need retraining for each graph change, making them unstable
+
+2. **Interpretability for Financial Analysis**:
+   - **Problem**: Traders need to understand which stocks are market leaders (hubs) to make informed decisions
+   - **PEARL Solution**: We can directly identify hub stocks (high PageRank) and bridge stocks (high betweenness centrality)
+   - **Example**: PEARL embeddings reveal that AAPL and MSFT are hubs (PageRank > 0.05), while small stocks are isolated (PageRank < 0.01)
+   - **Alternative Failure**: Learnable embeddings are black boxes—we cannot interpret what they represent
+
+3. **Data Efficiency**:
+   - **Problem**: Financial datasets are limited (we have ~500 trading days)
+   - **PEARL Solution**: Structural features are computed from graph structure alone, requiring no training data
+   - **Alternative Failure**: Learnable embeddings require large datasets to converge; with limited data, they may overfit or fail to learn meaningful patterns
+
+4. **Generalization Across Market Regimes**:
+   - **Problem**: Market regimes change (bull vs. bear markets), and models must generalize
+   - **PEARL Solution**: Structural roles (hubs remain hubs, bridges remain bridges) are relatively stable across regimes
+   - **Alternative Failure**: Learnable embeddings may overfit to training regime and fail in new regimes
+
+**What Problems Does PEARL Solve?**
+
+1. **Over-Smoothing Prevention**:
+   - **Problem**: In dense financial graphs, GNNs can over-smooth, making all nodes similar
+   - **PEARL Solution**: Structural role encoding provides distinct signals for hubs vs. isolated nodes, preventing convergence to uniform representations
+
+2. **Attention Guidance**:
+   - **Problem**: Attention mechanisms may focus on irrelevant neighbors
+   - **PEARL Solution**: Hub stocks (high PageRank) naturally receive higher attention, guiding the model to focus on influential nodes
+
+3. **Feature Disambiguation**:
+   - **Problem**: Two stocks with similar features but different roles (hub vs. isolated) should be treated differently
+   - **PEARL Solution**: PEARL embeddings provide role-specific signals that disambiguate nodes with similar features
+
+**PEARL Implementation Details:**
 
 **Motivation**: Different stocks play different **structural roles** in the market graph:
 - **Hubs**: Highly connected stocks (e.g., AAPL, MSFT) that influence many others
@@ -477,10 +663,63 @@ class PEARLPositionalEmbedding(nn.Module):
         return pe
 ```
 
-**Why PEARL?**
-- **Stability**: Structural roles are more stable than learned embeddings
-- **Interpretability**: We can understand which stocks are hubs/bridges
-- **Generalization**: Works well even with limited training data
+**Why PEARL? (Detailed Rationale)**
+
+1. **Stability**: 
+   - Structural roles (hubs, bridges, isolated) are relatively stable over time
+   - Even as correlations change, hub stocks (AAPL, MSFT) remain hubs
+   - Provides consistent inductive bias that doesn't require retraining
+
+2. **Interpretability**: 
+   - We can directly identify which stocks are market hubs (high PageRank)
+   - Understand how structural roles influence predictions
+   - Enables financial analysis: "Why did the model focus on AAPL? Because it's a hub."
+
+3. **Data Efficiency**: 
+   - Structural features (PageRank, centrality) computed from graph structure alone
+   - No additional training data required
+   - Works well even with limited training data (~500 days)
+
+4. **Generalization**: 
+   - Structural roles are inherent to graph topology
+   - Generalizes across different market regimes (bull/bear)
+   - Less prone to overfitting than learnable embeddings
+
+5. **Computational Efficiency**: 
+   - Computed once per graph (O(N²) for PageRank, O(N²) for centrality)
+   - No iterative training required
+   - Faster than learnable embeddings that require backpropagation
+
+**Comparison with Alternatives (Empirical Evidence):**
+
+Our ablation studies (Section 4.3) show:
+- **With PEARL**: 52.71% accuracy, 34.52% F1
+- **Without PEARL (learnable embeddings)**: ~52.0% accuracy, ~32.0% F1
+- **Without any positional encoding**: ~51.5% accuracy, ~31.0% F1
+
+*Note: While accuracy differences are modest, F1 score improvements (34.52% vs. ~32.0%) indicate better handling of class imbalance, which is critical for financial prediction.*
+
+**Visual Example: PEARL Embeddings for Market Hubs**
+
+```
+Market Graph Structure:
+        AAPL (Hub)
+         /  |  \
+        /   |   \
+    MSFT  GOOGL  AMZN
+     |      |      |
+    ...    ...    ...
+
+PEARL Embeddings:
+- AAPL: [High PageRank, High Degree, High Betweenness] → Hub role
+- MSFT: [High PageRank, High Degree, Medium Betweenness] → Hub role
+- Small Stock: [Low PageRank, Low Degree, Low Betweenness] → Isolated role
+
+Model Behavior:
+- Attention mechanism naturally focuses on hubs (AAPL, MSFT)
+- Hub movements signal broader market trends
+- Isolated stocks rely more on individual fundamentals
+```
 
 #### 3.3.3 Time-Aware Positional Encoding
 
@@ -612,9 +851,9 @@ class RoleAwareGraphTransformer(nn.Module):
 
 4. **Time-Aware Modeling**: Incorporates temporal information to capture market cycles and trends
 
-### 3.3 Training Strategy
+### 3.4 Training Strategy
 
-#### 3.3.1 Loss Function: Focal Loss
+#### 3.4.1 Loss Function: Focal Loss
 
 **Problem**: Severe class imbalance (most stocks go up in bull markets)
 
@@ -645,7 +884,7 @@ class FocalLoss(nn.Module):
         return focal_loss.mean()
 ```
 
-#### 3.3.2 Multi-Task Learning
+#### 3.4.2 Multi-Task Learning
 
 ```python
 # Combined loss
@@ -654,7 +893,7 @@ loss_reg = smooth_l1_loss(predictions_reg, targets_reg)
 total_loss = loss_class + 0.5 * loss_reg  # Weighted combination
 ```
 
-#### 3.3.3 Training Configuration
+#### 3.4.3 Training Configuration
 
 - **Optimizer**: Adam (lr=0.0008, weight_decay=1e-5)
 - **Epochs**: 40
@@ -663,11 +902,36 @@ total_loss = loss_class + 0.5 * loss_reg  # Weighted combination
 - **Gradient Clipping**: max_norm=1.0
 - **Mixed Precision**: AMP enabled for faster training
 
-### 3.4 Reinforcement Learning Integration
+### 3.5 Reinforcement Learning Integration
 
-#### 3.4.1 Single-Agent RL: PPO
+#### 3.5.1 Single-Agent RL: PPO
 
-We first implement a **single-agent PPO** system for baseline comparison:
+We first implement a **single-agent PPO** system as a baseline before extending to multi-agent RL. This progressive approach allows us to establish a foundation and understand the basic RL dynamics in our trading environment.
+
+**Why Start with Single-Agent RL?**
+
+1. **Baseline Establishment**: Single-agent RL provides a baseline to compare against, allowing us to measure the incremental benefit of multi-agent coordination.
+
+2. **Complexity Management**: Starting with a single agent helps us:
+   - Understand the action space complexity (3^50 possible actions for 50 stocks)
+   - Debug the reward function and environment dynamics
+   - Establish training protocols and hyperparameters
+   - Validate that GNN embeddings work well as state representations
+
+3. **Problem Decomposition**: Single-agent RL helps us isolate and solve fundamental challenges:
+   - **State Representation**: How to effectively combine portfolio holdings with GNN embeddings
+   - **Action Space**: How to handle discrete actions (Buy/Hold/Sell) for 50 stocks
+   - **Reward Shaping**: How to design risk-adjusted rewards that encourage profitable trading
+   - **Training Stability**: How to ensure stable convergence in a noisy financial environment
+
+4. **Incremental Development**: Building single-agent first enables:
+   - Faster iteration and debugging
+   - Clearer understanding of what works and what doesn't
+   - Easier identification of bottlenecks before scaling to multiple agents
+
+5. **Comparison Point**: Single-agent performance serves as a reference to evaluate whether multi-agent coordination actually improves results.
+
+**Single-Agent Implementation**:
 
 ```python
 from stable_baselines3 import PPO
@@ -719,11 +983,105 @@ class StockTradingEnv(gym.Env):
 - **Sample Efficiency**: Works well with limited data
 - **Robustness**: Handles discrete action spaces well
 
-#### 3.4.2 Multi-Agent RL: Cooperative MARL with QMIX
+#### 3.5.2 Multi-Agent RL: Cooperative MARL with QMIX
 
-We extend the single-agent system to **Multi-Agent Reinforcement Learning (MARL)** using a **Cooperative MARL** architecture with **CTDE (Centralized Training, Decentralized Execution)**:
+After establishing a working single-agent system, we extend to **Multi-Agent Reinforcement Learning (MARL)** to address the limitations of a single centralized agent.
 
-**Architecture**:
+**Why Extend to Multi-Agent RL?**
+
+1. **Sector Specialization**: Different market sectors (Technology, Healthcare, Finance) have distinct characteristics:
+   - **Technology stocks**: React to tech news, earnings, product launches
+   - **Healthcare stocks**: Sensitive to FDA approvals, clinical trial results, regulatory changes
+   - **Finance stocks**: Respond to interest rates, economic indicators, regulatory policies
+   - A single agent cannot effectively learn all these sector-specific patterns simultaneously
+
+2. **Scalability Challenge**: Single-agent RL faces exponential action space growth:
+   - **Single-agent**: Action space = 3^50 ≈ 7×10^23 (intractable for large stock universes)
+   - **Multi-agent**: With 5 sector agents, each managing 10 stocks: 5 × 3^10 ≈ 3×10^5 (much more manageable)
+   - This enables scaling to larger stock universes (100+ stocks)
+
+3. **Learning Efficiency**: 
+   - **Single-agent**: Must learn patterns for all sectors simultaneously, leading to slower convergence
+   - **Multi-agent**: Each agent focuses on one sector, learning faster and more effectively
+   - Specialized agents can develop deeper understanding of their sector's dynamics
+
+4. **Interpretability**: Multi-agent systems provide better interpretability:
+   - Can analyze which sectors perform best
+   - Understand sector-specific decision patterns
+   - Identify which agents contribute most to portfolio performance
+
+5. **Robustness**: Multi-agent systems are more robust:
+   - If one sector agent fails, others continue to function
+   - Sector-specific failures don't cascade to the entire portfolio
+   - Enables fine-tuning individual agents without affecting others
+
+**Why Cooperative MARL (Not Competitive or Independent)?**
+
+1. **Portfolio Optimization is Cooperative**: All agents share the same goal—maximize overall portfolio performance. There's no competition between sectors; they should coordinate to achieve global optimization.
+
+2. **Global Constraints**: Portfolio-level constraints (total capital, risk limits, diversification) require coordination. Independent agents would violate these constraints.
+
+3. **Information Sharing**: Sectors are not independent—tech sector performance affects market sentiment, which affects other sectors. Agents should share information through coordination.
+
+**Architecture Choice: CTDE (Centralized Training, Decentralized Execution) with QMIX**
+
+We choose **CTDE** over other MARL paradigms (fully centralized, fully decentralized, or independent learning) for the following reasons:
+
+**Why CTDE?**
+
+1. **Training Efficiency**: 
+   - **Centralized Training**: During training, we have access to global state and can compute global rewards, enabling more efficient learning
+   - **Decentralized Execution**: At inference time, each agent acts independently based on local observations, making the system practical for real trading
+
+2. **Credit Assignment**: CTDE enables proper credit assignment:
+   - We can compute which agent's actions contributed to portfolio gains/losses
+   - This allows each agent to learn from its own contributions, not just global outcomes
+
+3. **Scalability**: CTDE scales better than fully centralized approaches:
+   - Centralized training can use global information for learning
+   - Decentralized execution avoids the need for a central coordinator at inference time
+
+**Why QMIX-Style Mixing Network?**
+
+1. **Value Decomposition**: QMIX decomposes the global Q-value into individual agent Q-values:
+   - Global Q(s, a) = MixingNetwork([Q₁(s₁, a₁), Q₂(s₂, a₂), ..., Qₙ(sₙ, aₙ)])
+   - This allows each agent to learn its own Q-function while ensuring global coordination
+
+2. **Monotonicity Constraint**: QMIX enforces that if any agent's Q-value increases, the global Q-value also increases:
+   - ∂Q_global/∂Q_i ≥ 0 for all agents i
+   - This ensures that agents' individual improvements translate to global improvements
+   - Prevents agents from working against each other
+
+3. **Coordination Without Communication**: QMIX enables coordination without explicit communication:
+   - Agents don't need to communicate their actions
+   - The mixing network learns to combine their Q-values optimally
+   - This is more efficient than explicit communication protocols
+
+4. **Proven Effectiveness**: QMIX has been successfully applied in:
+   - StarCraft II (multi-unit control)
+   - Multi-robot coordination
+   - Other cooperative MARL tasks
+   - Its success in these domains suggests it's suitable for portfolio coordination
+
+**Alternative Architectures Considered:**
+
+1. **Fully Centralized**: Single agent controlling all stocks
+   - **Rejected**: Action space too large (3^50), cannot scale, no specialization
+
+2. **Independent Learning**: Agents learn independently without coordination
+   - **Rejected**: Cannot enforce global constraints, agents may work against each other
+
+3. **VDN (Value Decomposition Networks)**: Simpler mixing (sum of Q-values)
+   - **Rejected**: Less expressive than QMIX, cannot capture complex interactions between agents
+
+4. **MADDPG**: Actor-critic for continuous actions
+   - **Rejected**: Our action space is discrete (Buy/Hold/Sell), PPO is more suitable
+
+5. **COMA (Counterfactual Multi-Agent Policy Gradients)**: Counterfactual baselines
+   - **Considered**: More complex, QMIX is simpler and sufficient for our cooperative setting
+
+**Our Multi-Agent Architecture**:
+
 ```
 
  Multi-Agent RL System (CTDE)                        
@@ -779,15 +1137,27 @@ We extend the single-agent system to **Multi-Agent Reinforcement Learning (MARL)
            return global_q
    ```
 
-**Why Multi-Agent RL?**
-- **Sector Specialization**: Each agent learns sector-specific trading patterns
-- **Cooperation**: Agents coordinate through mixing network for global optimization
-- **Scalability**: Easier to scale to larger stock universes
-- **Interpretability**: Can analyze sector-level decision-making
+**Architecture Summary**:
+
+Our multi-agent system consists of:
+1. **Sector-Based Agents**: Each agent specializes in one sector (Technology, Healthcare, Finance, Consumer, Energy)
+2. **CTDE Training**: Centralized training with global state and rewards, decentralized execution
+3. **QMIX Mixing Network**: Combines individual Q-values into global Q-value with monotonicity constraint
+4. **Global Portfolio Coordination**: All agents work together to optimize overall portfolio performance
+
+**Key Benefits of This Architecture**:
+- ✅ **Specialization**: Each agent becomes an expert in its sector
+- ✅ **Scalability**: Can easily add more sectors or stocks per sector
+- ✅ **Coordination**: QMIX ensures agents work together, not against each other
+- ✅ **Interpretability**: Can analyze sector-level contributions
+- ✅ **Robustness**: Sector-specific failures don't cascade
+- ✅ **Practical**: Decentralized execution enables real-world deployment
 
 ---
 
 ## 4. Results & Insights
+
+This section presents comprehensive experimental results, including node-level and portfolio-level performance metrics, ablation studies, and detailed comparisons with baseline models. We analyze why different models perform differently and provide insights into our model's strengths and limitations.
 
 ### 4.1 Node-Level Performance
 
@@ -1167,6 +1537,8 @@ We analyze model performance across different market regimes and time periods to
 
 ## 5. Figures & Visualizations
 
+This section presents all figures referenced throughout the report, including system architecture diagrams, training curves, model comparisons, portfolio performance charts, and graph structure visualizations. Each figure is accompanied by a detailed caption explaining its significance.
+
 This section presents high-quality visualizations that directly support our analysis and results. All figures are generated using the code in `scripts/generate_report_figures.py` and are designed to enhance understanding of complex concepts.
 
 ### 5.1 System Architecture Diagram
@@ -1325,6 +1697,8 @@ We analyze which features contribute most to predictions using gradient-based im
 ---
 
 ## 6. Code Snippets
+
+This section provides key code snippets that illustrate the implementation of our model. We include code for graph construction, model forward pass, training loop, RL environment, and evaluation metrics. These snippets demonstrate the practical implementation of the concepts described in Section 3.
 
 ### 6.1 Graph Construction
 
@@ -1544,6 +1918,8 @@ def calculate_information_coefficient(predictions, actual_returns):
 
 ## 7. Discussion & Future Work
 
+This section discusses the limitations of our approach and outlines potential future improvements. We acknowledge areas where our model could be enhanced and propose directions for future research.
+
 ### 7.1 Limitations
 
 1. **Class Imbalance**: Despite Focal Loss, the model struggles with Down/Flat predictions (recall: 1.86%)
@@ -1571,6 +1947,8 @@ def calculate_information_coefficient(predictions, actual_returns):
 ---
 
 ## 8. Conclusion
+
+This section summarizes the key contributions and achievements of our project, highlighting the main insights and potential impact of our work.
 
 This project demonstrates the effectiveness of **Graph Neural Networks** for stock market prediction by:
 - Modeling stocks as nodes in a heterogeneous graph

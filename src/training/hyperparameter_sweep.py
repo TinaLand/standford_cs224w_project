@@ -111,7 +111,7 @@ def configure_training_params(config, run_dir, run_name):
     trainer_module.MODEL_SAVE_NAME = f"{run_name}.pt"
     
     run_dir.mkdir(parents=True, exist_ok=True)
-    
+
     return originals, trainer_module
 
 
