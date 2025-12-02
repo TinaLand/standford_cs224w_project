@@ -237,37 +237,73 @@ class TimePositionalEncoding(torch.nn.Module):
     def forward(self, date_tensor):
         """
         Args:
-            date_tensor: Tensor of shape [N] with timestamps (days since epoch or similar)
+            date_tensor: Tensor of shape [N] with timestamps (days since reference date 2015-01-01)
         Returns:
             time_pe: Tensor of shape [N, pe_dim] with time positional encodings
         """
-        # Convert to datetime if needed (assuming date_tensor is days since epoch)
-        # For simplicity, we'll use a normalized timestamp
-        # In practice, you'd extract actual date features
+        batch_size = date_tensor.size(0)
+        device = date_tensor.device
         
-        # Normalize timestamp to [0, 1] range (assuming dates are in reasonable range)
-        # This is a placeholder - in real implementation, extract actual date features
-        normalized_time = date_tensor.float() / 10000.0  # Normalize
+        # Convert days since reference to actual date features
+        # Reference date is 2015-01-01, so date_tensor contains days since then
+        reference_date = pd.Timestamp('2015-01-01')
         
-        # Extract time features (simplified - in practice use actual date parsing)
-        # For now, use sinusoidal encoding for continuous time
+        # Extract temporal features for each timestamp
         time_features = []
         
-        # Sinusoidal encoding for continuous time
-        div_term = torch.exp(torch.arange(0, self.pe_dim, 2, device=date_tensor.device).float() * 
-                           -(torch.log(torch.tensor(10000.0, device=date_tensor.device)) / self.pe_dim))
-        time_features.append(torch.sin(normalized_time.unsqueeze(-1) * div_term))
-        time_features.append(torch.cos(normalized_time.unsqueeze(-1) * div_term))
+        # Convert to actual dates for feature extraction
+        days_since_ref = date_tensor.long().cpu().numpy()
+        
+        # Extract date components
+        day_of_week_indices = []
+        month_indices = []
+        quarter_indices = []
+        year_values = []
+        
+        for days in days_since_ref:
+            actual_date = reference_date + pd.Timedelta(days=int(days))
+            day_of_week_indices.append(actual_date.weekday())  # 0=Monday, 6=Sunday
+            month_indices.append(actual_date.month - 1)        # 0-11 for embedding
+            quarter_indices.append(actual_date.quarter - 1)     # 0-3 for embedding
+            year_values.append((actual_date.year - 2015) / 10.0)  # Normalize years
+        
+        # Convert to tensors
+        day_of_week_tensor = torch.tensor(day_of_week_indices, device=device, dtype=torch.long)
+        month_tensor = torch.tensor(month_indices, device=device, dtype=torch.long)
+        quarter_tensor = torch.tensor(quarter_indices, device=device, dtype=torch.long)
+        year_tensor = torch.tensor(year_values, device=device, dtype=torch.float32)
+        
+        # Get embeddings for categorical features
+        dow_emb = self.day_of_week_emb(day_of_week_tensor)     # [N, pe_dim//4]
+        month_emb = self.month_emb(month_tensor)               # [N, pe_dim//4]
+        quarter_emb = self.quarter_emb(quarter_tensor)         # [N, pe_dim//4]
+        year_emb = self.year_proj(year_tensor.unsqueeze(-1))   # [N, pe_dim//4]
         
         # Concatenate all time features
-        time_pe = torch.cat(time_features, dim=-1)
+        time_pe = torch.cat([dow_emb, month_emb, quarter_emb, year_emb], dim=-1)  # [N, pe_dim]
         
-        # Ensure output dimension matches pe_dim
+        # Add sinusoidal encoding for fine-grained temporal patterns
+        if time_pe.shape[-1] < self.pe_dim:
+            # Fill remaining dimensions with sinusoidal encoding
+            remaining_dim = self.pe_dim - time_pe.shape[-1]
+            if remaining_dim > 0:
+                # Normalize timestamp for sinusoidal encoding
+                normalized_time = date_tensor.float() / 3650.0  # Normalize by ~10 years
+                
+                # Create sinusoidal patterns for remaining dimensions
+                div_term = torch.exp(torch.arange(0, remaining_dim, 2, device=device).float() * 
+                                   -(torch.log(torch.tensor(10000.0, device=device)) / remaining_dim))
+                
+                sin_enc = torch.sin(normalized_time.unsqueeze(-1) * div_term)
+                cos_enc = torch.cos(normalized_time.unsqueeze(-1) * div_term)
+                
+                # Concatenate sin and cos, truncate to exact remaining dimension
+                sin_cos = torch.cat([sin_enc, cos_enc], dim=-1)[:, :remaining_dim]
+                time_pe = torch.cat([time_pe, sin_cos], dim=-1)
+        
+        # Ensure exact dimension match
         if time_pe.shape[-1] != self.pe_dim:
-            # Project to correct dimension
-            if not hasattr(self, 'time_proj'):
-                self.time_proj = torch.nn.Linear(time_pe.shape[-1], self.pe_dim).to(time_pe.device)
-            time_pe = self.time_proj(time_pe)
+            time_pe = time_pe[:, :self.pe_dim]
         
         return time_pe
 
