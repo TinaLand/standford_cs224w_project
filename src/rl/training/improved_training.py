@@ -17,9 +17,9 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT / 'scripts'))
 
-from phase5_rl_integration import load_gnn_model_for_rl
-from rl_environment_improved import ImprovedStockTradingEnv
-from rl_agent import StockTradingAgent
+from src.rl.integration import load_gnn_model_for_rl
+from src.rl.environments.single_agent import StockTradingEnv as ImprovedStockTradingEnv
+from src.rl.agents.single_agent import StockTradingAgent
 
 # Configuration
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

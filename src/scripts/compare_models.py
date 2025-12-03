@@ -19,11 +19,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT / 'scripts'))
 
 # Import models
-from phase3_baseline_training import BaselineGNN
+from src.training.baseline_trainer import BaselineGNN
 from src.training.transformer_trainer import RoleAwareGraphTransformer, create_target_labels, _read_time_series_csv
 from src.utils.graph_loader import load_graph_data
 from src.utils.paths import OHLCV_RAW_FILE
-from phase6_evaluation import calculate_precision_at_topk, calculate_information_coefficient
+from src.evaluation.evaluation import calculate_precision_at_topk, calculate_information_coefficient
 
 # Configuration
 MODELS_DIR = PROJECT_ROOT / "models"

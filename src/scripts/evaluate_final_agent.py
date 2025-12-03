@@ -16,14 +16,13 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT / 'scripts'))
 
-from phase5_rl_integration import load_gnn_model_for_rl
-from phase6_evaluation import (
+from src.rl.integration import load_gnn_model_for_rl
+from src.evaluation.evaluation import (
     START_DATE_TEST, END_DATE_TEST, RESULTS_DIR,
     calculate_financial_metrics
 )
-from baseline_strategies import run_all_baseline_strategies
-from compare_all_strategies import load_rl_metrics
-from rl_agent import StockTradingAgent
+from src.rl.agents.single_agent import StockTradingAgent
+# Note: run_all_baseline_strategies and load_rl_metrics may need to be implemented
 import numpy as np
 
 
@@ -42,7 +41,8 @@ def evaluate_final_agent():
     
     # Load final agent
     print("\n--- Loading Final RL Agent ---")
-    from phase5_rl_final_training import FinalStockTradingEnv
+    # Note: FinalStockTradingEnv may need to be imported from src.rl.environments
+    from src.rl.environments.single_agent import StockTradingEnv as FinalStockTradingEnv
     
     def make_final_env():
         return FinalStockTradingEnv(

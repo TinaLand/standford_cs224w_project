@@ -15,8 +15,9 @@ import torch
 from pathlib import Path
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parent))
-from rl_environment import StockTradingEnv, TRANSACTION_COST, DATA_GRAPHS_DIR, PROJECT_ROOT
+from src.rl.environments.single_agent import StockTradingEnv
+from src.rl.config import SingleAgentConfig, DATA_GRAPHS_DIR, PROJECT_ROOT
+TRANSACTION_COST = SingleAgentConfig.TRANSACTION_COST
 
 
 class BalancedStockTradingEnv(StockTradingEnv):
@@ -219,7 +220,7 @@ if __name__ == '__main__':
     Test the balanced environment vs original.
     """
     from phase5_rl_integration import load_gnn_model_for_rl
-    from phase6_evaluation import START_DATE_TEST, END_DATE_TEST
+    from src.evaluation.evaluation import START_DATE_TEST, END_DATE_TEST
     
     print("=" * 70)
     print("🧪 Testing Balanced Trading Environment")
@@ -230,7 +231,7 @@ if __name__ == '__main__':
     
     # Test original environment
     print("\n--- Original Environment (Fixed 0.02% per buy) ---")
-    from rl_environment import StockTradingEnv
+    from src.rl.environments.single_agent import StockTradingEnv
     env_original = StockTradingEnv(
         start_date=START_DATE_TEST,
         end_date=END_DATE_TEST,

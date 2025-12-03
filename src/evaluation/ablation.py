@@ -323,7 +323,7 @@ def train_ablation_model(config: Dict, ablation_name: str) -> Dict[str, Any]:
     
     # Calculate metrics
     from sklearn.metrics import accuracy_score, f1_score
-    from phase6_evaluation import calculate_precision_at_topk, calculate_information_coefficient
+    from src.evaluation.evaluation import calculate_precision_at_topk, calculate_information_coefficient
     
     test_preds = np.concatenate(test_predictions)
     test_targs = np.concatenate(test_targets)

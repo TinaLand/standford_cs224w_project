@@ -17,7 +17,7 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 
 from multi_agent_rl_coordinator import MultiAgentCoordinator, SectorGrouping
-from phase5_rl_integration import load_gnn_model_for_rl
+from src.rl.integration import load_gnn_model_for_rl
 from src.rl.environments.single_agent import StockTradingEnv
 
 from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR, MODELS_PLOTS_DIR as PLOTS_DIR

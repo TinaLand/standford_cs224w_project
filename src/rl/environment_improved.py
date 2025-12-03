@@ -22,7 +22,9 @@ import sys
 
 # Import base environment
 sys.path.append(str(Path(__file__).resolve().parent))
-from rl_environment import StockTradingEnv, TRANSACTION_COST, DATA_GRAPHS_DIR, PROJECT_ROOT
+from src.rl.environments.single_agent import StockTradingEnv
+from src.rl.config import SingleAgentConfig, DATA_GRAPHS_DIR, PROJECT_ROOT
+TRANSACTION_COST = SingleAgentConfig.TRANSACTION_COST
 
 # --- Improved Reward Configuration ---
 REWARD_TYPE = 'risk_adjusted'  # Options: 'simple', 'sharpe', 'risk_adjusted', 'drawdown_aware'
@@ -292,7 +294,7 @@ if __name__ == '__main__':
     # Test different reward types
     reward_types = ['simple', 'sharpe', 'drawdown_aware', 'risk_adjusted']
     
-    from phase6_evaluation import START_DATE_TEST, END_DATE_TEST
+    from src.evaluation.evaluation import START_DATE_TEST, END_DATE_TEST
     
     results = []
     

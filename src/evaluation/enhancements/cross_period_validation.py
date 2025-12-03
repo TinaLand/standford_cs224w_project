@@ -15,7 +15,7 @@ import sys
 
 sys.path.append(str(Path(__file__).resolve().parent))
 
-from phase5_rl_integration import load_gnn_model_for_rl
+from src.rl.integration import load_gnn_model_for_rl
 from src.rl.environments.single_agent import StockTradingEnv
 from src.rl.agents.single_agent import StockTradingAgent
 from stable_baselines3 import PPO
