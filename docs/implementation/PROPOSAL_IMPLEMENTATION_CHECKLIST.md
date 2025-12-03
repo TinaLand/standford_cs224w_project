@@ -164,7 +164,7 @@
 
 | Element | Required Definition | Status | Implementation |
 |---------|-------------------|--------|----------------|
-| **State** | Portfolio holdings + GNN embeddings + Node features | | `rl_environment.py` |
+| **State** | Portfolio holdings + GNN embeddings + Node features | | `src/rl/environments/single_agent.py` |
 | **Action** | Buy/Sell/Hold for each stock | | `MultiDiscrete([3] * N)` |
 | **Reward** | Portfolio return / Risk-adjusted return | | Return-based + Sharpe (improved) |
 | **Algorithm** | Q-learning or Policy Gradient | | PPO (Stable Baselines3) |

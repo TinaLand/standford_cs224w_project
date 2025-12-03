@@ -9,8 +9,8 @@
 ### 1. Create Agent
 
 ```python
-from rl_agent import StockTradingAgent
-from src.rl.environment import StockTradingEnv
+from src.rl.agents.single_agent import StockTradingAgent
+from src.rl.environments.single_agent import StockTradingEnv
 
 # Define environment factory function
 def make_env():

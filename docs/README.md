@@ -70,11 +70,25 @@ Technical implementation documentation:
 
 | Document | Description |
 |----------|-------------|
-| [PEARL Implementation](implementation/PEARL_IMPLEMENTATION_STATUS.md) | PEARL positional embedding implementation details |
 | [Multi-Agent RL Explanation](implementation/MULTI_AGENT_RL_EXPLANATION.md) | Multi-Agent RL architecture and design |
 | [Multi-Agent RL Implementation](implementation/MULTI_AGENT_RL_IMPLEMENTATION.md) | Implementation details for Multi-Agent RL |
-| [Phase 6 & 7 Implementation](implementation/PHASE6_PHASE7_IMPLEMENTATION.md) | Implementation status for Phase 6 and 7 |
 | [Proposal Implementation Checklist](implementation/PROPOSAL_IMPLEMENTATION_CHECKLIST.md) | Checklist of proposal requirements vs. implementation |
+
+---
+
+## Figure Documentation
+
+Documentation related to figure generation and requirements:
+
+| Document | Description |
+|----------|-------------|
+| [Figures Checklist](figures/FIGURES_CHECKLIST.md) | Checklist of all figures and their status |
+
+---
+
+## Architecture Documentation
+
+- **[Architecture Overview](ARCHITECTURE.md)** - High-level architecture, module structure, and data flow
 
 ---
 
@@ -83,6 +97,7 @@ Technical implementation documentation:
 ```
 docs/
  README.md                    # This file - documentation index
+ HARDWARE_REQUIREMENTS.md     # Hardware and system requirements
 
  phases/                      # Phase-by-phase documentation
     phase1_data_collection.md
@@ -104,6 +119,8 @@ docs/
     GNN_PREDICTION_ANALYSIS.md
     PROJECT_SCORE_EVALUATION.md
     PROJECT_COMPLEXITY_EVALUATION.md
+    FINAL_SCORE_EVALUATION.md
+    RUBRIC_EVALUATION.md
 
  implementation/              # Technical implementation details
      PEARL_IMPLEMENTATION_STATUS.md
@@ -146,11 +163,13 @@ docs/
 ## Documentation Standards
 
 All documentation follows these standards:
-- **Language**: English (except where explicitly noted)
+- **Language**: English (all active documents must be in English)
 - **Format**: Markdown (.md)
 - **Structure**: Clear headings, code blocks, tables
-- **Code Examples**: Complete, runnable code snippets
+- **Code Examples**: Complete, runnable code snippets with updated import paths
 - **Mathematical Notation**: LaTeX-style formulas where appropriate
+- **Import Paths**: Use centralized modules (`src.utils.paths`, `src.utils.graph_loader`, `src.utils.constants`)
+- **RL Imports**: Use `src.rl.environments.single_agent` and `src.rl.agents.single_agent` (not deprecated paths)
 
 ---
 
@@ -189,6 +208,13 @@ When adding or updating documentation:
 - **Course**: CS224W - Machine Learning with Graphs (Stanford)
 - **Project Repository**: See main [README](../README.md) for repository information
 - **External References**: See [FINAL_REPORT.md](../FINAL_REPORT.md) for complete reference list
+
+---
+
+## Additional Resources
+
+- **[Hardware Requirements](HARDWARE_REQUIREMENTS.md)** - System requirements and recommendations
+- **[Archived Documents](archive/)** - Historical documentation and design notes
 
 ---
 

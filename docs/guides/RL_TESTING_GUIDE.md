@@ -123,7 +123,7 @@ After viewing results:
 1. **If results are good**: Consider running full evaluation for comprehensive analysis
 2. **If results need improvement**: 
  - Increase training timesteps in `src/rl/integration.py`
- - Adjust reward function in `rl_environment.py`
+ - Adjust reward function in `src/rl/environments/single_agent.py`
  - Tune hyperparameters
 
 3. **For production use**:
@@ -144,5 +144,5 @@ python scripts/view_rl_results.py
 python scripts/run_full_rl_evaluation.py
 
 # Verify connection (one-time)
-python scripts/test_rl_agent_connection.py
+python -m src.rl.training.single_agent  # For single-agent RL testing
 ```

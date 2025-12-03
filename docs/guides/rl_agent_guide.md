@@ -298,7 +298,7 @@ metrics = calculate_financial_metrics(portfolio_values)
 
 ### Key Code Locations
 
-#### **How Environment Generates State** (`rl_environment.py`)
+#### **How Environment Generates State** (`src/rl/environments/single_agent.py`)
 
 ```python
 def _get_observation(self):
@@ -316,7 +316,7 @@ def _get_observation(self):
  return observation
 ```
 
-#### **How Agent Makes Decisions** (`rl_agent.py`)
+#### **How Agent Makes Decisions** (`src/rl/agents/single_agent.py`)
 
 ```python
 def predict(self, observation, deterministic=True):
@@ -326,7 +326,7 @@ def predict(self, observation, deterministic=True):
  return action, _
 ```
 
-#### **How Environment Executes Actions** (`rl_environment.py`)
+#### **How Environment Executes Actions** (`src/rl/environments/single_agent.py`)
 
 ```python
 def step(self, action):
