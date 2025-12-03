@@ -10,10 +10,16 @@ from pathlib import Path
 import sys
 from typing import Optional
 
-# Fix PyTorch serialization for pandas timestamps (PyTorch 2.6+)
+# Fix PyTorch serialization for pandas timestamps and PyTorch Geometric (PyTorch 2.6+)
 import torch.serialization
 if hasattr(torch.serialization, 'add_safe_globals'):
     torch.serialization.add_safe_globals([pd._libs.tslibs.timestamps._unpickle_timestamp])
+    # Add PyTorch Geometric BaseStorage for graph loading
+    try:
+        from torch_geometric.data.storage import BaseStorage
+        torch.serialization.add_safe_globals([BaseStorage])
+    except ImportError:
+        pass
 
 from ..config import SingleAgentConfig, GNNConfig, PROJECT_ROOT, DEVICE, RL_LOG_PATH, RL_SAVE_PATH
 from ..agents.single_agent import StockTradingAgent
@@ -218,6 +224,24 @@ def run_single_agent_training(
     print(f"✅ Agent also saved to results: {results_agent_path}.zip")
     
     # 9. Generate Results JSON
+    def convert_to_json_serializable(obj):
+        """Convert numpy/torch types to JSON-serializable Python types."""
+        import numpy as np
+        if isinstance(obj, (np.integer, np.floating)):
+            return obj.item()
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, torch.Tensor):
+            return obj.cpu().item() if obj.numel() == 1 else obj.cpu().tolist()
+        elif isinstance(obj, dict):
+            return {k: convert_to_json_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [convert_to_json_serializable(item) for item in obj]
+        elif isinstance(obj, (int, float, str, bool, type(None))):
+            return obj
+        else:
+            return str(obj)  # Fallback to string representation
+    
     results_json = {
         "model_type": "single_agent_ppo",
         "training_config": {
@@ -226,7 +250,7 @@ def run_single_agent_training(
             "policy": SingleAgentConfig.POLICY,
             "verbose": verbose
         },
-        "training_statistics": training_stats,
+        "training_statistics": convert_to_json_serializable(training_stats),
         "model_path": str(results_agent_path) + ".zip",
         "training_period": {
             "start_date": start_date.strftime("%Y-%m-%d"),
@@ -241,7 +265,7 @@ def run_single_agent_training(
         test_env = env_factory()
         eval_results = agent.evaluate(test_env, n_episodes=5, deterministic=True)
         print(f"📈 Evaluation Results: {eval_results}")
-        results_json["evaluation_results"] = eval_results
+        results_json["evaluation_results"] = convert_to_json_serializable(eval_results)
     except Exception as e:
         print(f"⚠️  Evaluation failed: {e}")
         results_json["evaluation_results"] = {"error": str(e)}
