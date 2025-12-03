@@ -20,7 +20,9 @@ sys.path.append(str(PROJECT_ROOT / 'scripts'))
 
 # Import models
 from phase3_baseline_training import BaselineGNN
-from phase4_core_training import RoleAwareGraphTransformer, load_graph_data, create_target_labels, _read_time_series_csv, OHLCV_RAW_FILE
+from src.training.transformer_trainer import RoleAwareGraphTransformer, create_target_labels, _read_time_series_csv
+from src.utils.graph_loader import load_graph_data
+from src.utils.paths import OHLCV_RAW_FILE
 from phase6_evaluation import calculate_precision_at_topk, calculate_information_coefficient
 
 # Configuration

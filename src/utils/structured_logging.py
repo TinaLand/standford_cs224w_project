@@ -11,10 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 import sys
 
-# Project root
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-LOGS_DIR = PROJECT_ROOT / "logs"
-LOGS_DIR.mkdir(exist_ok=True)
+from .paths import PROJECT_ROOT, LOGS_DIR
 
 
 class StructuredLogger:

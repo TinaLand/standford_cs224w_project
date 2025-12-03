@@ -16,11 +16,11 @@ from typing import Dict, List, Any
 # Add parent directory to path
 sys.path.append(str(Path(__file__).resolve().parent))
 
-from phase4_core_training import (
+from src.training.transformer_trainer import (
     RoleAwareGraphTransformer,
-    load_graph_data,
-    load_targets,
-    get_train_val_test_dates,
+    create_target_labels,
+)
+from src.utils.constants import (
     DEVICE,
     HIDDEN_CHANNELS,
     NUM_LAYERS,
@@ -28,12 +28,11 @@ from phase4_core_training import (
     OUT_CHANNELS,
     LEARNING_RATE,
     NUM_EPOCHS,
-    LOOKAHEAD_DAYS
+    LOOKAHEAD_DAYS,
 )
+from src.utils.graph_loader import load_graph_data
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODELS_DIR = PROJECT_ROOT / "models"
-RESULTS_DIR = PROJECT_ROOT / "results"
+from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR
 ABLATION_MODELS_DIR = MODELS_DIR / "ablation_models"
 ABLATION_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)

@@ -23,14 +23,13 @@ import json
 import sys
 
 # Add project root to path for imports
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from src.utils.paths import PROJECT_ROOT
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # Import the Phase 4 training pipeline from transformer_trainer
 from src.training.transformer_trainer import (
     RoleAwareGraphTransformer,
     run_training_pipeline,
-    load_graph_data,
     create_target_labels,
     HIDDEN_CHANNELS,
     LEARNING_RATE,
@@ -38,8 +37,8 @@ from src.training.transformer_trainer import (
     NUM_HEADS,
     NUM_EPOCHS,
     DEVICE,
-    MODELS_DIR as DEFAULT_MODELS_DIR
 )
+from src.utils.paths import MODELS_DIR as DEFAULT_MODELS_DIR
 
 # Create a mock module-like object for compatibility
 class CoreModule:
@@ -58,7 +57,8 @@ class CoreModule:
         return run_training_pipeline()
 
 core = CoreModule()
-SWEEP_ROOT = PROJECT_ROOT / "models" / "sweeps"
+from src.utils.paths import MODELS_DIR
+SWEEP_ROOT = MODELS_DIR / "sweeps"
 
 
 def build_search_grid():

@@ -19,54 +19,41 @@ if hasattr(torch.serialization, 'add_safe_globals'):
     torch.serialization.add_safe_globals([BaseStorage, NodeStorage, EdgeStorage, GlobalStorage])
 
 # --- Configuration & Hyperparameters (from Proposal) ---
-# NOTE: This file lives in `src/training/`, so the project root is three levels up.
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_GRAPHS_DIR = PROJECT_ROOT / "data" / "graphs"
-MODELS_DIR = PROJECT_ROOT / "models"
-OHLCV_RAW_FILE = PROJECT_ROOT / "data" / "raw" / "stock_prices_ohlcv_raw.csv"
+# Import centralized paths and utilities
+from src.utils.paths import PROJECT_ROOT, DATA_GRAPHS_DIR, MODELS_DIR, OHLCV_RAW_FILE
+from src.utils.graph_loader import load_graph_data
 
-# Hyperparameters (IMPROVED for better performance)
-LOOKAHEAD_DAYS = 5              # Target: 5-day-ahead return sign
-HIDDEN_CHANNELS = 512           # Hidden size (INCREASED from 256 to 512 for better capacity)
-NUM_LAYERS = 3                  # Number of layers (INCREASED from 2 to 3 for deeper model)
-NUM_HEADS = 8                   # Number of attention heads
-OUT_CHANNELS = 2                # Binary classification: Up/Down
-LEARNING_RATE = 0.0008          # Learning rate (ADJUSTED: slightly reduced for more stable training)
-NUM_EPOCHS = 40                 # Increased epochs (from 30 to 40) for more training
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# Class Imbalance Handling Configuration
-LOSS_TYPE = 'focal'  # Options: 'standard', 'focal'
-# IMPROVED: Adjusted for better Down/Flat class handling
-# Down/Flat class has very low recall (1.86%), need stronger focus
-FOCAL_ALPHA = 0.85   # Weight for minority class (INCREASED from 0.80 to 0.85 for Down/Flat class)
-FOCAL_GAMMA = 3.0    # Focusing parameter (INCREASED from 2.5 to 3.0 for harder focus on hard examples)
-# Use class weights in addition to focal loss for better balance
-USE_CLASS_WEIGHTS = True  # Enable class weights for additional balancing
-
-# Multi-task Learning Configuration (Classification + Regression on returns)
-ENABLE_MULTI_TASK = True
-REG_LOSS_WEIGHT = 0.5          # Weight for regression loss in total loss
-
-# Time-Aware Modeling Configuration
-ENABLE_TIME_AWARE = True        # Enable time-aware positional encoding
-TIME_PE_DIM = 16                # Dimension for time positional encoding
-
-# Early Stopping Configuration
-ENABLE_EARLY_STOPPING = True
-EARLY_STOP_PATIENCE = 12        # Increased from 10 to 12 to allow more training epochs
-EARLY_STOP_MIN_DELTA = 0.0001   # Minimum improvement threshold
-
-# Learning Rate Scheduler Configuration
-ENABLE_LR_SCHEDULER = True
-LR_SCHEDULER_PATIENCE = 4       # Increased from 3 to 4 for more stable training
-LR_SCHEDULER_FACTOR = 0.5       # Multiply LR by this factor
-LR_SCHEDULER_MIN_LR = 1e-6      # Minimum learning rate
-
-# Additional Training Improvements
-DROPOUT_RATE = 0.3              # Dropout rate for regularization (NEW)
-WEIGHT_DECAY = 1e-5             # L2 regularization (NEW)
-GRAD_CLIP_NORM = 1.0            # Gradient clipping norm (NEW)
+# Import centralized constants
+from src.utils.constants import (
+    DEVICE,
+    HIDDEN_CHANNELS,
+    NUM_LAYERS,
+    NUM_HEADS,
+    OUT_CHANNELS,
+    LEARNING_RATE,
+    NUM_EPOCHS,
+    LOOKAHEAD_DAYS,
+    LOSS_TYPE,
+    FOCAL_ALPHA,
+    FOCAL_GAMMA,
+    USE_CLASS_WEIGHTS,
+    ENABLE_MULTI_TASK,
+    REG_LOSS_WEIGHT,
+    ENABLE_TIME_AWARE,
+    TIME_PE_DIM,
+    ENABLE_EARLY_STOPPING,
+    EARLY_STOP_PATIENCE,
+    EARLY_STOP_MIN_DELTA,
+    ENABLE_LR_SCHEDULER,
+    LR_SCHEDULER_PATIENCE,
+    LR_SCHEDULER_FACTOR,
+    LR_SCHEDULER_MIN_LR,
+    DROPOUT_RATE,
+    WEIGHT_DECAY,
+    GRAD_CLIP_NORM,
+    ENABLE_AMP,
+    ENABLE_MINI_BATCH,
+)
 
 # --- Helper Utilities ---
 
@@ -475,21 +462,7 @@ class RoleAwareGraphTransformer(torch.nn.Module):
 
 # --- 2. Data Utilities (Copied from Phase 3 for consistency) ---
 
-def load_graph_data(date):
-    """Loads a single graph snapshot for the given date."""
-    date_str = date.strftime('%Y%m%d')
-    filepath = DATA_GRAPHS_DIR / f'graph_t_{date_str}.pt'
-    
-    if not filepath.exists():
-        return None
-    
-    try:
-        # Load the PyG graph object with weights_only=False for PyTorch 2.6+
-        data = torch.load(filepath, weights_only=False)
-        return data
-    except Exception as e:
-        # print(f"❌ Error loading graph {filepath.name}: {e}") # Keep this silent during loop
-        return None
+# load_graph_data is now imported from src.utils.graph_loader
 
 def create_target_labels(tickers, dates, lookahead_days):
     """

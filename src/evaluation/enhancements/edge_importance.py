@@ -17,13 +17,11 @@ import networkx as nx
 
 sys.path.append(str(Path(__file__).resolve().parent))
 
-from phase4_core_training import RoleAwareGraphTransformer, load_graph_data
+from src.training.transformer_trainer import RoleAwareGraphTransformer
+from src.utils.graph_loader import load_graph_data
 from utils_data import load_data_file
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODELS_DIR = PROJECT_ROOT / "models"
-RESULTS_DIR = PROJECT_ROOT / "results"
-PLOTS_DIR = MODELS_DIR / "plots"
+from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR, MODELS_PLOTS_DIR as PLOTS_DIR
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -377,7 +375,7 @@ def main():
         return
     
     # Load sample graph to get dimensions
-    from phase4_core_training import load_graph_data
+    from src.utils.graph_loader import load_graph_data
     sample_graph = list((PROJECT_ROOT / "data" / "graphs").glob('graph_t_*.pt'))[0]
     temp_data = torch.load(sample_graph, weights_only=False)
     INPUT_DIM = temp_data['stock'].x.shape[1]

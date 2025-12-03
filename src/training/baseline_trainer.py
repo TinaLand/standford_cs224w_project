@@ -28,11 +28,9 @@ except ImportError:
     print("⚠️ TensorBoard not available. Install with: pip install tensorboard")
 
 # --- Configuration ---
-# NOTE: This file lives in `src/training/`, so the project root is three levels up.
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_GRAPHS_DIR = PROJECT_ROOT / "data" / "graphs"
-MODELS_DIR = PROJECT_ROOT / "models"
-OHLCV_RAW_FILE = PROJECT_ROOT / "data" / "raw" / "stock_prices_ohlcv_raw.csv"
+# Import centralized paths and utilities
+from src.utils.paths import PROJECT_ROOT, DATA_GRAPHS_DIR, MODELS_DIR, OHLCV_RAW_FILE, TENSORBOARD_DIR
+from src.utils.graph_loader import load_graph_data
 
 # Hyperparameters
 HIDDEN_DIM = 128  # Increased from 64 (more capacity for 15 features)
@@ -67,7 +65,7 @@ LR_SCHEDULER_MIN_LR = 1e-6      # Minimum learning rate
 
 # TensorBoard & Metrics Logging Configuration
 ENABLE_TENSORBOARD = True       # Enable TensorBoard logging
-TENSORBOARD_DIR = PROJECT_ROOT / "runs"
+# TENSORBOARD_DIR is now imported from src.utils.paths
 ENABLE_ROC_AUC = True          # Calculate ROC-AUC score
 ENABLE_CONFUSION_MATRIX = True  # Generate confusion matrix plots
 PLOTS_DIR = MODELS_DIR / "plots"
@@ -596,22 +594,7 @@ def calculate_roc_auc(y_true, y_prob):
 
 # --- 3. Data Preparation ---
 
-def load_graph_data(date):
-    """Loads a single graph snapshot for the given date."""
-    date_str = date.strftime('%Y%m%d')
-    filepath = DATA_GRAPHS_DIR / f'graph_t_{date_str}.pt'
-    
-    if not filepath.exists():
-        # This should not happen if phase 2 ran correctly with the date fix
-        return None
-    
-    try:
-        # Load the PyG graph object
-        data = torch.load(filepath, weights_only=False)
-        return data
-    except Exception as e:
-        print(f"❌ Error loading graph {filepath.name}: {e}")
-        return None
+# load_graph_data is now imported from src.utils.graph_loader
 
 def create_target_labels(tickers, dates, lookahead_days):
     """

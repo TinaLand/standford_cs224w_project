@@ -11,10 +11,12 @@ from tqdm import tqdm
 from typing import Dict, Any, List
 
 # Import necessary modules from previous phases
-from src.training.transformer_trainer import RoleAwareGraphTransformer, load_graph_data, create_target_labels, _read_time_series_csv, OHLCV_RAW_FILE
+from src.training.transformer_trainer import RoleAwareGraphTransformer, create_target_labels, _read_time_series_csv
+from src.utils.graph_loader import load_graph_data
+from src.utils.paths import OHLCV_RAW_FILE
 from src.rl.integration import load_gnn_model_for_rl 
-from src.rl.environment import StockTradingEnv
-from src.rl.agent import StockTradingAgent 
+from src.rl.environments.single_agent import StockTradingEnv
+from src.rl.agents.single_agent import StockTradingAgent 
 
 # --- Configuration & Setup ---
 # NOTE: This file lives in `src/evaluation/`, so the project root is three levels up.

@@ -32,11 +32,9 @@ from torch_geometric.data.storage import BaseStorage, NodeStorage, EdgeStorage, 
 if hasattr(torch.serialization, 'add_safe_globals'):
     torch.serialization.add_safe_globals([BaseStorage, NodeStorage, EdgeStorage, GlobalStorage])
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_GRAPHS_DIR = PROJECT_ROOT / "data" / "graphs"
-MODELS_DIR = PROJECT_ROOT / "models"
-RESULTS_DIR = PROJECT_ROOT / "results"
-OHLCV_RAW_FILE = PROJECT_ROOT / "data" / "raw" / "stock_prices_ohlcv_raw.csv"
+# Import centralized paths and utilities
+from src.utils.paths import PROJECT_ROOT, DATA_GRAPHS_DIR, MODELS_DIR, RESULTS_DIR, OHLCV_RAW_FILE
+from src.utils.graph_loader import load_graph_data
 RESULTS_DIR.mkdir(exist_ok=True)
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -202,12 +200,7 @@ class LSTMModel(nn.Module):
 # Data Loading and Preparation
 # ============================================================================
 
-def load_graph_data(date: pd.Timestamp) -> HeteroData:
-    """Load graph data for a specific date."""
-    graph_file = DATA_GRAPHS_DIR / f"graph_t_{date.strftime('%Y%m%d')}.pt"
-    if graph_file.exists():
-        return torch.load(graph_file, weights_only=False)
-    return None
+# load_graph_data is now imported from src.utils.graph_loader
 
 
 def _read_time_series_csv(path: Path) -> pd.DataFrame:

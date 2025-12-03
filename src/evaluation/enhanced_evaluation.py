@@ -27,12 +27,8 @@ from src.evaluation.deep_analysis import (
     generate_comprehensive_report
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-RESULTS_DIR = PROJECT_ROOT / "results"
-PLOTS_DIR = RESULTS_DIR / "plots"
+from src.utils.paths import PROJECT_ROOT, RESULTS_DIR, RESULTS_PLOTS_DIR as PLOTS_DIR
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def run_enhanced_evaluation():
@@ -150,8 +146,8 @@ def run_enhanced_evaluation():
     rl_agent_file = PROJECT_ROOT / "models" / "rl_ppo_agent_model" / "ppo_stock_agent.zip"
     if rl_agent_file.exists():
         # Run backtest and collect trading data
-        from src.rl.environment import StockTradingEnv
-        from src.rl.agent import StockTradingAgent
+        from src.rl.environments.single_agent import StockTradingEnv
+        from src.rl.agents.single_agent import StockTradingAgent
         
         # Setup environment
         def make_test_env():

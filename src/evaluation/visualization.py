@@ -30,7 +30,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT / 'scripts'))
 sys.path.append(str(PROJECT_ROOT / 'scripts' / 'components'))
 
-from phase4_core_training import RoleAwareGraphTransformer, load_graph_data
+from src.training.transformer_trainer import RoleAwareGraphTransformer
+from src.utils.graph_loader import load_graph_data
 from utils_data import load_data_file
 
 # Configuration

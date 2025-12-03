@@ -22,7 +22,7 @@ from src.models.multi_agent.coordinator import (
     MultiAgentTradingEnv
 )
 from src.rl.integration import load_gnn_model_for_rl
-from src.rl.environment import StockTradingEnv
+from src.rl.environments.single_agent import StockTradingEnv
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"

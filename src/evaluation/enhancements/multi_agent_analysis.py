@@ -18,13 +18,9 @@ sys.path.append(str(Path(__file__).resolve().parent))
 
 from multi_agent_rl_coordinator import MultiAgentCoordinator, SectorGrouping
 from phase5_rl_integration import load_gnn_model_for_rl
-from rl_environment import StockTradingEnv
+from src.rl.environments.single_agent import StockTradingEnv
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-MODELS_DIR = PROJECT_ROOT / "models"
-RESULTS_DIR = PROJECT_ROOT / "results"
-PLOTS_DIR = MODELS_DIR / "plots"
-RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR, MODELS_PLOTS_DIR as PLOTS_DIR
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

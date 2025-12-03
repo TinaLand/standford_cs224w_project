@@ -16,16 +16,12 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 
 from phase5_rl_integration import load_gnn_model_for_rl
-from rl_environment import StockTradingEnv
-from rl_agent import StockTradingAgent
+from src.rl.environments.single_agent import StockTradingEnv
+from src.rl.agents.single_agent import StockTradingAgent
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODELS_DIR = PROJECT_ROOT / "models"
-RESULTS_DIR = PROJECT_ROOT / "results"
-PLOTS_DIR = MODELS_DIR / "plots"
-RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR, MODELS_PLOTS_DIR as PLOTS_DIR
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -278,7 +274,7 @@ def main():
         vec_env = make_vec_env(env_factory, n_envs=1)
         ppo_agent = PPO.load(agent_path, env=vec_env, device="cpu")
         
-        from rl_agent import StockTradingAgent
+        from src.rl.agents.single_agent import StockTradingAgent
         agent = StockTradingAgent(gnn_model, env_factory, DEVICE)
         agent.agent = ppo_agent
         agent.is_trained = True

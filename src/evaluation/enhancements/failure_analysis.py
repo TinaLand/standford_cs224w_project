@@ -17,14 +17,10 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 
 from phase5_rl_integration import load_gnn_model_for_rl
-from rl_environment import StockTradingEnv
-from rl_agent import StockTradingAgent
+from src.rl.environments.single_agent import StockTradingEnv
+from src.rl.agents.single_agent import StockTradingAgent
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODELS_DIR = PROJECT_ROOT / "models"
-RESULTS_DIR = PROJECT_ROOT / "results"
-PLOTS_DIR = MODELS_DIR / "plots"
-RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR, MODELS_PLOTS_DIR as PLOTS_DIR
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -151,7 +147,7 @@ def analyze_error_patterns(
     print("🔍 Analyzing Error Patterns")
     print("="*60)
     
-    from phase4_core_training import load_graph_data
+    from src.utils.graph_loader import load_graph_data
     
     all_predictions = []
     all_targets = []
@@ -413,7 +409,7 @@ def main():
         if agent_path.exists():
             from stable_baselines3 import PPO
             from stable_baselines3.common.env_util import make_vec_env
-            from rl_environment import StockTradingEnv
+            from src.rl.environments.single_agent import StockTradingEnv
             
             start_date = pd.to_datetime('2023-01-01')
             end_date = pd.to_datetime('2024-12-31')
@@ -425,7 +421,7 @@ def main():
             agent = PPO.load(agent_path, env=vec_env, device="cpu")
             
             # Wrap in StockTradingAgent
-            from rl_agent import StockTradingAgent
+            from src.rl.agents.single_agent import StockTradingAgent
             trading_agent = StockTradingAgent(gnn_model, env_factory, DEVICE)
             trading_agent.agent = agent
             trading_agent.is_trained = True
