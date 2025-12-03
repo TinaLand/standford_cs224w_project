@@ -264,6 +264,55 @@ def load_static_connections():
 
 # --- Graph Construction Functions ---
 
+def calculate_sector_weight(ticker1, ticker2, sector_df):
+    """
+    Calculate weighted edge for sector/industry connections.
+    
+    Weighting scheme:
+    - Same sector AND same industry: 1.0 (strongest connection)
+    - Same sector but different industry: 0.8 (strong connection)
+    - Related sectors: 0.5 (moderate connection)
+    """
+    try:
+        row1 = sector_df[sector_df['Ticker'] == ticker1].iloc[0]
+        row2 = sector_df[sector_df['Ticker'] == ticker2].iloc[0]
+        
+        sector1 = row1.get('Sector', '')
+        sector2 = row2.get('Sector', '')
+        industry1 = row1.get('Industry', '')
+        industry2 = row2.get('Industry', '')
+        
+        if sector1 == sector2:
+            if industry1 == industry2:
+                # Same sector AND same industry: strongest connection
+                return 1.0
+            else:
+                # Same sector but different industry: strong connection
+                return 0.8
+        else:
+            # Different sectors: moderate connection (if we want cross-sector edges)
+            # For now, we only connect within same sector, so this shouldn't happen
+            return 0.5
+    except (IndexError, KeyError):
+        # Fallback if data not found
+        return 0.7
+
+def calculate_supply_competitor_weight(relation_type, ticker1, ticker2):
+    """
+    Calculate weighted edge for supply chain/competitor connections.
+    
+    Weighting scheme:
+    - SUPPLY_CHAIN: 1.0 (strong business relationship)
+    - COMPETITOR: 0.9 (strong competitive relationship)
+    - Can be extended based on relationship strength if data available
+    """
+    if relation_type == 'SUPPLY_CHAIN':
+        return 1.0  # Strong business relationship
+    elif relation_type == 'COMPETITOR':
+        return 0.9  # Strong competitive relationship
+    else:
+        return 0.8  # Default for unknown relation types
+
 def pre_calculate_static_edges(tickers, sector_df, supply_comp_df, ticker_to_idx):
     """Calculates all static edges (Sector, Industry, Supply Chain, Competitor) once."""
     print("\n🧱 Pre-calculating Static Edges...")
@@ -277,24 +326,37 @@ def pre_calculate_static_edges(tickers, sector_df, supply_comp_df, ticker_to_idx
         
         # Check if this is the sector mapping format (Ticker, Sector, Industry)
         if 'Ticker' in sector_df.columns and 'Sector' in sector_df.columns:
-            print("   Creating sector edges from Ticker-Sector mappings...")
+            print("   Creating sector edges from Ticker-Sector mappings with weighted connections...")
             
             # Group by sector to create intra-sector edges
             sector_groups = sector_df.groupby('Sector')['Ticker'].apply(list).to_dict()
             
             sector_edge_count = 0
+            weight_stats = {'same_industry': 0, 'diff_industry': 0}
+            
             for sector_name, sector_tickers in sector_groups.items():
                 # Connect all stocks within the same sector
                 for i, ticker1 in enumerate(sector_tickers):
                     for ticker2 in sector_tickers[i+1:]:  # Avoid self-loops and duplicates
                         if ticker1 in ticker_to_idx and ticker2 in ticker_to_idx:
                             idx1, idx2 = ticker_to_idx[ticker1], ticker_to_idx[ticker2]
+                            
+                            # Calculate weight based on industry similarity
+                            weight = calculate_sector_weight(ticker1, ticker2, sector_df)
+                            
                             # Add bidirectional edges for undirected graph
                             sector_edges.extend([[idx1, idx2], [idx2, idx1]])
-                            sector_weights.extend([1.0, 1.0])  # Equal weight for sector connections
+                            sector_weights.extend([weight, weight])
                             sector_edge_count += 2
+                            
+                            # Track weight distribution
+                            if weight == 1.0:
+                                weight_stats['same_industry'] += 1
+                            else:
+                                weight_stats['diff_industry'] += 1
             
             print(f"     Generated {sector_edge_count} intra-sector edges from {len(sector_groups)} sectors")
+            print(f"     Weight distribution: {weight_stats['same_industry']} same-industry (1.0), {weight_stats['diff_industry']} different-industry (0.8)")
             
         else:
             # Legacy format with ticker1, ticker2 columns
@@ -304,7 +366,11 @@ def pre_calculate_static_edges(tickers, sector_df, supply_comp_df, ticker_to_idx
                     if ticker1 in ticker_to_idx and ticker2 in ticker_to_idx:
                         idx1, idx2 = ticker_to_idx[ticker1], ticker_to_idx[ticker2]
                         sector_edges.extend([[idx1, idx2], [idx2, idx1]])  # Undirected
-                        weight = float(row.get('weight', 1.0))
+                        # Use provided weight if available, otherwise calculate
+                        if 'weight' in row and pd.notna(row['weight']):
+                            weight = float(row['weight'])
+                        else:
+                            weight = calculate_sector_weight(ticker1, ticker2, sector_df)
                         sector_weights.extend([weight, weight])
         
         if sector_edges:
@@ -320,21 +386,31 @@ def pre_calculate_static_edges(tickers, sector_df, supply_comp_df, ticker_to_idx
         
         # Check column names in supply/competitor data
         if 'Ticker1' in supply_comp_df.columns and 'Ticker2' in supply_comp_df.columns:
-            print("   Creating supply/competitor edges from edge list...")
+            print("   Creating supply/competitor edges from edge list with weighted connections...")
             edge_count = 0
+            relation_stats = {'SUPPLY_CHAIN': 0, 'COMPETITOR': 0}
             
             for _, row in supply_comp_df.iterrows():
                 ticker1, ticker2 = row['Ticker1'], row['Ticker2']
                 if ticker1 in ticker_to_idx and ticker2 in ticker_to_idx:
                     idx1, idx2 = ticker_to_idx[ticker1], ticker_to_idx[ticker2]
-                    weight = float(row.get('Weight', 1.0))
+                    
+                    # Get relation type and calculate weight
+                    # Always calculate weight based on relation type to ensure proper weighting
+                    relation_type = row.get('Relation', 'UNKNOWN')
+                    weight = calculate_supply_competitor_weight(relation_type, ticker1, ticker2)
                     
                     # Add the edge as specified (may be directed for supply chain)
                     supply_edges.append([idx1, idx2])
                     supply_weights.append(weight)
                     edge_count += 1
+                    
+                    # Track relation types
+                    if relation_type in relation_stats:
+                        relation_stats[relation_type] += 1
             
             print(f"     Generated {edge_count} supply/competitor edges")
+            print(f"     Relation distribution: {relation_stats}")
             
         else:
             # Legacy format with ticker1, ticker2 columns  
@@ -344,13 +420,24 @@ def pre_calculate_static_edges(tickers, sector_df, supply_comp_df, ticker_to_idx
                     if ticker1 in ticker_to_idx and ticker2 in ticker_to_idx:
                         idx1, idx2 = ticker_to_idx[ticker1], ticker_to_idx[ticker2]
                         supply_edges.extend([[idx1, idx2], [idx2, idx1]])  # Undirected
-                        weight = float(row.get('weight', 1.0))
+                        # Always calculate weight based on relation type to ensure proper weighting
+                        relation_type = row.get('relation', 'UNKNOWN')
+                        weight = calculate_supply_competitor_weight(relation_type, ticker1, ticker2)
                         supply_weights.extend([weight, weight])
         
         if supply_edges:
+            supply_weights_tensor = torch.tensor(supply_weights, dtype=torch.float32).unsqueeze(1)
+            # Debug: Print weight statistics
+            if len(supply_weights) > 0:
+                weight_min = min(supply_weights)
+                weight_max = max(supply_weights)
+                weight_unique = sorted(set(supply_weights))
+                print(f"     Supply/Competitor weight range: [{weight_min:.4f}, {weight_max:.4f}]")
+                print(f"     Unique weights: {weight_unique}")
+            
             static_edge_dict['supply_competitor'] = (
                 torch.tensor(supply_edges, dtype=torch.long).t().contiguous(),
-                torch.tensor(supply_weights, dtype=torch.float32).unsqueeze(1)
+                supply_weights_tensor
             )
     
     print(f"✅ Pre-calculated {len(static_edge_dict)} static edge types")

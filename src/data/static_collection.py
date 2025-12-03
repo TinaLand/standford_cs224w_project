@@ -208,22 +208,24 @@ def download_supply_chain_competitor_data(tickers, output_path):
     
     # Simulate Supply Chain: Customer -> Supplier (Binary edge [cite: 68])
     # Assume 10-15 random customer-supplier links
+    # Note: Weight will be calculated by graph_construction.py based on Relation type
     num_supply_links = int(len(tickers) * 0.5) if len(tickers) > 10 else 5
     for _ in range(num_supply_links):
         customer = random.choice(tickers)
         supplier = random.choice([t for t in tickers if t != customer])
-        edges.append({'Ticker1': customer, 'Ticker2': supplier, 'Relation': 'SUPPLY_CHAIN', 'Weight': 1.0})
+        edges.append({'Ticker1': customer, 'Ticker2': supplier, 'Relation': 'SUPPLY_CHAIN'})
     print(f"  - Simulated {num_supply_links} Supply Chain (Customer->Supplier) links[cite: 67].")
 
     # Simulate Competitor: Competitor <-> Competitor (Binary edge [cite: 72])
     # Assume 5-10 random competitor links
+    # Note: Weight will be calculated by graph_construction.py based on Relation type
     num_comp_links = int(len(tickers) * 0.3) if len(tickers) > 10 else 3
     for _ in range(num_comp_links):
         comp1 = random.choice(tickers)
         comp2 = random.choice([t for t in tickers if t != comp1])
         # Add both directions for undirected competitor relationship
-        edges.append({'Ticker1': comp1, 'Ticker2': comp2, 'Relation': 'COMPETITOR', 'Weight': 1.0})
-        edges.append({'Ticker1': comp2, 'Ticker2': comp1, 'Relation': 'COMPETITOR', 'Weight': 1.0})
+        edges.append({'Ticker1': comp1, 'Ticker2': comp2, 'Relation': 'COMPETITOR'})
+        edges.append({'Ticker1': comp2, 'Ticker2': comp1, 'Relation': 'COMPETITOR'})
     print(f"  - Simulated {num_comp_links * 2} Competitor links (undirected)[cite: 71].")
 
     
