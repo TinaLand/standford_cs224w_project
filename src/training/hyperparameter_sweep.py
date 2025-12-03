@@ -31,6 +31,8 @@ from src.training.transformer_trainer import (
     RoleAwareGraphTransformer,
     run_training_pipeline,
     create_target_labels,
+)
+from src.utils.constants import (
     HIDDEN_CHANNELS,
     LEARNING_RATE,
     NUM_LAYERS,
