@@ -17,8 +17,8 @@ from typing import Dict, List
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.rl.environment import StockTradingEnv
-from src.rl.integration import load_gnn_model_for_rl
+from src.rl.environments.single_agent import StockTradingEnv
+from src.rl.training.single_agent import load_gnn_model_for_rl
 import torch
 import pandas as pd
 import gymnasium as gym
@@ -38,15 +38,18 @@ class RobustnessStockTradingEnv(StockTradingEnv):
         super().__init__(start_date, end_date, gnn_model, device)
         self.transaction_cost = transaction_cost
         self.slippage = slippage
+        # Store original transaction cost from config
+        from src.rl.config import SingleAgentConfig
+        self._original_transaction_cost = SingleAgentConfig.TRANSACTION_COST
     
     def step(self, action):
         """
         Override step to use custom transaction cost and slippage.
         """
-        # Temporarily override TRANSACTION_COST in the module
-        import src.rl.environment as env_module
-        original_tc = env_module.TRANSACTION_COST
-        env_module.TRANSACTION_COST = self.transaction_cost
+        # Temporarily override TRANSACTION_COST in config
+        from src.rl.config import SingleAgentConfig
+        original_tc = SingleAgentConfig.TRANSACTION_COST
+        SingleAgentConfig.TRANSACTION_COST = self.transaction_cost
         
         try:
             # Apply slippage to prices before executing trades
@@ -61,7 +64,7 @@ class RobustnessStockTradingEnv(StockTradingEnv):
             return obs, reward, terminated, truncated, info
         finally:
             # Restore original transaction cost
-            env_module.TRANSACTION_COST = original_tc
+            SingleAgentConfig.TRANSACTION_COST = original_tc
 
 
 def run_rl_evaluation_with_params(

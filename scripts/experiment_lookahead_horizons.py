@@ -58,7 +58,7 @@ def train_model_for_lookahead(lookahead_days, train_dates, val_dates, test_dates
     
     # Create targets with specific lookahead
     all_dates = train_dates + val_dates + test_dates
-    targets_class_dict, targets_reg_dict = create_target_labels(tickers, all_dates, lookahead_days=lookahead_days)
+    targets_class_dict, targets_reg_dict = create_target_labels(tickers, all_dates, lookahead_days)
     
     # Get input dimension from first graph
     sample_graph_file = sorted(list(DATA_GRAPHS_DIR.glob('graph_t_*.pt')))[0]

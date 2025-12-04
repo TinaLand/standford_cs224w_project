@@ -125,7 +125,9 @@ class HGTModel(nn.Module):
         # For simplicity, we'll use HeteroConv with GATConv for each edge type
         # This approximates HGT behavior
         self.convs = nn.ModuleList()
-        for _ in range(num_layers):
+        self.num_heads = num_heads
+        
+        for layer_idx in range(num_layers):
             conv_dict = {}
             # Use all edge types from heterogeneous graph
             edge_types = [
@@ -134,12 +136,31 @@ class HGTModel(nn.Module):
                 ('stock', 'sector_industry', 'stock'),
                 ('stock', 'supply_competitor', 'stock')
             ]
+            
+            # Calculate input and output dimensions for this layer
+            if layer_idx == 0:
+                # First layer: in_channels -> hidden_channels
+                layer_in = in_channels
+                layer_out = hidden_channels
+            elif layer_idx == num_layers - 1:
+                # Last layer: hidden_channels * num_heads -> out_channels
+                layer_in = hidden_channels * num_heads
+                layer_out = out_channels
+            else:
+                # Middle layers: hidden_channels * num_heads -> hidden_channels
+                layer_in = hidden_channels * num_heads
+                layer_out = hidden_channels
+            
             for edge_type in edge_types:
+                # For last layer, use 1 head to get exact output dimension
+                # For other layers, use num_heads
+                heads = 1 if layer_idx == num_layers - 1 else num_heads
                 conv_dict[edge_type] = GATConv(
-                    in_channels if len(self.convs) == 0 else hidden_channels,
-                    hidden_channels if len(self.convs) < num_layers - 1 else out_channels,
-                    heads=num_heads,
-                    dropout=0.3
+                    layer_in,
+                    layer_out,
+                    heads=heads,
+                    dropout=0.3,
+                    concat=True if layer_idx < num_layers - 1 else False
                 )
             self.convs.append(HeteroConv(conv_dict, aggr='sum'))
     
@@ -265,11 +286,13 @@ def create_target_labels(data: HeteroData, date: pd.Timestamp, lookahead_days: i
 def convert_hetero_to_homogeneous(data: HeteroData, edge_type: str = 'rolling_correlation') -> Tuple[torch.Tensor, torch.Tensor]:
     """Convert heterogeneous graph to homogeneous for GCN/GAT/GraphSAGE."""
     # Use rolling_correlation as primary edge type
-    if ('stock', edge_type, 'stock') in data.edge_index_dict:
-        edge_index = data[('stock', edge_type, 'stock')].edge_index
+    edge_type_tuple = ('stock', edge_type, 'stock')
+    if edge_type_tuple in data.edge_index_dict:
+        edge_index = data[edge_type_tuple].edge_index
     else:
         # Fallback to first available edge type
-        edge_index = list(data.edge_index_dict.values())[0].edge_index
+        first_edge_type = list(data.edge_index_dict.keys())[0]
+        edge_index = data[first_edge_type].edge_index
     
     x = data['stock'].x
     return x, edge_index
@@ -322,7 +345,14 @@ def train_gnn_model(model, train_dates, val_dates, model_name: str, use_hetero: 
             optimizer.zero_grad()
             
             if use_hetero:
-                out = model(data['stock'].x.to(DEVICE), data.edge_index_dict)
+                # Always build edge_index_dict from edge_types to ensure it's a proper dict
+                edge_index_dict = {}
+                for edge_type in data.edge_types:
+                    if hasattr(data[edge_type], 'edge_index') and data[edge_type].edge_index is not None:
+                        edge_index_dict[edge_type] = data[edge_type].edge_index.to(DEVICE)
+                
+                x_dict = {'stock': data['stock'].x.to(DEVICE)}
+                out = model(x_dict, edge_index_dict)
             else:
                 x, edge_index = convert_hetero_to_homogeneous(data)
                 out = model(x.to(DEVICE), edge_index.to(DEVICE))
@@ -353,7 +383,14 @@ def train_gnn_model(model, train_dates, val_dates, model_name: str, use_hetero: 
                     continue
                 
                 if use_hetero:
-                    out = model(data['stock'].x.to(DEVICE), data.edge_index_dict)
+                    # Always build edge_index_dict from edge_types to ensure it's a proper dict
+                    edge_index_dict = {}
+                    for edge_type in data.edge_types:
+                        if hasattr(data[edge_type], 'edge_index') and data[edge_type].edge_index is not None:
+                            edge_index_dict[edge_type] = data[edge_type].edge_index.to(DEVICE)
+                    
+                    x_dict = {'stock': data['stock'].x.to(DEVICE)}
+                    out = model(x_dict, edge_index_dict)
                 else:
                     x, edge_index = convert_hetero_to_homogeneous(data)
                     out = model(x.to(DEVICE), edge_index.to(DEVICE))
@@ -388,18 +425,25 @@ def train_gnn_model(model, train_dates, val_dates, model_name: str, use_hetero: 
     all_targets = []
     all_probs = []
     
-        with torch.no_grad():
-            for date in val_dates:
-                data = load_graph_data(date)
-                if data is None:
-                    continue
-                
-                targets = create_target_labels(data, date, LOOKAHEAD_DAYS)
-                if targets is None or len(targets) == 0:
-                    continue
+    with torch.no_grad():
+        for date in val_dates:
+            data = load_graph_data(date)
+            if data is None:
+                continue
+            
+            targets = create_target_labels(data, date, LOOKAHEAD_DAYS)
+            if targets is None or len(targets) == 0:
+                continue
             
             if use_hetero:
-                out = model(data['stock'].x.to(DEVICE), data.edge_index_dict)
+                # Always build edge_index_dict from edge_types to ensure it's a proper dict
+                edge_index_dict = {}
+                for edge_type in data.edge_types:
+                    if hasattr(data[edge_type], 'edge_index') and data[edge_type].edge_index is not None:
+                        edge_index_dict[edge_type] = data[edge_type].edge_index.to(DEVICE)
+                
+                x_dict = {'stock': data['stock'].x.to(DEVICE)}
+                out = model(x_dict, edge_index_dict)
             else:
                 x, edge_index = convert_hetero_to_homogeneous(data)
                 out = model(x.to(DEVICE), edge_index.to(DEVICE))

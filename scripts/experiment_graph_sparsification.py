@@ -59,7 +59,7 @@ def evaluate_sparsification_config(top_k, corr_threshold, test_dates, tickers):
     print(f"{'='*60}")
     
     # Create targets
-    targets_class_dict, targets_reg_dict = create_target_labels(tickers, test_dates, lookahead_days=5)
+    targets_class_dict, targets_reg_dict = create_target_labels(tickers, test_dates, 5)
     
     # Get input dimension
     sample_graph_file = sorted(list(DATA_GRAPHS_DIR.glob('graph_t_*.pt')))[0]
@@ -89,11 +89,20 @@ def evaluate_sparsification_config(top_k, corr_threshold, test_dates, tickers):
         """Filter graph edges based on Top-K and correlation threshold."""
         from torch_geometric.data import HeteroData
         
+        # Create a deep copy of the original data to avoid modifying it
+        # Use clone() to ensure we have a proper copy
         filtered_data = HeteroData()
         filtered_data['stock'].x = data['stock'].x.clone()
-        filtered_data.edge_index_dict = {}
         
+        # Get edge_index_dict from HeteroData
+        # Access edge_index_dict property which returns a dict
         edge_index_dict = data.edge_index_dict if hasattr(data, 'edge_index_dict') else {}
+        
+        # If edge_index_dict is not available, build it from edge_types
+        if not edge_index_dict:
+            for edge_type in data.edge_types:
+                if hasattr(data[edge_type], 'edge_index') and data[edge_type].edge_index is not None:
+                    edge_index_dict[edge_type] = data[edge_type].edge_index
         
         # Filter correlation edges
         corr_key = ('stock', 'rolling_correlation', 'stock')
@@ -122,14 +131,17 @@ def evaluate_sparsification_config(top_k, corr_threshold, test_dates, tickers):
             
             if len(filtered_edges) > 0:
                 filtered_edge_index = edge_index[:, filtered_edges]
-                filtered_data.edge_index_dict[corr_key] = filtered_edge_index
+                # Properly set edge_index for the edge type
+                filtered_data[corr_key].edge_index = filtered_edge_index.clone()
         
         # Keep other edge types as-is
         for key in edge_index_dict:
             if key != corr_key:
-                filtered_data.edge_index_dict[key] = edge_index_dict[key].clone()
+                # Properly set edge_index for other edge types
+                filtered_data[key].edge_index = edge_index_dict[key].clone()
         
-        if 'tickers' in data:
+        # Copy other attributes if they exist
+        if hasattr(data, 'tickers'):
             filtered_data.tickers = data.tickers
         
         return filtered_data
