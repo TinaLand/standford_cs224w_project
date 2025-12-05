@@ -89,30 +89,72 @@ def filter_graph_edges(data, config: Dict):
     # Initialize edge_index_dict
     filtered_data.edge_index_dict = {}
     
-    # Filter edges based on configuration using edge_index_dict
-    edge_index_dict = data.edge_index_dict if hasattr(data, 'edge_index_dict') else {}
+    # Build edge_index_dict from data if it doesn't exist
+    if hasattr(data, 'edge_index_dict') and isinstance(data.edge_index_dict, dict) and len(data.edge_index_dict) > 0:
+        edge_index_dict = data.edge_index_dict
+    else:
+        # Build edge_index_dict from edge_types
+        edge_index_dict = {}
+        for edge_type in data.edge_types:
+            try:
+                if hasattr(data[edge_type], 'edge_index') and data[edge_type].edge_index is not None:
+                    edge_index_dict[edge_type] = data[edge_type].edge_index
+            except (KeyError, AttributeError):
+                continue
     
+    # Filter edges based on configuration
     if config['use_correlation']:
         edge_key = ('stock', 'rolling_correlation', 'stock')
         if edge_key in edge_index_dict:
             filtered_data.edge_index_dict[edge_key] = edge_index_dict[edge_key].clone()
+        elif edge_key in data.edge_types:
+            try:
+                filtered_data.edge_index_dict[edge_key] = data[edge_key].edge_index.clone()
+            except (KeyError, AttributeError):
+                pass  # Edge type doesn't exist, skip
     
     if config['use_fund_similarity']:
         edge_key = ('stock', 'fund_similarity', 'stock')
         if edge_key in edge_index_dict:
             filtered_data.edge_index_dict[edge_key] = edge_index_dict[edge_key].clone()
+        elif edge_key in data.edge_types:
+            try:
+                filtered_data.edge_index_dict[edge_key] = data[edge_key].edge_index.clone()
+            except (KeyError, AttributeError):
+                pass
     
     if config['use_static_edges']:
         edge_key = ('stock', 'sector_industry', 'stock')
         if edge_key in edge_index_dict:
             filtered_data.edge_index_dict[edge_key] = edge_index_dict[edge_key].clone()
+        elif edge_key in data.edge_types:
+            try:
+                filtered_data.edge_index_dict[edge_key] = data[edge_key].edge_index.clone()
+            except (KeyError, AttributeError):
+                pass
         
         edge_key = ('stock', 'supply_competitor', 'stock')
         if edge_key in edge_index_dict:
             filtered_data.edge_index_dict[edge_key] = edge_index_dict[edge_key].clone()
+        elif edge_key in data.edge_types:
+            try:
+                filtered_data.edge_index_dict[edge_key] = data[edge_key].edge_index.clone()
+            except (KeyError, AttributeError):
+                pass
+    
+    # Ensure at least one edge type exists (required by model)
+    if len(filtered_data.edge_index_dict) == 0:
+        # If no edges match, create a minimal self-loop graph to prevent errors
+        num_nodes = filtered_data['stock'].x.shape[0]
+        # Create self-loops as fallback
+        import torch
+        self_loops = torch.arange(num_nodes, dtype=torch.long, device=filtered_data['stock'].x.device).repeat(2, 1)
+        fallback_key = ('stock', 'rolling_correlation', 'stock')
+        filtered_data.edge_index_dict[fallback_key] = self_loops
+        print(f"⚠️  Warning: No edges found for config, using self-loops as fallback")
     
     # Copy tickers if they exist
-    if 'tickers' in data:
+    if hasattr(data, 'tickers'):
         filtered_data.tickers = data.tickers
     
     return filtered_data

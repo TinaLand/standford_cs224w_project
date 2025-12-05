@@ -387,25 +387,61 @@ class RoleAwareGraphTransformer(torch.nn.Module):
         # 2. Relation-aware Graph Transformer Layers
         for layer_idx, (conv, aggregator) in enumerate(zip(self.convs, self.relation_aggregators)):
             # Apply convolution to get outputs for each relation
-            conv_output = conv(x_dict, edge_index_dict)
+            try:
+                conv_output = conv(x_dict, edge_index_dict)
+            except Exception as e:
+                raise RuntimeError(
+                    f"HeteroConv failed at layer {layer_idx}. "
+                    f"edge_index_dict keys: {list(edge_index_dict.keys())}, "
+                    f"x_dict keys: {list(x_dict.keys())}, "
+                    f"Error: {e}"
+                ) from e
             
-            # Collect outputs from different relations for aggregation
-            relation_outputs = {}
-            for edge_type in edge_index_dict.keys():
-                if 'stock' in conv_output:
-                    relation_outputs[edge_type] = conv_output['stock']
-            
-            # Apply relation-aware aggregation if we have relation outputs
-            if relation_outputs and len(relation_outputs) > 1:
-                x_dict['stock'] = aggregator(relation_outputs)
+            # HeteroConv returns a dict with node types as keys
+            # When only one edge type exists, it should still return 'stock' as the destination
+            if 'stock' in conv_output:
+                # Direct output from HeteroConv
+                x_dict['stock'] = conv_output['stock']
+            elif len(conv_output) > 0:
+                # If HeteroConv returns something but not 'stock', use the first value
+                # This shouldn't happen in our case, but handle it gracefully
+                first_key = list(conv_output.keys())[0]
+                x_dict['stock'] = conv_output[first_key]
             else:
-                x_dict = conv_output
+                # If conv_output is empty, this means HeteroConv found no matching edges
+                # This can happen when edge_index_dict is empty or has no matching edge types
+                # In this case, we need to ensure x_dict['stock'] still exists
+                if 'stock' not in x_dict:
+                    # This should never happen if we set x_dict['stock'] correctly earlier
+                    raise ValueError(
+                        f"conv_output is empty and x_dict missing 'stock' at layer {layer_idx}. "
+                        f"edge_index_dict keys: {list(edge_index_dict.keys())}, "
+                        f"conv_output keys: {list(conv_output.keys())}, "
+                        f"x_dict keys: {list(x_dict.keys())}, "
+                        f"conv.convs keys: {list(conv.convs.keys()) if hasattr(conv, 'convs') else 'N/A'}"
+                    )
+                # Keep existing x_dict['stock'] - no message passing occurred
+                # We'll just pass through the existing features (identity mapping)
+                # This is acceptable when there are no edges to process
+                pass
             
-            # Apply activations and dropout
+            # Apply activations and dropout (ensure 'stock' exists)
+            if 'stock' not in x_dict:
+                raise ValueError(
+                    f"x_dict missing 'stock' after conv layer {layer_idx}. "
+                    f"x_dict keys: {list(x_dict.keys())}, "
+                    f"conv_output keys: {list(conv_output.keys())}, "
+                    f"edge_index_dict keys: {list(edge_index_dict.keys())}"
+                )
             x_dict['stock'] = x_dict['stock'].relu()
             x_dict['stock'] = F.dropout(x_dict['stock'], p=DROPOUT_RATE, training=self.training)
         
         # 3. Node-Level Output
+        if 'stock' not in x_dict:
+            raise ValueError(
+                f"x_dict missing 'stock' before final output. "
+                f"x_dict keys: {list(x_dict.keys())}"
+            )
         out = self.lin_out(x_dict['stock'])
         return out
     
@@ -433,18 +469,44 @@ class RoleAwareGraphTransformer(torch.nn.Module):
         
         # 2. Relation-aware Graph Transformer Layers
         for layer_idx, (conv, aggregator) in enumerate(zip(self.convs, self.relation_aggregators)):
-            conv_output = conv(x_dict, edge_index_dict)
+            try:
+                conv_output = conv(x_dict, edge_index_dict)
+            except Exception as e:
+                raise RuntimeError(
+                    f"HeteroConv failed at layer {layer_idx}. "
+                    f"edge_index_dict keys: {list(edge_index_dict.keys())}, "
+                    f"x_dict keys: {list(x_dict.keys())}, "
+                    f"Error: {e}"
+                ) from e
             
-            relation_outputs = {}
-            for edge_type in edge_index_dict.keys():
-                if 'stock' in conv_output:
-                    relation_outputs[edge_type] = conv_output['stock']
-            
-            if relation_outputs and len(relation_outputs) > 1:
-                x_dict['stock'] = aggregator(relation_outputs)
+            # HeteroConv returns a dict with node types as keys
+            if 'stock' in conv_output:
+                x_dict['stock'] = conv_output['stock']
+            elif len(conv_output) > 0:
+                # If HeteroConv returns something but not 'stock', use the first value
+                first_key = list(conv_output.keys())[0]
+                x_dict['stock'] = conv_output[first_key]
             else:
-                x_dict = conv_output
+                # If conv_output is empty, keep existing x_dict['stock']
+                if 'stock' not in x_dict:
+                    raise ValueError(
+                        f"conv_output is empty and x_dict missing 'stock' at layer {layer_idx}. "
+                        f"edge_index_dict keys: {list(edge_index_dict.keys())}, "
+                        f"conv_output keys: {list(conv_output.keys())}, "
+                        f"x_dict keys: {list(x_dict.keys())}, "
+                        f"conv.convs keys: {list(conv.convs.keys()) if hasattr(conv, 'convs') else 'N/A'}"
+                    )
+                # Keep existing x_dict['stock'] - no message passing occurred
+                pass
             
+            # Apply activations and dropout (ensure 'stock' exists)
+            if 'stock' not in x_dict:
+                raise ValueError(
+                    f"x_dict missing 'stock' after conv layer {layer_idx}. "
+                    f"x_dict keys: {list(x_dict.keys())}, "
+                    f"conv_output keys: {list(conv_output.keys())}, "
+                    f"edge_index_dict keys: {list(edge_index_dict.keys())}"
+                )
             x_dict['stock'] = x_dict['stock'].relu()
             x_dict['stock'] = F.dropout(x_dict['stock'], p=DROPOUT_RATE, training=self.training)
         
