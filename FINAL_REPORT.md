@@ -603,33 +603,68 @@ Without positional encoding, the model cannot distinguish these roles, leading t
 ```python
 class PEARLPositionalEmbedding(nn.Module):
     """
-    Encodes structural roles using:
-    - PageRank: Importance in the graph
-    - Centrality measures: Degree, betweenness, closeness
-    - Clustering coefficient: Local connectivity
-    - Core number: Position in k-core decomposition
+    Full PEARL (Position-aware graph neural networks) Positional Embedding implementation.
+    
+    PEARL encodes structural roles (hubs, bridges, role twins) by:
+    1. Pre-calculating structural properties (PageRank, centrality, clustering, etc.)
+    2. Learning transformations of these properties to generate stable embeddings.
+    3. Relation-aware attention for heterogeneous graphs
     """
-    def __init__(self, feature_dim, pe_dim=32):
+    def __init__(self, feature_dim: int, pe_dim: int = 32, cache_structural_features: bool = True):
         super().__init__()
-        self.structural_feature_dim = 8  # 8 structural features
+        self.structural_feature_dim = 8  # pagerank, degree_centrality, betweenness, closeness, 
+                                        # clustering, core_number, avg_neighbor_degree, triangles
         
-        # MLP to transform structural features to embeddings
+        # MLP to transform structural features into positional embeddings
         self.structural_mapper = nn.Sequential(
-            nn.Linear(8, pe_dim * 2),
+            nn.Linear(self.structural_feature_dim, pe_dim * 2),
             nn.BatchNorm1d(pe_dim * 2),
             nn.ReLU(),
             nn.Dropout(0.1),
             nn.Linear(pe_dim * 2, pe_dim),
             nn.Tanh()
         )
-    
-    def forward(self, data):
-        # Compute structural features
-        structural_features = self._compute_structural_features(data)
         
-        # Transform to positional embeddings
-        pe = self.structural_mapper(structural_features)
-        return pe
+        # Combine with learned features from node attributes
+        self.feature_mapper = nn.Sequential(
+            nn.Linear(feature_dim, pe_dim),
+            nn.ReLU(),
+            nn.Linear(pe_dim, pe_dim),
+            nn.Tanh()
+        )
+        
+        # Relation-aware attention for different edge types
+        self.edge_type_names = ['sector_industry', 'supply_competitor', 'rolling_correlation', 'fund_similarity']
+        self.relation_attention = nn.ModuleDict()
+        for edge_type in self.edge_type_names:
+            self.relation_attention[edge_type] = nn.MultiheadAttention(pe_dim, num_heads=2, batch_first=True)
+        
+        # Global attention for combining all relations
+        self.global_attention = nn.MultiheadAttention(pe_dim, num_heads=4, batch_first=True)
+        self.layer_norm = nn.LayerNorm(pe_dim)
+    
+    def forward(self, x: torch.Tensor, edge_index_dict: Optional[Dict] = None) -> torch.Tensor:
+        # Compute structural features (PageRank, centrality, clustering, etc.)
+        structural_features = self._compute_structural_features(edge_index_dict, x.size(0), x.device)
+        
+        # Transform structural features to embeddings
+        structural_pe = self.structural_mapper(structural_features)
+        
+        # Transform node features to embeddings  
+        feature_pe = self.feature_mapper(x)
+        
+        # Relation-aware attention processing
+        if edge_index_dict is not None:
+            # Process each relation type with specific attention
+            final_pe = self._apply_relation_attention(structural_pe, feature_pe, edge_index_dict)
+        else:
+            # Fallback: simple attention combination
+            final_pe = self._simple_attention_combine(structural_pe, feature_pe)
+        
+        # Adaptive residual connection to prevent over-smoothing
+        final_pe = self.layer_norm(final_pe + structural_pe)
+        
+        return final_pe
 ```
 
 **Why PEARL? (Detailed Rationale)**
@@ -700,22 +735,63 @@ Model Behavior:
 ```python
 class TimePositionalEncoding(nn.Module):
     """
-    Encodes temporal information using sinusoidal encoding.
+    Time-aware positional encoding based on trading date.
+    Encodes temporal information (day of week, month, year, etc.) into embeddings.
     """
     def __init__(self, pe_dim):
         super().__init__()
         self.pe_dim = pe_dim
+        
+        # Learnable embeddings for different time features
+        self.day_of_week_emb = nn.Embedding(7, pe_dim // 4)    # Day of week (0-6) 
+        self.month_emb = nn.Embedding(12, pe_dim // 4)         # Month (1-12)
+        self.quarter_emb = nn.Embedding(4, pe_dim // 4)        # Quarter (1-4)
+        self.year_proj = nn.Linear(1, pe_dim // 4)             # Year (normalized, continuous)
     
     def forward(self, date_tensor):
-        # Sinusoidal encoding for continuous time
-        normalized_time = date_tensor.float() / 10000.0
-        div_term = torch.exp(torch.arange(0, self.pe_dim, 2).float() * 
-                           -(torch.log(torch.tensor(10000.0)) / self.pe_dim))
-        time_pe = torch.cat([
-            torch.sin(normalized_time.unsqueeze(-1) * div_term),
-            torch.cos(normalized_time.unsqueeze(-1) * div_term)
-        ], dim=-1)
-        return time_pe
+        """
+        Args:
+            date_tensor: Tensor of shape [N] with timestamps (days since reference date 2015-01-01)
+        Returns:
+            time_pe: Tensor of shape [N, pe_dim] with time positional encodings
+        """
+        device = date_tensor.device
+        reference_date = pd.Timestamp('2015-01-01')
+        
+        # Extract temporal features for each timestamp
+        days_since_ref = date_tensor.long().cpu().numpy()
+        day_of_week_indices, month_indices, quarter_indices, year_values = [], [], [], []
+        
+        for days in days_since_ref:
+            actual_date = reference_date + pd.Timedelta(days=int(days))
+            day_of_week_indices.append(actual_date.weekday())  # 0=Monday, 6=Sunday
+            month_indices.append(actual_date.month - 1)        # 0-11 for embedding
+            quarter_indices.append(actual_date.quarter - 1)     # 0-3 for embedding
+            year_values.append((actual_date.year - 2015) / 10.0)  # Normalize years
+        
+        # Convert to tensors and get embeddings
+        dow_emb = self.day_of_week_emb(torch.tensor(day_of_week_indices, device=device, dtype=torch.long))
+        month_emb = self.month_emb(torch.tensor(month_indices, device=device, dtype=torch.long))
+        quarter_emb = self.quarter_emb(torch.tensor(quarter_indices, device=device, dtype=torch.long))
+        year_emb = self.year_proj(torch.tensor(year_values, device=device, dtype=torch.float32).unsqueeze(-1))
+        
+        # Concatenate all time features
+        time_pe = torch.cat([dow_emb, month_emb, quarter_emb, year_emb], dim=-1)
+        
+        # Add sinusoidal encoding for fine-grained temporal patterns if needed
+        if time_pe.shape[-1] < self.pe_dim:
+            remaining_dim = self.pe_dim - time_pe.shape[-1]
+            normalized_time = date_tensor.float() / 3650.0  # Normalize by ~10 years
+            
+            div_term = torch.exp(torch.arange(0, remaining_dim, 2, device=device).float() * 
+                               -(torch.log(torch.tensor(10000.0, device=device)) / remaining_dim))
+            
+            sin_enc = torch.sin(normalized_time.unsqueeze(-1) * div_term)
+            cos_enc = torch.cos(normalized_time.unsqueeze(-1) * div_term)
+            sin_cos = torch.cat([sin_enc, cos_enc], dim=-1)[:, :remaining_dim]
+            time_pe = torch.cat([time_pe, sin_cos], dim=-1)
+        
+        return time_pe[:, :self.pe_dim]  # Ensure exact dimension match
 ```
 
 #### 3.3.4 Role-Aware Graph Transformer with Multi-Relational Attention
