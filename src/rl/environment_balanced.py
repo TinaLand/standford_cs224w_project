@@ -219,7 +219,7 @@ if __name__ == '__main__':
     """
     Test the balanced environment vs original.
     """
-    from phase5_rl_integration import load_gnn_model_for_rl
+    from src.rl.integration import load_gnn_model_for_rl
     from src.evaluation.evaluation import START_DATE_TEST, END_DATE_TEST
     
     print("=" * 70)

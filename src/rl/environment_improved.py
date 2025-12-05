@@ -281,7 +281,7 @@ if __name__ == '__main__':
     """
     Test the improved environment with different reward types.
     """
-    from phase5_rl_integration import load_gnn_model_for_rl
+    from src.rl.integration import load_gnn_model_for_rl
     
     print("=" * 70)
     print("🧪 Testing Improved RL Environment with Risk-Adjusted Rewards")

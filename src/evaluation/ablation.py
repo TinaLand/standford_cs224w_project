@@ -32,7 +32,8 @@ from src.utils.constants import (
 )
 from src.utils.graph_loader import load_graph_data
 
-from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR
+from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR, OHLCV_RAW_FILE
+from src.training.transformer_trainer import _read_time_series_csv
 ABLATION_MODELS_DIR = MODELS_DIR / "ablation_models"
 ABLATION_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -45,6 +46,42 @@ try:
 except ImportError:
     LAPLACIAN_AVAILABLE = False
     print("⚠️  LaplacianEigenvectorPE not available, skipping Laplacian ablation")
+
+
+def get_train_val_test_dates():
+    """Get train/val/test date splits (70/15/15 split)."""
+    graph_files = sorted(list((PROJECT_ROOT / "data" / "graphs").glob('graph_t_*.pt')))
+    all_dates = [pd.to_datetime(f.stem.split('_')[-1]) for f in graph_files]
+    
+    # 70/15/15 split
+    split_70_idx = int(len(all_dates) * 0.70)
+    split_85_idx = int(len(all_dates) * 0.85)
+    
+    train_dates = all_dates[:split_70_idx]
+    val_dates = all_dates[split_70_idx:split_85_idx]
+    test_dates = all_dates[split_85_idx:]
+    
+    return train_dates, val_dates, test_dates
+
+
+def load_targets():
+    """Load target labels for all dates."""
+    # Get all dates
+    graph_files = sorted(list((PROJECT_ROOT / "data" / "graphs").glob('graph_t_*.pt')))
+    all_dates = [pd.to_datetime(f.stem.split('_')[-1]) for f in graph_files]
+    
+    # Get tickers
+    sample_graph = torch.load(graph_files[0], weights_only=False)
+    if 'tickers' in sample_graph:
+        tickers = sample_graph['tickers']
+    else:
+        ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
+        tickers = [col.replace('Close_', '') for col in ohlcv_df.columns if col.startswith('Close_')]
+    
+    # Create targets
+    targets_class_dict, targets_reg_dict = create_target_labels(tickers, all_dates, lookahead_days=LOOKAHEAD_DAYS)
+    
+    return targets_class_dict
 
 
 def modify_graph_for_ablation(data, config: Dict):
