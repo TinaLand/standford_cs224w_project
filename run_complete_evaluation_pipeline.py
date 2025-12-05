@@ -182,7 +182,7 @@ def main():
     
     evaluation_scripts = [
         ("run_baseline_comparison.py", "Compare baseline models (GCN, GAT, GraphSAGE, etc.)", 7200),  # 2 hours
-        ("run_improved_ablation.py", "Run improved ablation studies with full retraining", 10800),  # 3 hours
+        ("run_improved_ablation.py", "Run improved ablation studies with full retraining", 18000),  # 5 hours (increased from 3 hours)
         ("analyze_ic_deep.py", "Deep analysis of Information Coefficient (IC)", 600),  # 10 min
     ]
     
