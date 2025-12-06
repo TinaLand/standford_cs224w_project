@@ -1546,6 +1546,11 @@ To understand the value of coordination mechanisms in Multi-Agent RL, we conduct
 - Adaptive coordination (coordinate when beneficial, independent when not)
 - Sector-specific coordination strategies
 
+**Visualizations**: Comprehensive visualizations of the MARL ablation study are presented in Section 5.15, including:
+- **Figure 15a**: Method comparison chart showing average return and Sharpe Ratio across all three approaches
+- **Figure 15b**: Sector-level performance comparison between MARL and Independent Learning
+- **Figure 15c**: Training curves showing episode returns over time for MARL and Independent Learning
+
 *Note: Full results are available in `results/marl_ablation_results.json` and `results/marl_ablation_summary.csv`. Run `python scripts/run_marl_ablation.py` to regenerate these results.*
 
 ---
@@ -1963,6 +1968,56 @@ This section describes the Multi-Agent RL decision flow:
 - CTDE architecture: Centralized training, decentralized execution
 - QMIX enables coordination without explicit communication
 - Sector specialization improves overall portfolio performance
+
+### 5.15 MARL Ablation Study Visualizations
+
+This section presents comprehensive visualizations of the Multi-Agent RL ablation study comparing MARL (QMIX), Single-Agent RL, and Independent Learning (IQL). These visualizations support the detailed analysis presented in Section 4.4.2.
+
+#### 5.15.1 Method Comparison
+
+**Figure 15a: MARL Ablation Study - Method Comparison**
+
+![MARL Ablation Comparison](figures/figure_marl_ablation_comparison.png)
+
+*Caption: Comprehensive comparison of three RL approaches across key performance metrics. (Left) Average Return: Independent Learning achieves the highest average return (315.77), followed by MARL (52.60), with Single-Agent RL showing negative returns (-35.28). (Right) Sharpe Ratio: Independent Learning achieves 0.34, MARL achieves 0.23, while Single-Agent RL shows 0.00. The comparison reveals that sector specialization (both MARL and Independent Learning) significantly outperforms single-agent approaches, while coordination through QMIX provides different trade-offs compared to independent optimization. This visualization demonstrates the value of multi-agent decomposition for financial trading tasks.*
+
+**Key Findings from Figure 15a**:
+- **Sector Specialization Advantage**: Both MARL and Independent Learning outperform Single-Agent RL, confirming that sector-based decomposition is valuable
+- **Coordination Trade-offs**: Independent Learning achieves higher returns but MARL provides better coordination mechanisms
+- **Scalability**: Multi-agent approaches scale better to larger stock universes
+
+#### 5.15.2 Sector-Level Performance
+
+**Figure 15b: MARL Ablation Study - Sector Performance Comparison**
+
+![MARL Sector Performance](figures/figure_marl_sector_performance.png)
+
+*Caption: Sector-level performance comparison between MARL (QMIX) and Independent Learning (IQL) across five sectors. The bar chart shows average returns per sector, revealing that Independent Learning achieves higher returns in most sectors (Financials: 224.21 vs 23.96, Energy: 61.11 vs 27.16, Consumer Discretionary: 42.29 vs 22.37). However, both approaches show similar sector-level patterns, with Technology sector struggling in both cases (-35.41 vs -40.76). This visualization demonstrates that sector specialization benefits are consistent across both coordination paradigms, while highlighting sector-specific performance characteristics.*
+
+**Key Findings from Figure 15b**:
+- **Financials Sector**: Independent Learning shows exceptional performance (224.21), significantly outperforming MARL (23.96)
+- **Energy Sector**: Both approaches show strong performance, with Independent Learning achieving higher returns
+- **Technology Sector**: Both approaches struggle, suggesting sector-specific challenges
+- **Consistent Patterns**: Sector-level performance patterns are similar across both approaches, indicating sector characteristics are more important than coordination mechanism
+
+#### 5.15.3 Training Curves
+
+**Figure 15c: MARL Ablation Study - Training Curves**
+
+![MARL Training Curves](figures/figure_marl_training_curves.png)
+
+*Caption: Training curves showing episode returns over 32 training episodes for MARL (QMIX) and Independent Learning (IQL). The blue line (MARL) shows relatively stable performance with most episode returns between -300 and +700, with notable peaks around episodes 4, 10, and 14. The orange line (Independent Learning) exhibits much higher volatility with extreme fluctuations, including very high positive peaks (around episodes 12, 22, and 30 reaching 3000+) and significant negative troughs (around episodes 4, 14, and 26 dropping to -400). This visualization demonstrates that while Independent Learning achieves higher peak returns, MARL provides more consistent and stable performance, suggesting different risk-return trade-offs between coordination and independence.*
+
+**Key Findings from Figure 15c**:
+- **MARL Stability**: MARL shows more consistent performance with lower volatility, staying within a narrower range
+- **Independent Learning Volatility**: Independent Learning exhibits extreme fluctuations, with both very high peaks and deep troughs
+- **Risk-Return Trade-off**: Independent Learning achieves higher peak returns but with much higher risk
+- **Convergence Patterns**: Neither approach shows clear consistent upward trend, suggesting both require further training or hyperparameter tuning
+
+**Implications**:
+- **For Risk-Averse Strategies**: MARL's stable performance may be preferable despite lower peak returns
+- **For Risk-Tolerant Strategies**: Independent Learning's high peaks may be attractive if volatility can be managed
+- **Future Work**: Adaptive coordination mechanisms that balance stability and peak performance could be beneficial
 
 *Note: Figure 8 (Regime Performance) is shown in Section 5.10 above.*
 
