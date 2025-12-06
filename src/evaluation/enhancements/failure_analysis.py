@@ -14,13 +14,14 @@ import seaborn as sns
 from collections import defaultdict
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parent))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.rl.integration import load_gnn_model_for_rl
 from src.rl.environments.single_agent import StockTradingEnv
 from src.rl.agents.single_agent import StockTradingAgent
 
-from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR, MODELS_PLOTS_DIR as PLOTS_DIR
+from src.utils.paths import MODELS_DIR, RESULTS_DIR, MODELS_PLOTS_DIR as PLOTS_DIR
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -402,6 +403,12 @@ def main():
         print(f"❌ Error loading GNN model: {e}")
         return
     
+    # Create environment first (needed for agent loading)
+    print("\n🌍 Creating environment...")
+    start_date = pd.to_datetime('2023-01-01')
+    end_date = pd.to_datetime('2024-12-31')
+    env = StockTradingEnv(start_date, end_date, gnn_model, DEVICE)
+    
     # Load RL agent
     print("\n🤖 Loading RL agent...")
     try:
@@ -409,10 +416,6 @@ def main():
         if agent_path.exists():
             from stable_baselines3 import PPO
             from stable_baselines3.common.env_util import make_vec_env
-            from src.rl.environments.single_agent import StockTradingEnv
-            
-            start_date = pd.to_datetime('2023-01-01')
-            end_date = pd.to_datetime('2024-12-31')
             
             def env_factory():
                 return StockTradingEnv(start_date, end_date, gnn_model, DEVICE)
@@ -433,12 +436,6 @@ def main():
     except Exception as e:
         print(f"⚠️  Error loading RL agent: {e}")
         trading_agent = None
-    
-    # Create environment
-    print("\n🌍 Creating environment...")
-    start_date = pd.to_datetime('2023-01-01')
-    end_date = pd.to_datetime('2024-12-31')
-    env = StockTradingEnv(start_date, end_date, gnn_model, DEVICE)
     
     # Run analyses
     print("\n" + "="*60)

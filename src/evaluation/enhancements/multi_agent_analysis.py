@@ -14,13 +14,14 @@ import seaborn as sns
 from collections import defaultdict
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parent))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
-from multi_agent_rl_coordinator import MultiAgentCoordinator, SectorGrouping
+from src.rl.coordination.coordinator import MultiAgentCoordinator, SectorGrouping
 from src.rl.integration import load_gnn_model_for_rl
 from src.rl.environments.single_agent import StockTradingEnv
 
-from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR, MODELS_PLOTS_DIR as PLOTS_DIR
+from src.utils.paths import MODELS_DIR, RESULTS_DIR, MODELS_PLOTS_DIR as PLOTS_DIR
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -364,8 +365,15 @@ def main():
     end_date = pd.to_datetime('2024-12-31')
     env = StockTradingEnv(start_date, end_date, gnn_model, DEVICE)
     
-    # Get dates
-    dates = env.data_loader['dates'][:100]  # Sample 100 dates
+    # Get dates from valid graph files
+    dates = []
+    for file_path in env.valid_files[:100]:  # Sample 100 dates
+        date_str = file_path.stem.split('_')[-1]
+        try:
+            date = pd.to_datetime(date_str)
+            dates.append(date)
+        except (ValueError, IndexError):
+            continue
     
     # Run analyses
     print("\n" + "="*60)

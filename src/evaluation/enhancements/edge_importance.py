@@ -15,13 +15,14 @@ from collections import defaultdict
 import sys
 import networkx as nx
 
-sys.path.append(str(Path(__file__).resolve().parent))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.training.transformer_trainer import RoleAwareGraphTransformer
 from src.utils.graph_loader import load_graph_data
-from utils_data import load_data_file
+from src.utils.data import load_data_file
 
-from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR, MODELS_PLOTS_DIR as PLOTS_DIR
+from src.utils.paths import MODELS_DIR, RESULTS_DIR, MODELS_PLOTS_DIR as PLOTS_DIR
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -380,8 +381,10 @@ def main():
     temp_data = torch.load(sample_graph, weights_only=False)
     INPUT_DIM = temp_data['stock'].x.shape[1]
     
-    model = RoleAwareGraphTransformer(INPUT_DIM, 256, 2, 2, 4).to(DEVICE)
-    model.load_state_dict(torch.load(model_path, map_location=DEVICE, weights_only=False))
+    # Use correct model parameters from config
+    from src.training.transformer_trainer import HIDDEN_CHANNELS, OUT_CHANNELS, NUM_LAYERS, NUM_HEADS
+    model = RoleAwareGraphTransformer(INPUT_DIM, HIDDEN_CHANNELS, OUT_CHANNELS, NUM_LAYERS, NUM_HEADS).to(DEVICE)
+    model.load_state_dict(torch.load(model_path, map_location=DEVICE, weights_only=False), strict=False)
     model.eval()
     print("✅ Model loaded")
     

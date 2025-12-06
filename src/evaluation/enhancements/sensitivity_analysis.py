@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parent))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.rl.integration import load_gnn_model_for_rl
 from src.rl.environments.single_agent import StockTradingEnv
@@ -21,7 +22,7 @@ from src.rl.agents.single_agent import StockTradingAgent
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 
-from src.utils.paths import PROJECT_ROOT, MODELS_DIR, RESULTS_DIR
+from src.utils.paths import MODELS_DIR, RESULTS_DIR
 PLOTS_DIR = MODELS_DIR / "plots"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)

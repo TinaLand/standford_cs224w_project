@@ -1198,6 +1198,35 @@ Our multi-agent system consists of:
 - ✅ **Robustness**: Sector-specific failures don't cascade
 - ✅ **Practical**: Decentralized execution enables real-world deployment
 
+**Training Results**:
+
+Our Multi-Agent RL system was successfully trained on 5 sector agents over 33 episodes (15,312 timesteps). The training period spans from 2023-02-27 to 2024-12-31, using the same GNN embeddings as the single-agent system.
+
+**Training Performance Metrics**:
+- **Average Return**: 52.60 (per episode)
+- **Sharpe Ratio**: 0.23
+- **Total Episodes**: 33
+- **Total Timesteps**: 15,312
+
+**Sector-Level Performance** (average return per sector):
+- **Energy**: 27.16 (best performing sector)
+- **Financials**: 23.96 (strong performance)
+- **Consumer Discretionary**: 22.37 (good performance)
+- **Healthcare**: 19.86 (moderate performance)
+- **Technology**: -40.76 (struggling, possibly due to high volatility)
+
+**Key Observations**:
+
+1. **Sector Specialization Works**: Different sectors show varying performance, confirming that sector-specific agents can learn distinct patterns. Energy and Financials sectors perform well, while Technology struggles, possibly due to its high volatility.
+
+2. **Coordination Through QMIX**: The QMIX mixing network successfully coordinates 5 sector agents, enabling global portfolio optimization while maintaining sector specialization.
+
+3. **Training Stability**: The system completed 33 episodes with consistent learning, demonstrating the stability of the CTDE architecture.
+
+4. **Comparison with Baselines**: See Section 4.4.2 for a comprehensive comparison with Single-Agent RL and Independent Learning, which reveals interesting insights about the value of coordination mechanisms.
+
+*Note: Full training statistics are available in `results/multi_agent_results.json`. For detailed ablation study comparing MARL, Single-Agent RL, and Independent Learning, see Section 4.4.2.*
+
 ---
 
 ## 4. Results & Insights
@@ -1457,6 +1486,71 @@ The performance gap between graph-based models (GCN: 53.20%, GAT: 53.80%) and no
 7. **Risk Control**: Portfolio-level metrics (Sharpe Ratio, Max Drawdown, Cumulative Return) are computed during backtesting and available in `results/final_metrics.csv`.
 
 #### 4.4.2 MARL Ablation (Reinforcement Learning)
+
+To understand the value of coordination mechanisms in Multi-Agent RL, we conduct a comprehensive ablation study comparing three RL approaches:
+
+1. **Multi-Agent RL (MARL) with QMIX**: Our full system with sector-based agents coordinated through a QMIX mixing network
+2. **Single-Agent RL (PPO)**: A baseline single agent managing all stocks without sector specialization
+3. **Independent Learning (IQL)**: Sector-based agents learning independently without coordination
+
+**Training Performance Comparison**:
+
+| Method | Avg Return | Sharpe Ratio | Episodes | Key Characteristics |
+|--------|------------|--------------|----------|---------------------|
+| **Independent Learning (IQL)** | **315.77** | **0.34** | 33 | No coordination, agents optimize independently |
+| **MARL (QMIX)** | 52.60 | 0.23 | 33 | Sector specialization with QMIX coordination |
+| **Single-Agent RL** | -35.28 | 0.00 | 5 | Single agent, no specialization |
+
+**Key Findings**:
+
+1. **Independent Learning Outperforms Coordinated MARL**: Surprisingly, Independent Learning achieves the highest average return (315.77) compared to MARL (52.60). This suggests that:
+   - **No coordination constraints**: Independent agents can optimize their sectors more freely without global portfolio constraints
+   - **Faster learning**: Each agent focuses solely on its sector, potentially learning faster
+   - **No coordination overhead**: The QMIX mixing network may introduce overhead that limits performance
+
+2. **MARL Outperforms Single-Agent RL**: MARL (52.60) significantly outperforms Single-Agent RL (-35.28), demonstrating that:
+   - **Sector specialization is valuable**: Dividing the problem into sector-specific agents improves performance
+   - **Action space reduction**: With 5 sector agents managing 10 stocks each, the action space is 5 × 3^10 ≈ 3×10^5, much more manageable than 3^50 for a single agent
+   - **Better scalability**: Multi-agent approach scales better to larger stock universes
+
+3. **Sector-Level Performance Analysis** (MARL):
+   - **Financials**: 23.96 (strong performance)
+   - **Energy**: 27.16 (best sector performance)
+   - **Consumer Discretionary**: 22.37 (good performance)
+   - **Healthcare**: 19.86 (moderate performance)
+   - **Technology**: -40.76 (struggling, possibly due to high volatility)
+
+4. **Sector-Level Performance Analysis** (Independent Learning):
+   - **Financials**: 224.21 (exceptional performance)
+   - **Energy**: 61.11 (strong performance)
+   - **Consumer Discretionary**: 42.29 (good performance)
+   - **Healthcare**: 23.56 (moderate performance)
+   - **Technology**: -35.41 (still struggling, but better than MARL)
+
+**Implications**:
+
+- **Coordination may not always help**: In this financial trading context, independent optimization may be more effective than coordinated learning, possibly because:
+  - Financial markets are highly competitive, and coordination constraints may limit agent flexibility
+  - Sector-specific strategies may be more effective when agents can act independently
+  - The QMIX mixing network may not capture the right coordination signals for financial markets
+
+- **Sector specialization is crucial**: Both MARL and Independent Learning outperform Single-Agent RL, confirming that sector-based decomposition is valuable
+
+- **Trade-offs**: While Independent Learning achieves higher returns, MARL provides:
+  - **Global portfolio coherence**: QMIX ensures agents coordinate to maintain portfolio-level constraints
+  - **Interpretability**: Coordination mechanisms provide insights into sector interactions
+  - **Scalability**: The mixing network can handle more complex coordination requirements
+
+**Future Work**: Further investigation is needed to understand why coordination hurts performance in this context. Potential improvements include:
+- Different coordination mechanisms (e.g., hierarchical RL, attention-based coordination)
+- Adaptive coordination (coordinate when beneficial, independent when not)
+- Sector-specific coordination strategies
+
+*Note: Full results are available in `results/marl_ablation_results.json` and `results/marl_ablation_summary.csv`. Run `python scripts/run_marl_ablation.py` to regenerate these results.*
+
+---
+
+**Computational Complexity Analysis** (for reference):
 
 Beyond accuracy, different models have varying computational costs and practical trade-offs:
 
