@@ -44,6 +44,25 @@ def load_marl_ablation_data():
     with open(results_file, 'r') as f:
         results = json.load(f)
     
+    # If episode_returns not in results, load from original files
+    if 'MARL_QMIX' in results and 'episode_returns' not in results['MARL_QMIX']:
+        # Try to load from multi_agent_results.json
+        marl_file = RESULTS_DIR / "multi_agent_results.json"
+        if marl_file.exists():
+            with open(marl_file, 'r') as f:
+                marl_data = json.load(f)
+                if 'training_statistics' in marl_data and 'episode_returns' in marl_data['training_statistics']:
+                    results['MARL_QMIX']['episode_returns'] = marl_data['training_statistics']['episode_returns']
+    
+    if 'Independent_Learning' in results and 'episode_returns' not in results['Independent_Learning']:
+        # Try to load from independent_learning_training_stats.json
+        iql_file = RESULTS_DIR / "independent_learning_training_stats.json"
+        if iql_file.exists():
+            with open(iql_file, 'r') as f:
+                iql_data = json.load(f)
+                if 'episode_returns' in iql_data:
+                    results['Independent_Learning']['episode_returns'] = iql_data['episode_returns']
+    
     summary_df = pd.read_csv(summary_file) if summary_file.exists() else None
     
     return results, summary_df
