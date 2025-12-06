@@ -355,16 +355,21 @@ def run_multi_agent_training(
     # Save training statistics
     stats_file = save_path / "training_stats.json"
     with open(stats_file, 'w') as f:
-        # Convert numpy arrays to lists for JSON serialization
-        serializable_stats = {}
-        for key, value in training_stats.items():
-            if isinstance(value, dict):
-                serializable_stats[key] = {k: list(v) if isinstance(v, np.ndarray) else v for k, v in value.items()}
-            elif isinstance(value, np.ndarray):
-                serializable_stats[key] = value.tolist()
-            else:
-                serializable_stats[key] = value
+        # Convert numpy types to Python types for JSON serialization
+        def convert_to_serializable(obj):
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, (np.integer, np.floating)):
+                return float(obj)
+            elif isinstance(obj, dict):
+                return {k: convert_to_serializable(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_to_serializable(item) for item in obj]
+            elif isinstance(obj, tuple):
+                return tuple(convert_to_serializable(item) for item in obj)
+            return obj
         
+        serializable_stats = convert_to_serializable(training_stats)
         json.dump(serializable_stats, f, indent=2)
     
     print(f"\n✅ Multi-Agent Training Results saved to: {save_path}")
