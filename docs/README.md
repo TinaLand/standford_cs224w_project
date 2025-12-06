@@ -155,8 +155,8 @@ docs/
 - **1,450+ Features**: Technical indicators, fundamentals, sentiment, macro
 
 ### Results
-- **Node-Level**: Accuracy 54.62%, F1 35.33%, Precision@Top-10 55.23%
-- **Portfolio-Level**: Sharpe Ratio 1.90, Cumulative Return 45.99%, Max Drawdown 6.62%
+- **Node-Level**: Accuracy 54.62%, F1 35.33%, Precision@Top-10 54.91%
+- **Portfolio-Level**: Sharpe Ratio 3.04, Cumulative Return 304.36%, Max Drawdown -94.40%
 
 ---
 

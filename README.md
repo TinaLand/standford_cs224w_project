@@ -24,17 +24,17 @@ This project investigates how **Graph Neural Networks (GNNs)** can leverage the 
 ## Key Results
 
 ### Node-Level Performance
-- **Accuracy**: 52.71%
-- **F1 Score**: 34.52%
-- **Precision@Top-10**: 53.97% (identifies winners effectively)
-- **Precision@Top-5**: 52.42%
-- **Precision@Top-20**: 54.16%
-- **Information Coefficient (IC)**: -0.0047
+- **Accuracy**: 54.62%
+- **F1 Score**: 35.33%
+- **Precision@Top-10**: 54.91% (identifies winners effectively)
+- **Precision@Top-5**: 55.46%
+- **Precision@Top-20**: 55.04%
+- **Information Coefficient (IC)**: -0.000038 (significantly improved from -0.0047)
 
 ### Portfolio-Level Performance
-- **Cumulative Return**: Results available in `results/final_metrics.csv`
-- **Sharpe Ratio**: Results available in `results/final_metrics.csv`
-- **Max Drawdown**: Results available in `results/final_metrics.csv`
+- **Cumulative Return**: 304.36%
+- **Sharpe Ratio**: 3.04
+- **Max Drawdown**: -94.40%
 
 ### Model Comparison
 - **Our Model** outperforms non-graph baselines (Logistic Regression, MLP, LSTM)
