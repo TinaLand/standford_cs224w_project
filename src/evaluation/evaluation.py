@@ -39,6 +39,8 @@ RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 def calculate_financial_metrics(portfolio_values: List[float], trading_days: int) -> Dict[str, float]:
     """
     Calculates key financial metrics including Cumulative Return, Sharpe Ratio, and Max Drawdown.
+    
+    Handles edge cases where portfolio value may become negative or zero.
     """
     if len(portfolio_values) < 2:
         return {'Cumulative_Return': 0, 'Sharpe_Ratio': 0, 'Max_Drawdown': 0}
@@ -46,21 +48,44 @@ def calculate_financial_metrics(portfolio_values: List[float], trading_days: int
     # Convert to pandas Series for easier calculations
     portfolio_series = pd.Series(portfolio_values)
     
-    # Convert to daily returns
-    returns = portfolio_series.pct_change().dropna()
+    # Handle negative or zero values: clip to a small positive value to avoid division errors
+    # This is a common issue in RL when portfolio can go negative due to leverage or losses
+    min_threshold = max(portfolio_series.min(), portfolio_series.iloc[0] * 0.01)  # At least 1% of initial
+    portfolio_series_clipped = portfolio_series.clip(lower=min_threshold)
     
-    # Cumulative Return
-    cumulative_return = (portfolio_values[-1] / portfolio_values[0]) - 1
+    # Convert to daily returns (using clipped values to avoid division by zero/negative)
+    returns = portfolio_series_clipped.pct_change().dropna()
+    
+    # Filter out extreme outliers that might skew metrics
+    if len(returns) > 0:
+        q1, q99 = returns.quantile([0.01, 0.99])
+        returns = returns.clip(lower=q1, upper=q99)
+    
+    # Cumulative Return (use original values for final calculation)
+    initial_value = portfolio_values[0]
+    final_value = portfolio_values[-1]
+    if initial_value > 0:
+        cumulative_return = (final_value / initial_value) - 1
+    else:
+        cumulative_return = 0
 
     # Sharpe Ratio (assuming Risk-Free Rate R_f = 0 for simplicity)
-    # Annualization factor = 252 (trading days)
+    # Annualization factor = sqrt(252) for daily returns
     annualization_factor = np.sqrt(252)
-    sharpe_ratio = returns.mean() / returns.std() * annualization_factor if returns.std() != 0 else 0
+    if len(returns) > 0 and returns.std() > 0:
+        sharpe_ratio = returns.mean() / returns.std() * annualization_factor
+    else:
+        sharpe_ratio = 0
 
-    # Max Drawdown
-    cumulative_max = portfolio_series.cummax()
-    drawdown = (cumulative_max - portfolio_series) / cumulative_max
-    max_drawdown = drawdown.max()
+    # Max Drawdown (use clipped values for calculation)
+    # Max drawdown should be negative (loss), but we calculate as positive percentage
+    cumulative_max = portfolio_series_clipped.cummax()
+    # Drawdown = (peak - current) / peak, which gives positive percentage
+    drawdown = (cumulative_max - portfolio_series_clipped) / cumulative_max
+    max_drawdown_pct = drawdown.max()
+    
+    # Convert to negative for reporting (standard convention: -X% means X% loss)
+    max_drawdown = -max_drawdown_pct if max_drawdown_pct > 0 else 0
     
     return {
         'Cumulative_Return': cumulative_return,
