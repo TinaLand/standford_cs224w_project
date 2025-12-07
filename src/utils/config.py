@@ -51,7 +51,7 @@ def load_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
         _config_cache = config
         return config
     except Exception as e:
-        print(f"❌ Error loading config file: {e}")
+        print(f" Error loading config file: {e}")
         print("   Using default configuration.")
         return _get_default_config()
 
@@ -171,9 +171,9 @@ def setup_reproducibility(config: Optional[Dict] = None) -> None:
             # Note: This may reduce performance
             torch.use_deterministic_algorithms(True, warn_only=True)
         
-        print(f"✅ Reproducibility set up: seed={seed}, deterministic={pytorch_deterministic}")
+        print(f" Reproducibility set up: seed={seed}, deterministic={pytorch_deterministic}")
     except ImportError:
-        print("⚠️  PyTorch not available, skipping PyTorch seed setup")
+        print("  PyTorch not available, skipping PyTorch seed setup")
 
 
 if __name__ == '__main__':

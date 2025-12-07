@@ -37,7 +37,7 @@ def ensure_edges_directories():
     Create edges data directories if they don't exist.
     """
     DATA_EDGES_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"✅ Edges data directory ready: {DATA_EDGES_DIR}")
+    print(f" Edges data directory ready: {DATA_EDGES_DIR}")
 
 def compute_rolling_correlation(technical_data, window=30, min_periods=20):
     """
@@ -59,10 +59,10 @@ def compute_rolling_correlation(technical_data, window=30, min_periods=20):
     Returns:
         pd.DataFrame: Time-varying correlation matrix with columns [date, ticker1, ticker2, correlation]
     """
-    print(f"📈 Computing rolling correlations with window={window} days...")
+    print(f" Computing rolling correlations with window={window} days...")
     
     if technical_data is None or technical_data.empty:
-        print("❌ No technical data available for correlation calculation")
+        print(" No technical data available for correlation calculation")
         return None
     
     # Pivot data to have tickers as columns and dates as rows
@@ -126,12 +126,12 @@ def compute_rolling_correlation(technical_data, window=30, min_periods=20):
         output_file = DATA_EDGES_DIR / "edges_dynamic_corr_params.csv"
         correlation_df.to_csv(output_file, index=False)
         
-        print(f"✅ Correlation data saved to: {output_file}")
-        print(f"📊 Data shape: {correlation_df.shape}")
+        print(f" Correlation data saved to: {output_file}")
+        print(f" Data shape: {correlation_df.shape}")
         
         return correlation_df
     else:
-        print("❌ No correlation data generated")
+        print(" No correlation data generated")
         return None
 
 def compute_fundamental_similarity(fundamental_data):
@@ -152,10 +152,10 @@ def compute_fundamental_similarity(fundamental_data):
     Returns:
         pd.DataFrame: Pairwise fundamental similarity with columns [ticker1, ticker2, similarity]
     """
-    print("📊 Computing fundamental similarity...")
+    print(" Computing fundamental similarity...")
     
     if fundamental_data is None or fundamental_data.empty:
-        print("❌ No fundamental data available for similarity calculation")
+        print(" No fundamental data available for similarity calculation")
         return None
     
     # Select numerical features for similarity calculation
@@ -221,12 +221,12 @@ def compute_fundamental_similarity(fundamental_data):
         output_file = DATA_EDGES_DIR / "edges_dynamic_fund_sim_params.csv"
         similarity_pairs_df.to_csv(output_file, index=False)
         
-        print(f"✅ Fundamental similarity data saved to: {output_file}")
-        print(f"📊 Data shape: {similarity_pairs_df.shape}")
+        print(f" Fundamental similarity data saved to: {output_file}")
+        print(f" Data shape: {similarity_pairs_df.shape}")
         
         return similarity_pairs_df
     else:
-        print("❌ No fundamental similarity data generated")
+        print(" No fundamental similarity data generated")
         return None
 
 def compute_sector_similarity(fundamental_data):
@@ -242,7 +242,7 @@ def compute_sector_similarity(fundamental_data):
     Returns:
         pd.DataFrame: Sector-based connections with columns [ticker1, ticker2, sector_connection, weight]
     """
-    print("🏭 Computing sector-based connections...")
+    print(" Computing sector-based connections...")
     
     # Load sector data from static file
     # BASE_DIR is already the project root (parent.parent.parent from src/data/edge_parameters.py)
@@ -260,17 +260,17 @@ def compute_sector_similarity(fundamental_data):
                 # Also create original case mapping for reference
                 sector_dict_original = sector_df.set_index('Ticker')['Sector'].to_dict()
                 
-                print(f"✅ Loaded sector data from static file: {len(sector_dict_upper)} tickers")
+                print(f" Loaded sector data from static file: {len(sector_dict_upper)} tickers")
         except Exception as e:
-            print(f"⚠️  Could not load sector data: {e}")
+            print(f"  Could not load sector data: {e}")
             import traceback
             traceback.print_exc()
     else:
-        print(f"⚠️  Sector file not found: {sector_file}")
+        print(f"  Sector file not found: {sector_file}")
     
     # Check if fundamental_data is available
     if fundamental_data is None or fundamental_data.empty:
-        print("❌ No fundamental data available")
+        print(" No fundamental data available")
         return None
     
     # Try to add sector column if not present
@@ -282,22 +282,22 @@ def compute_sector_similarity(fundamental_data):
             fundamental_data = fundamental_data.drop('ticker_upper', axis=1)
             matched_count = fundamental_data['sector'].notna().sum()
             total_count = len(fundamental_data)
-            print(f"✅ Mapped sector data: {matched_count}/{total_count} tickers matched")
+            print(f" Mapped sector data: {matched_count}/{total_count} tickers matched")
             if matched_count == 0:
-                print(f"⚠️  Warning: No tickers matched. Sample tickers in fundamental_data: {fundamental_data['ticker'].head(5).tolist()}")
+                print(f"  Warning: No tickers matched. Sample tickers in fundamental_data: {fundamental_data['ticker'].head(5).tolist()}")
                 if sector_dict_original:
-                    print(f"⚠️  Sample tickers in sector file: {list(sector_dict_original.keys())[:5]}")
+                    print(f"  Sample tickers in sector file: {list(sector_dict_original.keys())[:5]}")
         else:
-            print("❌ No sector data available to map")
+            print(" No sector data available to map")
             return None
     
     # Check if sector data is available
     if 'sector' not in fundamental_data.columns:
-        print("❌ No sector column in fundamental data")
+        print(" No sector column in fundamental data")
         return None
     
     if fundamental_data['sector'].isna().all():
-        print("❌ All sector values are NaN (ticker names may not match)")
+        print(" All sector values are NaN (ticker names may not match)")
         print(f"   Sample tickers: {fundamental_data['ticker'].head(10).tolist()}")
         return None
     
@@ -353,19 +353,19 @@ def compute_sector_similarity(fundamental_data):
         output_file = DATA_EDGES_DIR / "edges_sector_connections.csv"
         sector_df.to_csv(output_file, index=False)
         
-        print(f"✅ Sector connection data saved to: {output_file}")
-        print(f"📊 Data shape: {sector_df.shape}")
+        print(f" Sector connection data saved to: {output_file}")
+        print(f" Data shape: {sector_df.shape}")
         
         return sector_df
     else:
-        print("❌ No sector connection data generated")
+        print(" No sector connection data generated")
         return None
 
 def main():
     """
     Main function to execute the edge parameter calculation pipeline.
     """
-    print("🚀 Starting Phase 1: Edge Parameter Calculation")
+    print(" Starting Phase 1: Edge Parameter Calculation")
     print("=" * 50)
     
     # Ensure directories exist
@@ -373,13 +373,13 @@ def main():
     
     try:
         # Load processed data
-        print("📁 Loading processed data...")
+        print(" Loading processed data...")
         
         # Load consolidated node features (contains technical + fundamental + sentiment data)
         consolidated_file = DATA_PROCESSED_DIR / "node_features_X_t_final.csv"
         if consolidated_file.exists():
             consolidated_data = pd.read_csv(consolidated_file, index_col='Date', parse_dates=True)
-            print(f"✅ Loaded consolidated data: {consolidated_data.shape}")
+            print(f" Loaded consolidated data: {consolidated_data.shape}")
             
             # Extract technical indicators (log returns) from consolidated data
             technical_cols = [col for col in consolidated_data.columns if 'LogRet_1d_' in col]
@@ -395,12 +395,12 @@ def main():
                 
                 technical_data = pd.concat(technical_data_list, ignore_index=True)
                 technical_data['Date'] = pd.to_datetime(technical_data['Date'])
-                print(f"✅ Extracted technical features for correlation: {technical_data.shape}")
+                print(f" Extracted technical features for correlation: {technical_data.shape}")
             else:
-                print("❌ No technical indicators found in consolidated data")
+                print(" No technical indicators found in consolidated data")
                 technical_data = None
         else:
-            print(f"❌ Consolidated data file not found: {consolidated_file}")
+            print(f" Consolidated data file not found: {consolidated_file}")
             technical_data = None
         
         # Extract fundamental features from consolidated data
@@ -440,21 +440,21 @@ def main():
                 
                 if fundamental_data_list:
                     fundamental_data = pd.DataFrame(fundamental_data_list)
-                    print(f"✅ Transformed fundamental features for {len(fundamental_data_list)} tickers: {fundamental_data.shape}")
+                    print(f" Transformed fundamental features for {len(fundamental_data_list)} tickers: {fundamental_data.shape}")
                 else:
-                    print("❌ No valid fundamental features found")
+                    print(" No valid fundamental features found")
                     fundamental_data = None
             else:
-                print("❌ No fundamental features found in consolidated data")
+                print(" No fundamental features found in consolidated data")
                 fundamental_data = None
                 
             # Extract sentiment/macro features from consolidated data
             sentiment_cols = [col for col in consolidated_data.columns if any(metric in col for metric in ['VIX', 'Sentiment'])]
             if sentiment_cols:
                 sentiment_data = consolidated_data[sentiment_cols].reset_index()
-                print(f"✅ Extracted sentiment/macro features: {sentiment_data.shape}")
+                print(f" Extracted sentiment/macro features: {sentiment_data.shape}")
             else:
-                print("❌ No sentiment/macro features found in consolidated data")
+                print(" No sentiment/macro features found in consolidated data")
                 sentiment_data = None
         else:
             fundamental_data = None
@@ -464,20 +464,20 @@ def main():
         
         # Compute different types of edge parameters
         if technical_data is not None:
-            print("1️⃣ Computing rolling correlations...")
+            print("1⃣ Computing rolling correlations...")
             correlation_data = compute_rolling_correlation(technical_data, window=30)
         
         if fundamental_data is not None:
-            print("\n2️⃣ Computing fundamental similarity...")
+            print("\n2⃣ Computing fundamental similarity...")
             similarity_data = compute_fundamental_similarity(fundamental_data)
             
-            print("\n3️⃣ Computing sector connections...")
+            print("\n3⃣ Computing sector connections...")
             sector_data = compute_sector_similarity(fundamental_data)
         
         print("\n" + "=" * 50)
-        print("✅ Phase 1: Edge Parameter Calculation Complete!")
-        print(f"📁 All edge parameters saved to: {DATA_EDGES_DIR}")
-        print("\n📋 Generated edge parameter files:")
+        print(" Phase 1: Edge Parameter Calculation Complete!")
+        print(f" All edge parameters saved to: {DATA_EDGES_DIR}")
+        print("\n Generated edge parameter files:")
         
         # List generated files
         edge_files = list(DATA_EDGES_DIR.glob("*.csv"))
@@ -485,7 +485,7 @@ def main():
             print(f"  - {edge_file.name}")
         
     except Exception as e:
-        print(f"❌ Error in edge parameter calculation pipeline: {e}")
+        print(f" Error in edge parameter calculation pipeline: {e}")
 
 if __name__ == "__main__":
     main()

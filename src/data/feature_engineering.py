@@ -39,7 +39,7 @@ def _read_time_series(path):
 
 def load_raw_data():
     """Load raw data files from the 'data/raw' directory."""
-    print("📁 Loading raw data...")
+    print(" Loading raw data...")
     
     # Load OHLCV data (saved as flat columns, e.g., 'Close_AAPL')
     ohlcv_path = DATA_RAW_DIR / 'stock_prices_ohlcv_raw.csv'
@@ -56,7 +56,7 @@ def load_raw_data():
     tickers = sorted(list(set(col.split('_')[-1] for col in ohlcv_df.columns if '_' in col)))
     
     if len(tickers) < 2 or ohlcv_df.empty:
-        print("⚠️  Warning: OHLCV raw data is empty. Generating synthetic price series for fallback.")
+        print("  Warning: OHLCV raw data is empty. Generating synthetic price series for fallback.")
         fallback_tickers = [
             'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'BRK-B', 'LLY', 'TSLA', 'V',
             'JPM', 'XOM', 'JNJ', 'WMT', 'PG', 'MA', 'HD', 'CVX', 'MRK', 'ABBV',
@@ -84,9 +84,9 @@ def load_raw_data():
         ohlcv_df.index.name = 'Date'
         ohlcv_df.to_csv(ohlcv_path)
         tickers = fallback_tickers
-        print(f"✅ Synthetic OHLCV data generated with shape: {ohlcv_df.shape}")
+        print(f" Synthetic OHLCV data generated with shape: {ohlcv_df.shape}")
     
-    print(f"✅ Loaded raw data for {len(tickers)} tickers.")
+    print(f" Loaded raw data for {len(tickers)} tickers.")
     return ohlcv_df, fund_df, sentiment_macro_df, tickers
 
 def align_data(ohlcv_df, fund_df, sentiment_macro_df):
@@ -116,7 +116,7 @@ def calculate_technical_indicators(aligned_data, tickers):
     
     Returns: DataFrame indexed by Date, with columns: 'Feature_TICKER'.
     """
-    print("🔧 Calculating technical indicators...")
+    print(" Calculating technical indicators...")
     
     technical_features = pd.DataFrame(index=aligned_data.index)
     
@@ -284,11 +284,11 @@ def calculate_technical_indicators(aligned_data, tickers):
             technical_features[f'TR_Norm_{ticker}'] = tr / (close_prices.values + 1e-8)
             
         except Exception as e:
-            print(f"❌ Error calculating technical indicators for {ticker}: {e}. Skipping.")
+            print(f" Error calculating technical indicators for {ticker}: {e}. Skipping.")
 
     # Drop initial NaNs caused by indicator lookback windows (e.g., 50 days)
     technical_features = technical_features.dropna(how='all') 
-    print(f"✅ Technical features calculated. Shape: {technical_features.shape}")
+    print(f" Technical features calculated. Shape: {technical_features.shape}")
     return technical_features
 
 
@@ -299,7 +299,7 @@ def normalize_fundamentals_and_sentiment(aligned_data, tickers):
     This function separates the fundamental/sentiment columns, normalizes them,
     and returns them ready for consolidation.
     """
-    print("\n📊 Normalizing fundamental/sentiment features...")
+    print("\n Normalizing fundamental/sentiment features...")
     
     # 1. Identify Fundamental, Sentiment, and Macro columns
     # We use the raw column names from the aligned data, excluding OHLCV
@@ -308,7 +308,7 @@ def normalize_fundamentals_and_sentiment(aligned_data, tickers):
     all_features_cols = [col for col in aligned_data.columns if not any(c in col for c in ['Open', 'High', 'Low', 'Close', 'Volume'])]
     
     if not all_features_cols:
-        print("❌ No fundamental or sentiment columns found for normalization.")
+        print(" No fundamental or sentiment columns found for normalization.")
         return pd.DataFrame(index=aligned_data.index)
 
     df_to_scale = aligned_data[all_features_cols].copy()
@@ -329,7 +329,7 @@ def normalize_fundamentals_and_sentiment(aligned_data, tickers):
     scaled_data = scaler.fit_transform(df_to_scale)
     normalized_features = pd.DataFrame(scaled_data, index=df_to_scale.index, columns=df_to_scale.columns)
     
-    print(f"✅ Normalized fundamental/sentiment features. Shape: {normalized_features.shape}")
+    print(f" Normalized fundamental/sentiment features. Shape: {normalized_features.shape}")
     return normalized_features.dropna()
 
 
@@ -337,7 +337,7 @@ def calculate_dynamic_edge_params(aligned_data, tickers):
     """
     Calculates the two dynamic edge parameters: Rolling Correlation and Fundamental Similarity.
     """
-    print("\n🔗 Calculating Dynamic Edge Parameters...")
+    print("\n Calculating Dynamic Edge Parameters...")
     
     # --- 3.1 Rolling Correlation (rho_ij,t) ---
     print("  - Calculating Rolling Correlation Matrix...")
@@ -368,10 +368,10 @@ def calculate_dynamic_edge_params(aligned_data, tickers):
     if len(rolling_corr_series) > 0:
         corr_path = DATA_EDGES_DIR / 'edges_dynamic_corr_params.pkl'
         rolling_corr_series.to_pickle(corr_path)
-        print(f"✅ Rolling correlation parameters saved to: {corr_path}")
+        print(f" Rolling correlation parameters saved to: {corr_path}")
         print(f"    Total correlation pairs computed: {len(rolling_corr_series)} (time-series pairs)")
     else:
-        print("⚠️ No correlation data computed - insufficient data quality after rolling window.")
+        print(" No correlation data computed - insufficient data quality after rolling window.")
 
 
     # --- 3.2 Fundamental Similarity (s_ij) ---
@@ -438,10 +438,10 @@ def calculate_dynamic_edge_params(aligned_data, tickers):
         # 'edges_dynamic_fund_sim_params.csv'.
         fund_sim_path = DATA_EDGES_DIR / 'edges_fundamental_similarity_matrix.csv'
         sim_matrix.to_csv(fund_sim_path)
-        print(f"✅ Fundamental Similarity matrix (latest) saved to: {fund_sim_path}")
+        print(f" Fundamental Similarity matrix (latest) saved to: {fund_sim_path}")
         print(f"    Similarity matrix shape: {sim_matrix.shape}")
     else:
-        print("⚠️ Fundamental Similarity: No valid metric vectors found.")
+        print(" Fundamental Similarity: No valid metric vectors found.")
 
 
 def calculate_static_edge_data(tickers):
@@ -456,7 +456,7 @@ def calculate_static_edge_data(tickers):
     Returns:
         pd.DataFrame: Static edge connections with weights
     """
-    print("\n🏢 Calculating Static Edge Data (Sector, Industry, Market Cap)...")
+    print("\n Calculating Static Edge Data (Sector, Industry, Market Cap)...")
     
     # Load sector and industry mappings from corrected static file
     # FIXED: No longer uses hardcoded mappings that create "Other" category
@@ -484,11 +484,11 @@ def calculate_static_edge_data(tickers):
                     'market_cap_tier': market_cap_tier
                 }
             
-            print(f"✅ Loaded sector data for {len(stock_metadata)} stocks from corrected static file")
+            print(f" Loaded sector data for {len(stock_metadata)} stocks from corrected static file")
         else:
-            print(f"⚠️  Static sector file not found: {sector_file}")
+            print(f"  Static sector file not found: {sector_file}")
     except Exception as e:
-        print(f"⚠️  Error loading sector data: {e}")
+        print(f"  Error loading sector data: {e}")
     
     # Fallback for any missing tickers (use Technology instead of Other)
     for ticker in tickers:
@@ -549,7 +549,7 @@ def calculate_static_edge_data(tickers):
         static_df.to_csv(static_path, index=False)
         
         # Statistics
-        print(f"✅ Static edge connections saved to: {static_path}")
+        print(f" Static edge connections saved to: {static_path}")
         print(f"    Total static connections: {len(static_df)}")
         print(f"    Same sector pairs: {static_df['connection_types'].str.contains('same_sector').sum()}")
         print(f"    Same industry pairs: {static_df['connection_types'].str.contains('same_industry').sum()}")
@@ -565,7 +565,7 @@ def calculate_static_edge_data(tickers):
         
         return static_df
     else:
-        print("⚠️ No static connections found")
+        print(" No static connections found")
         return None
 
 
@@ -581,7 +581,7 @@ def consolidate_node_features(technical_df, normalized_df, tickers):
     Returns:
         pd.DataFrame: Final X_t matrix.
     """
-    print("\n⭐ Consolidating Final Node Features (X_t)...")
+    print("\n Consolidating Final Node Features (X_t)...")
     
     # Combine the two wide feature sets based on their Date index
     final_X_t = technical_df.join(normalized_df, how='inner')
@@ -594,7 +594,7 @@ def consolidate_node_features(technical_df, normalized_df, tickers):
     output_file = DATA_PROCESSED_DIR / "node_features_X_t_final.csv"
     final_X_t.to_csv(output_file, index_label='Date')
     
-    print(f"✅ Final X_t matrix saved to: {output_file}")
+    print(f" Final X_t matrix saved to: {output_file}")
     print(f"Final X_t Shape: {final_X_t.shape}")
     
     return final_X_t
@@ -603,7 +603,7 @@ def consolidate_node_features(technical_df, normalized_df, tickers):
 
 def main():
     """Main function to execute the feature engineering pipeline."""
-    print("🚀 Starting Phase 1: Feature Engineering")
+    print(" Starting Phase 1: Feature Engineering")
     print("=" * 50)
     
     try:
@@ -628,23 +628,23 @@ def main():
             consolidate_node_features(technical_features, normalized_features, tickers)
         
         print("\n" + "=" * 50)
-        print("✅ Phase 1: Feature Engineering Complete!")
-        print(f"📁 All data ready for Phase 2 Graph Construction!")
-        print(f"📁 Node features: {DATA_PROCESSED_DIR}")
-        print(f"📁 Edge parameters: {DATA_EDGES_DIR}")
+        print(" Phase 1: Feature Engineering Complete!")
+        print(f" All data ready for Phase 2 Graph Construction!")
+        print(f" Node features: {DATA_PROCESSED_DIR}")
+        print(f" Edge parameters: {DATA_EDGES_DIR}")
         
         # Summary of generated files
-        print(f"\n📋 Generated Files Summary:")
-        print(f"   🎯 Node Features: node_features_X_t_final.csv")
-        print(f"   📊 Dynamic Edges (correlation): edges_dynamic_corr_params.pkl") 
-        print(f"   🔗 Fundamental Similarity (matrix for analysis): edges_fundamental_similarity_matrix.csv")
-        print(f"   🏢 Static Connections: edges_static_connections.csv")
+        print(f"\n Generated Files Summary:")
+        print(f"    Node Features: node_features_X_t_final.csv")
+        print(f"    Dynamic Edges (correlation): edges_dynamic_corr_params.pkl") 
+        print(f"    Fundamental Similarity (matrix for analysis): edges_fundamental_similarity_matrix.csv")
+        print(f"    Static Connections: edges_static_connections.csv")
         
     except FileNotFoundError as e:
-        print(f"❌ Error: Raw data file missing. Please run phase1_data_collection.py first.")
+        print(f" Error: Raw data file missing. Please run phase1_data_collection.py first.")
         print(f"Missing file detail: {e}")
     except Exception as e:
-        print(f"❌ Error in feature engineering pipeline: {e}")
+        print(f" Error in feature engineering pipeline: {e}")
 
 if __name__ == "__main__":
     # Dependencies: pip install pandas numpy ta-lib scikit-learn scipy

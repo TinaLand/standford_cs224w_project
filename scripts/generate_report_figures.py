@@ -110,7 +110,7 @@ def create_architecture_diagram():
     plt.tight_layout()
     plt.savefig(FIGS_DIR / 'figure1_system_architecture.png', bbox_inches='tight')
     plt.close()
-    print(f"✅ Created: figure1_system_architecture.png")
+    print(f" Created: figure1_system_architecture.png")
 
 # ============================================================================
 # Figure 2: Training Curves
@@ -192,7 +192,7 @@ def create_training_curves():
     plt.tight_layout()
     plt.savefig(FIGS_DIR / 'figure2_training_curves.png', bbox_inches='tight', dpi=300)
     plt.close()
-    print(f"✅ Created: figure2_training_curves.png")
+    print(f" Created: figure2_training_curves.png")
 
 # ============================================================================
 # Figure 3: Model Comparison Chart
@@ -267,7 +267,7 @@ def create_model_comparison():
     plt.tight_layout()
     plt.savefig(FIGS_DIR / 'figure3_model_comparison.png', bbox_inches='tight', dpi=300)
     plt.close()
-    print(f"✅ Created: figure3_model_comparison.png")
+    print(f" Created: figure3_model_comparison.png")
 
 # ============================================================================
 # Figure 4: Portfolio Performance
@@ -410,7 +410,7 @@ def create_portfolio_performance():
     plt.tight_layout()
     plt.savefig(FIGS_DIR / 'figure4_portfolio_performance.png', bbox_inches='tight', dpi=300)
     plt.close()
-    print(f"✅ Created: figure4_portfolio_performance.png")
+    print(f" Created: figure4_portfolio_performance.png")
 
 # ============================================================================
 # Figure 5: Ablation Study Results
@@ -486,7 +486,7 @@ def create_ablation_study():
     plt.tight_layout()
     plt.savefig(FIGS_DIR / 'figure5_ablation_study.png', bbox_inches='tight', dpi=300)
     plt.close()
-    print(f"✅ Created: figure5_ablation_study.png")
+    print(f" Created: figure5_ablation_study.png")
 
 # ============================================================================
 # Figure 6: Attention Heatmap
@@ -535,7 +535,7 @@ def create_attention_heatmap():
     plt.tight_layout()
     plt.savefig(FIGS_DIR / 'figure6_attention_heatmap.png', bbox_inches='tight')
     plt.close()
-    print(f"✅ Created: figure6_attention_heatmap.png")
+    print(f" Created: figure6_attention_heatmap.png")
 
 # ============================================================================
 # Figure 7: Graph Structure Visualization
@@ -786,7 +786,7 @@ def create_graph_structure_overview():
     plt.savefig(FIGS_DIR / 'figure7a_graph_structure_overview.png', 
                 dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
-    print(f"✅ Created: figure7a_graph_structure_overview.png")
+    print(f" Created: figure7a_graph_structure_overview.png")
 
 
 def create_correlation_edges_figure():
@@ -904,7 +904,7 @@ def create_correlation_edges_figure():
     plt.savefig(FIGS_DIR / 'figure7b_correlation_edges.png', 
                 dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
-    print(f"✅ Created: figure7b_correlation_edges.png")
+    print(f" Created: figure7b_correlation_edges.png")
 
 
 def create_sector_edges_figure():
@@ -1060,7 +1060,7 @@ def create_sector_edges_figure():
     plt.savefig(FIGS_DIR / 'figure7c_sector_edges.png', 
                 dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
-    print(f"✅ Created: figure7c_sector_edges.png")
+    print(f" Created: figure7c_sector_edges.png")
 
 
 def create_fundamental_edges_figure():
@@ -1179,7 +1179,7 @@ def create_fundamental_edges_figure():
     plt.savefig(FIGS_DIR / 'figure7d_fundamental_edges.png', 
                 dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
-    print(f"✅ Created: figure7d_fundamental_edges.png")
+    print(f" Created: figure7d_fundamental_edges.png")
 
 
 def create_edge_comparison_figure():
@@ -1341,7 +1341,7 @@ def create_edge_comparison_figure():
     plt.savefig(FIGS_DIR / 'figure7e_edge_comparison.png', 
                bbox_inches='tight', dpi=300, facecolor='white')
     plt.close()
-    print(f"✅ Created: figure7e_edge_comparison.png")
+    print(f" Created: figure7e_edge_comparison.png")
 
 
 def create_graph_structure():
@@ -1351,7 +1351,7 @@ def create_graph_structure():
     create_sector_edges_figure()
     create_fundamental_edges_figure()
     create_edge_comparison_figure()
-    print(f"\n✅ All graph structure figures created!")
+    print(f"\n All graph structure figures created!")
 
 # ============================================================================
 # Figure 8: Performance by Market Regime
@@ -1595,7 +1595,7 @@ def create_gnn_architecture_diagram():
     plt.savefig(FIGS_DIR / 'figure9_gnn_architecture.png', 
                bbox_inches='tight', dpi=300, facecolor='white')
     plt.close()
-    print(f"✅ Created: figure9_gnn_architecture.png")
+    print(f" Created: figure9_gnn_architecture.png")
 
 
 def create_multitask_loss_diagram():
@@ -1784,7 +1784,7 @@ def create_multitask_loss_diagram():
     plt.savefig(FIGS_DIR / 'figure10_multitask_loss.png', 
                bbox_inches='tight', dpi=300, facecolor='white')
     plt.close()
-    print(f"✅ Created: figure10_multitask_loss.png")
+    print(f" Created: figure10_multitask_loss.png")
 
 
 def create_regime_performance():
@@ -1824,7 +1824,7 @@ def create_regime_performance():
     plt.tight_layout()
     plt.savefig(FIGS_DIR / 'figure8_regime_performance.png', bbox_inches='tight')
     plt.close()
-    print(f"✅ Created: figure8_regime_performance.png")
+    print(f" Created: figure8_regime_performance.png")
 
 # ============================================================================
 # Main
@@ -1848,8 +1848,8 @@ def main():
     create_regime_performance()
     
     print("\n" + "="*60)
-    print("✅ All figures generated successfully!")
-    print(f"📁 Figures saved to: {FIGS_DIR}")
+    print(" All figures generated successfully!")
+    print(f" Figures saved to: {FIGS_DIR}")
     print("="*60)
 
 if __name__ == '__main__':

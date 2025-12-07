@@ -40,7 +40,7 @@ def analyze_agent_disagreements(
         Dictionary with disagreement statistics
     """
     print("\n" + "="*60)
-    print("🔍 Analyzing Multi-Agent Disagreements")
+    print(" Analyzing Multi-Agent Disagreements")
     print("="*60)
     
     disagreements = []
@@ -78,7 +78,7 @@ def analyze_agent_disagreements(
         
         except Exception as e:
             if i < 5:  # Only print first few errors
-                print(f"  ⚠️  Error on date {date}: {e}")
+                print(f"    Error on date {date}: {e}")
             continue
     
     # Analyze disagreement patterns
@@ -88,7 +88,7 @@ def analyze_agent_disagreements(
         max_variance = np.max(variances)
         min_variance = np.min(variances)
         
-        print(f"\n📊 Disagreement Statistics:")
+        print(f"\n Disagreement Statistics:")
         print(f"   Average Action Variance: {avg_variance:.4f}")
         print(f"   Max Variance: {max_variance:.4f}")
         print(f"   Min Variance: {min_variance:.4f}")
@@ -121,7 +121,7 @@ def analyze_sector_performance(
         Dictionary with sector-specific performance metrics
     """
     print("\n" + "="*60)
-    print("📊 Analyzing Sector-Specific Performance")
+    print(" Analyzing Sector-Specific Performance")
     print("="*60)
     
     sector_performance = {}
@@ -177,7 +177,7 @@ def analyze_sector_performance(
             
             except Exception as e:
                 if episode < 3:
-                    print(f"     ⚠️  Error in episode {episode}: {e}")
+                    print(f"       Error in episode {episode}: {e}")
                 continue
         
         if sector_returns:
@@ -207,7 +207,7 @@ def analyze_mixing_network_weights(
         Dictionary with mixing network analysis
     """
     print("\n" + "="*60)
-    print("🔍 Analyzing Mixing Network Weights")
+    print(" Analyzing Mixing Network Weights")
     print("="*60)
     
     mixing_analysis = {
@@ -217,7 +217,7 @@ def analyze_mixing_network_weights(
     }
     
     if not global_states or not q_values_history:
-        print("  ⚠️  No data available for mixing network analysis")
+        print("    No data available for mixing network analysis")
         return mixing_analysis
     
     # Analyze mixing weights over time
@@ -246,7 +246,7 @@ def analyze_mixing_network_weights(
             'q_value_range': (np.min(q_means), np.max(q_means))
         }
         
-        print(f"\n📊 Mixing Network Statistics:")
+        print(f"\n Mixing Network Statistics:")
         print(f"   Average Q-value: {mixing_analysis['weight_statistics']['avg_q_mean']:.4f}")
         print(f"   Q-value Range: {mixing_analysis['weight_statistics']['q_value_range']}")
     
@@ -260,7 +260,7 @@ def visualize_multi_agent_analysis(
     output_dir: Path
 ):
     """Create visualizations for multi-agent analysis."""
-    print("\n📊 Creating Multi-Agent Analysis Visualizations...")
+    print("\n Creating Multi-Agent Analysis Visualizations...")
     
     # 1. Disagreement Over Time
     if disagreement_results.get('disagreements'):
@@ -279,7 +279,7 @@ def visualize_multi_agent_analysis(
         plt.tight_layout()
         plt.savefig(output_dir / 'multi_agent_disagreement.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: multi_agent_disagreement.png")
+        print("    Saved: multi_agent_disagreement.png")
     
     # 2. Sector Performance Comparison
     if sector_performance:
@@ -308,7 +308,7 @@ def visualize_multi_agent_analysis(
         plt.tight_layout()
         plt.savefig(output_dir / 'sector_performance_comparison.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: sector_performance_comparison.png")
+        print("    Saved: sector_performance_comparison.png")
     
     # 3. Mixing Network Q-Value Patterns
     if mixing_analysis.get('mixing_patterns'):
@@ -325,26 +325,26 @@ def visualize_multi_agent_analysis(
         plt.tight_layout()
         plt.savefig(output_dir / 'mixing_network_patterns.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: mixing_network_patterns.png")
+        print("    Saved: mixing_network_patterns.png")
 
 
 def main():
     """Main analysis pipeline."""
-    print("🚀 Multi-Agent Decision Analysis")
+    print(" Multi-Agent Decision Analysis")
     print("="*60)
     
     # Load GNN model
-    print("\n📁 Loading GNN model...")
+    print("\n Loading GNN model...")
     try:
         gnn_model = load_gnn_model_for_rl()
         gnn_model.eval()
-        print("✅ GNN model loaded")
+        print(" GNN model loaded")
     except Exception as e:
-        print(f"❌ Error loading GNN model: {e}")
+        print(f" Error loading GNN model: {e}")
         return
     
     # Create coordinator
-    print("\n🤖 Creating multi-agent coordinator...")
+    print("\n Creating multi-agent coordinator...")
     sector_groups = SectorGrouping.load_sector_mapping()
     all_tickers = []
     for tickers in sector_groups.values():
@@ -360,7 +360,7 @@ def main():
     )
     
     # Create environment
-    print("\n🌍 Creating environment...")
+    print("\n Creating environment...")
     start_date = pd.to_datetime('2023-01-01')
     end_date = pd.to_datetime('2024-12-31')
     env = StockTradingEnv(start_date, end_date, gnn_model, DEVICE)
@@ -407,8 +407,8 @@ def main():
     with open(results_file, 'w') as f:
         json.dump(results, f, indent=2, default=str)
     
-    print(f"\n✅ Results saved to: {results_file}")
-    print("\n🎉 Multi-Agent Analysis Complete!")
+    print(f"\n Results saved to: {results_file}")
+    print("\n Multi-Agent Analysis Complete!")
 
 
 if __name__ == "__main__":

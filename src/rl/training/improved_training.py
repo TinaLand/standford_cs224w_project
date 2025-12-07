@@ -42,7 +42,7 @@ def run_improved_rl_training():
     Train RL agent with improved risk-adjusted reward function.
     """
     print("=" * 70)
-    print("🚀 Phase 5: Improved RL Training with Risk-Adjusted Rewards")
+    print(" Phase 5: Improved RL Training with Risk-Adjusted Rewards")
     print("=" * 70)
     print(f"Reward Type: {REWARD_TYPE}")
     print(f"Total Timesteps: {TOTAL_TIMESTEPS}")
@@ -82,16 +82,16 @@ def run_improved_rl_training():
     # Save agent
     save_path = RL_SAVE_PATH / "ppo_stock_agent_improved"
     agent.save(save_path)
-    print(f"\n✅ Improved RL Agent saved to: {save_path}")
+    print(f"\n Improved RL Agent saved to: {save_path}")
     
     # Print training summary
     print("\n" + "=" * 70)
-    print("📊 Training Summary")
+    print(" Training Summary")
     print("=" * 70)
     print(f"Total Timesteps: {TOTAL_TIMESTEPS}")
     print(f"Reward Type: {REWARD_TYPE}")
     print(f"Model saved: {save_path}")
-    print("\n💡 Next Steps:")
+    print("\n Next Steps:")
     print("  1. Evaluate the improved agent using phase6_evaluation.py")
     print("  2. Compare with baseline strategies")
     print("  3. Check if Sharpe ratio and Max Drawdown improved")

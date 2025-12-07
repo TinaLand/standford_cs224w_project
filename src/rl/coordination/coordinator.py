@@ -105,7 +105,7 @@ class MultiAgentCoordinator:
             lr=learning_rate
         )
         
-        print(f"✅ Multi-Agent Coordinator initialized with {len(self.agents)} sector agents")
+        print(f" Multi-Agent Coordinator initialized with {len(self.agents)} sector agents")
         for sector, agent in self.agents.items():
             print(f"   - {sector}: {agent.num_stocks} stocks")
     
@@ -281,7 +281,7 @@ class MultiAgentCoordinator:
         for sector_name, agent in self.agents.items():
             agent.save(coordinator_path)
         
-        print(f"✅ Multi-agent coordinator saved to: {coordinator_path}")
+        print(f" Multi-agent coordinator saved to: {coordinator_path}")
     
     def load(self, path: Path):
         """Load coordinator and all agents."""
@@ -302,7 +302,7 @@ class MultiAgentCoordinator:
             except FileNotFoundError as e:
                 print(f"Warning: Could not load agent for {sector_name}: {e}")
         
-        print(f"✅ Multi-agent coordinator loaded from: {coordinator_path}")
+        print(f" Multi-agent coordinator loaded from: {coordinator_path}")
     
     def __repr__(self):
         return f"MultiAgentCoordinator(sectors={len(self.agents)}, stocks={len(self.all_tickers)})"

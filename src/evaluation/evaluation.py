@@ -169,7 +169,7 @@ def calculate_information_coefficient(predictions: np.ndarray, actual_returns: n
     if pred_std < variance_threshold:
         # All predictions are essentially identical - cannot calculate meaningful correlation
         # But still try to calculate IC per day, as individual days might have variance
-        print(f"   ⚠️  Warning: Overall prediction std is very low ({pred_std:.10f}), but will try per-day IC calculation")
+        print(f"     Warning: Overall prediction std is very low ({pred_std:.10f}), but will try per-day IC calculation")
     
     # If predictions are probabilities, convert to expected returns
     # For binary classification: expected_return = prob_up - prob_down
@@ -268,7 +268,7 @@ def evaluate_gnn_metrics(gnn_model, test_dates, targets_class_dict, tickers) -> 
             all_probs.append(probs.cpu().numpy())
     
     if len(all_predictions) == 0:
-        print("❌ No predictions collected")
+        print(" No predictions collected")
         return {}
     
     # Convert to numpy arrays
@@ -367,8 +367,8 @@ def evaluate_gnn_metrics(gnn_model, test_dates, targets_class_dict, tickers) -> 
         logit_std = pred_logits_up.std()
         
         if prob_std < 0.01:  # Probabilities have very low variance
-            print(f"   ⚠️  Probabilities have low variance (std={prob_std:.6f})")
-            print(f"   🔧 Using raw logits for IC calculation instead (logit std={logit_std:.6f})")
+            print(f"     Probabilities have low variance (std={prob_std:.6f})")
+            print(f"    Using raw logits for IC calculation instead (logit std={logit_std:.6f})")
             # Use logits which have better variance
             ic_results = calculate_information_coefficient(pred_logits_up, actual_returns_array, use_logits=True)
             ic_results['method'] = 'logits'  # Mark that we used logits
@@ -385,7 +385,7 @@ def evaluate_gnn_metrics(gnn_model, test_dates, targets_class_dict, tickers) -> 
             print(f"   IC Range: [{min(ic_results['IC_values']):.4f}, {max(ic_results['IC_values']):.4f}]")
         
     except Exception as e:
-        print(f"⚠️  Could not calculate IC: {e}")
+        print(f"  Could not calculate IC: {e}")
         ic_results = {'IC_mean': 0.0, 'IC_std': 0.0, 'IC_IR': 0.0}
     
     # Calculate standard metrics
@@ -472,7 +472,7 @@ def run_final_backtest(gnn_model, rl_agent_path: Path) -> Dict[str, Any]:
     # Calculate final metrics
     metrics = calculate_financial_metrics(portfolio_values, test_env.current_step)
     
-    print("\n✅ Backtest Complete.")
+    print("\n Backtest Complete.")
     print(f"Final Value: ${portfolio_values[-1]:.2f}")
     
     return {
@@ -645,7 +645,7 @@ def run_ablation_studies():
     """Defines and runs the full set of ablation studies from the proposal."""
     
     print("\n" + "=" * 50)
-    print("🔬 Starting Ablation Studies")
+    print(" Starting Ablation Studies")
     print("=" * 50)
     print("Note: Using existing model on modified graphs (faster than full retraining)")
     print("=" * 50)
@@ -687,7 +687,7 @@ def run_ablation_studies():
             result = train_and_evaluate_ablation(abl['name'], abl['config'])
             ablation_results.append(result)
         except Exception as e:
-            print(f"⚠️  Error in ablation {abl['name']}: {e}")
+            print(f"  Error in ablation {abl['name']}: {e}")
             import traceback
             traceback.print_exc()
             continue
@@ -697,15 +697,15 @@ def run_ablation_studies():
         ablation_df.to_csv(RESULTS_DIR / 'ablation_results.csv', index=False)
         
         print("\n" + "=" * 50)
-        print("✅ Ablation Studies Complete. Results saved.")
+        print(" Ablation Studies Complete. Results saved.")
         print("=" * 50)
-        print("\n📊 Ablation Results Summary:")
+        print("\n Ablation Results Summary:")
         print(ablation_df[['strategy', 'accuracy', 'f1_score', 'precision_at_top10']].to_string(index=False))
-        print(f"\n📁 Results saved to: {RESULTS_DIR / 'ablation_results.csv'}")
+        print(f"\n Results saved to: {RESULTS_DIR / 'ablation_results.csv'}")
         
         return ablation_df
     else:
-        print("❌ No ablation results generated")
+        print(" No ablation results generated")
         return pd.DataFrame()
 
 
@@ -714,7 +714,7 @@ def run_ablation_studies():
 def main():
     """Orchestrates the final evaluation and analysis pipeline."""
     
-    print("🚀 Starting Phase 6: Final Evaluation and Ablation Studies")
+    print(" Starting Phase 6: Final Evaluation and Ablation Studies")
     print("=" * 50)
 
     # Load the core GNN model structure (needed for environment setup)
@@ -747,18 +747,18 @@ def main():
 
     # 1. Evaluate GNN Model Metrics (Precision@Top-K, IC)
     print("\n" + "=" * 50)
-    print("📊 Step 1: GNN Model Node-Level Metrics")
+    print(" Step 1: GNN Model Node-Level Metrics")
     print("=" * 50)
     gnn_metrics = evaluate_gnn_metrics(gnn_model, test_dates, targets_class_dict, tickers)
     
     # Save GNN metrics
     gnn_metrics_df = pd.DataFrame([gnn_metrics])
     gnn_metrics_df.to_csv(RESULTS_DIR / 'gnn_node_metrics.csv', index=False)
-    print("\n✅ GNN Metrics saved to: results/gnn_node_metrics.csv")
+    print("\n GNN Metrics saved to: results/gnn_node_metrics.csv")
 
     # 2. Run Final Backtest (RL Agent Performance)
     print("\n" + "=" * 50)
-    print("📊 Step 2: RL Agent Portfolio-Level Metrics")
+    print(" Step 2: RL Agent Portfolio-Level Metrics")
     print("=" * 50)
     rl_agent_file = RL_SAVE_PATH / "ppo_stock_agent.zip"
     portfolio_returns = None
@@ -768,7 +768,7 @@ def main():
         # Save core metrics
         metrics_df = pd.DataFrame([core_metrics])
         metrics_df.to_csv(RESULTS_DIR / 'final_metrics.csv', index=False)
-        print("\n🏆 RL AGENT PERFORMANCE:")
+        print("\n RL AGENT PERFORMANCE:")
         print(metrics_df[['Sharpe_Ratio', 'Cumulative_Return', 'Max_Drawdown']].iloc[0])
         
         # Extract portfolio returns for statistical testing
@@ -778,12 +778,12 @@ def main():
                 portfolio_series = pd.Series(portfolio_values)
                 portfolio_returns = portfolio_series.pct_change().dropna().values
     else:
-        print("❌ Cannot run final backtest: RL agent not found.")
+        print(" Cannot run final backtest: RL agent not found.")
         metrics_df = pd.DataFrame()
     
     # 2.5. Statistical Significance Testing
     print("\n" + "=" * 50)
-    print("📊 Step 2.5: Statistical Significance Testing")
+    print(" Step 2.5: Statistical Significance Testing")
     print("=" * 50)
     try:
         from src.evaluation.statistical_tests import (
@@ -799,7 +799,7 @@ def main():
                 risk_free_rate=0.02,
                 n_bootstrap=1000
             )
-            print(f"\n📈 Sharpe Ratio Statistical Analysis:")
+            print(f"\n Sharpe Ratio Statistical Analysis:")
             print(f"   Sharpe Ratio: {sharpe_result['sharpe_ratio']:.4f}")
             print(f"   95% CI: [{sharpe_result['ci_lower']:.4f}, {sharpe_result['ci_upper']:.4f}]")
             print(f"   Significant: {'Yes' if sharpe_result['ci_lower'] > 0 else 'No'}")
@@ -810,32 +810,32 @@ def main():
             }
             stats_df = pd.DataFrame([sharpe_result])
             stats_df.to_csv(RESULTS_DIR / 'statistical_tests.csv', index=False)
-            print(f"✅ Statistical test results saved to: results/statistical_tests.csv")
+            print(f" Statistical test results saved to: results/statistical_tests.csv")
         else:
-            print("⚠️  Insufficient data for statistical testing (need >30 returns)")
+            print("  Insufficient data for statistical testing (need >30 returns)")
             
     except Exception as e:
-        print(f"⚠️  Statistical testing failed: {e}")
+        print(f"  Statistical testing failed: {e}")
         import traceback
         traceback.print_exc()
 
     # 3. Run Ablation Studies
     print("\n" + "=" * 50)
-    print("📊 Step 3: Ablation Studies")
+    print(" Step 3: Ablation Studies")
     print("=" * 50)
     try:
         ablation_df = run_ablation_studies()
         if not ablation_df.empty:
-            print(f"\n📈 ABLATION STUDY RESULTS:\n{ablation_df}")
+            print(f"\n ABLATION STUDY RESULTS:\n{ablation_df}")
     except Exception as e:
-        print(f"⚠️  Ablation studies failed: {e}")
+        print(f"  Ablation studies failed: {e}")
         import traceback
         traceback.print_exc()
     
     print("\n" + "=" * 50)
-    print("✅ Project Execution Finalized!")
-    print("🎯 Project is ready for Report Generation and Interpretability Analysis (t-SNE/UMAP).")
-    print(f"📁 Results saved to: {RESULTS_DIR}")
+    print(" Project Execution Finalized!")
+    print(" Project is ready for Report Generation and Interpretability Analysis (t-SNE/UMAP).")
+    print(f" Results saved to: {RESULTS_DIR}")
 
 if __name__ == '__main__':
     # Dependencies: pip install pandas numpy stable-baselines3 tqdm

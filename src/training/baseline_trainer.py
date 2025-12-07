@@ -25,7 +25,7 @@ try:
     TENSORBOARD_AVAILABLE = True
 except ImportError:
     TENSORBOARD_AVAILABLE = False
-    print("⚠️ TensorBoard not available. Install with: pip install tensorboard")
+    print(" TensorBoard not available. Install with: pip install tensorboard")
 
 # --- Configuration ---
 # Import centralized paths and utilities
@@ -37,7 +37,7 @@ HIDDEN_DIM = 128  # Increased from 64 (more capacity for 15 features)
 OUT_DIM = 2  # Binary classification: Up (1) or Down/Flat (0)
 NUM_EPOCHS = 40  # Increased for better convergence
 LEARNING_RATE = 0.0005  # Balanced (not too high, not too low)
-LOOKAHEAD_DAYS = 5 # 预测 5-day-ahead stock return sign [cite: 29]
+LOOKAHEAD_DAYS = 5 #  5-day-ahead stock return sign [cite: 29]
 
 # Class Imbalance Handling Configuration
 # Options: 'standard' (no weighting), 'weighted' (class weights), 'focal' (focal loss)
@@ -237,7 +237,7 @@ def compute_class_weights(targets_dict, train_dates):
         class_weights: Tensor of shape [num_classes] with weights for each class
         class_counts: Dictionary with count of each class
     """
-    print("\n⚖️  Computing class weights for imbalanced data...")
+    print("\n  Computing class weights for imbalanced data...")
     
     # Step 1: Collect all training labels
     all_train_labels = []
@@ -268,7 +268,7 @@ def compute_class_weights(targets_dict, train_dates):
             class_weights[cls_idx] = 1.0
     
     # Step 5: Print class distribution statistics
-    print(f"   📊 Training Set Class Distribution:")
+    print(f"    Training Set Class Distribution:")
     for cls_idx in range(OUT_DIM):
         count = class_count_dict.get(cls_idx, 0)
         percentage = (count / n_total) * 100
@@ -279,9 +279,9 @@ def compute_class_weights(targets_dict, train_dates):
     # Step 6: Calculate imbalance ratio for reporting
     if len(class_count_dict) == 2:
         imbalance_ratio = max(class_counts) / min(class_counts)
-        print(f"   ⚠️  Imbalance Ratio: {imbalance_ratio:.2f}:1")
+        print(f"     Imbalance Ratio: {imbalance_ratio:.2f}:1")
         if imbalance_ratio > 2.0:
-            print(f"   💡 Significant imbalance detected. Using {LOSS_TYPE} loss is recommended.")
+            print(f"    Significant imbalance detected. Using {LOSS_TYPE} loss is recommended.")
     
     return class_weights, class_count_dict
 
@@ -350,9 +350,9 @@ def save_checkpoint(epoch, model, optimizer, metrics, checkpoint_dir, is_best=Fa
     if is_best:
         best_path = checkpoint_dir / 'checkpoint_best.pt'
         torch.save(checkpoint, best_path)
-        print(f"  💾 Saved BEST checkpoint: {best_path.name}")
+        print(f"   Saved BEST checkpoint: {best_path.name}")
     
-    print(f"  💾 Saved checkpoint: {checkpoint_path.name}")
+    print(f"   Saved checkpoint: {checkpoint_path.name}")
 
 def load_checkpoint(checkpoint_path, model, optimizer=None):
     """
@@ -383,7 +383,7 @@ def load_checkpoint(checkpoint_path, model, optimizer=None):
             - metrics_dict: Dictionary of training history
     """
     if not checkpoint_path.exists():
-        print(f"⚠️ Checkpoint not found: {checkpoint_path}")
+        print(f" Checkpoint not found: {checkpoint_path}")
         return 0, {
             'train_loss': [],
             'val_acc': [],
@@ -391,19 +391,19 @@ def load_checkpoint(checkpoint_path, model, optimizer=None):
             'epoch_times': []
         }
     
-    print(f"📂 Loading checkpoint from: {checkpoint_path.name}")
+    print(f" Loading checkpoint from: {checkpoint_path.name}")
     
     # Load checkpoint
     checkpoint = torch.load(checkpoint_path, weights_only=False)
     
     # Restore model weights
     model.load_state_dict(checkpoint['model_state_dict'])
-    print(f"  ✅ Model weights restored")
+    print(f"   Model weights restored")
     
     # Restore optimizer state (if optimizer provided)
     if optimizer is not None and 'optimizer_state_dict' in checkpoint:
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        print(f"  ✅ Optimizer state restored")
+        print(f"   Optimizer state restored")
     
     # Get training state
     start_epoch = checkpoint['epoch'] + 1  # Resume from next epoch
@@ -415,7 +415,7 @@ def load_checkpoint(checkpoint_path, model, optimizer=None):
     })
     
     # Display checkpoint info
-    print(f"  📊 Checkpoint Info:")
+    print(f"   Checkpoint Info:")
     print(f"     - Saved at epoch: {checkpoint['epoch']}")
     print(f"     - Resuming from epoch: {start_epoch}")
     print(f"     - Training history: {len(metrics.get('train_loss', []))} epochs")
@@ -462,9 +462,9 @@ def cleanup_old_checkpoints(checkpoint_dir, keep_last_n=5, keep_best=True):
         for checkpoint_file in to_delete:
             try:
                 checkpoint_file.unlink()
-                print(f"  🗑️ Deleted old checkpoint: {checkpoint_file.name}")
+                print(f"   Deleted old checkpoint: {checkpoint_file.name}")
             except Exception as e:
-                print(f"  ⚠️ Could not delete {checkpoint_file.name}: {e}")
+                print(f"   Could not delete {checkpoint_file.name}: {e}")
 
 def plot_confusion_matrix(y_true, y_pred, epoch, split='test', save_dir=None):
     """
@@ -552,7 +552,7 @@ def find_optimal_threshold(y_true, y_prob):
         
         return optimal_threshold
     except Exception as e:
-        print(f"  ⚠️ Could not find optimal threshold: {e}, using default 0.5")
+        print(f"   Could not find optimal threshold: {e}, using default 0.5")
         return 0.5
 
 def calculate_roc_auc(y_true, y_prob):
@@ -582,14 +582,14 @@ def calculate_roc_auc(y_true, y_prob):
     try:
         # Check if we have both classes in y_true
         if len(np.unique(y_true)) < 2:
-            print("  ⚠️ Only one class present in y_true. ROC-AUC not defined.")
+            print("   Only one class present in y_true. ROC-AUC not defined.")
             return None
         
         # Calculate ROC-AUC
         roc_auc = roc_auc_score(y_true, y_prob)
         return roc_auc
     except Exception as e:
-        print(f"  ⚠️ Could not calculate ROC-AUC: {e}")
+        print(f"   Could not calculate ROC-AUC: {e}")
         return None
 
 # --- 3. Data Preparation ---
@@ -601,7 +601,7 @@ def create_target_labels(tickers, dates, lookahead_days):
     Calculates the 5-day ahead return sign (y_{i, t+5}) for all stocks and dates.
     [cite_start]Target: 1 if return > 0, 0 otherwise[cite: 30].
     """
-    print(f"\n🏷️ Calculating {lookahead_days}-day ahead return signs...")
+    print(f"\n Calculating {lookahead_days}-day ahead return signs...")
     
     # 1. Load OHLCV data to calculate forward returns
     ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
@@ -635,7 +635,7 @@ def create_target_labels(tickers, dates, lookahead_days):
                     target_vector.append(0) # Safety zero if ticker data is missing
             targets_dict[date] = torch.tensor(target_vector, dtype=torch.long)
             
-    print(f"✅ Targets calculated for {len(targets_dict)} trading days.")
+    print(f" Targets calculated for {len(targets_dict)} trading days.")
     return targets_dict, target_labels.index.unique() # Also return valid trading dates
 
 # --- 3. Training and Evaluation ---
@@ -758,20 +758,20 @@ def run_training_pipeline():
     # Load the first available graph to determine dimensions and tickers
     graph_files = sorted(list(DATA_GRAPHS_DIR.glob('graph_t_*.pt')))
     if not graph_files:
-        print("❌ CRITICAL: No graph files found. Run Phase 2 first.")
+        print(" CRITICAL: No graph files found. Run Phase 2 first.")
         return
     sample_date = pd.to_datetime(graph_files[0].stem.split('_')[-1])
     sample_graph = load_graph_data(sample_date)
     # Use robust check for HeteroData contents
     if sample_graph is None or not hasattr(sample_graph, 'node_types') or 'stock' not in sample_graph.node_types:
-        print("❌ CRITICAL: Cannot load a sample graph. Phase 2 output files are invalid. STOPPING.")
+        print(" CRITICAL: Cannot load a sample graph. Phase 2 output files are invalid. STOPPING.")
         return
 
     # Assuming the features are stored as [N, F] tensor under 'stock'
     INPUT_DIM = sample_graph['stock'].x.shape[1]
     tickers = list(getattr(sample_graph, 'tickers', []))
     if not tickers:
-        print("❌ CRITICAL: Sample graph missing tickers metadata. STOPPING.")
+        print(" CRITICAL: Sample graph missing tickers metadata. STOPPING.")
         return
     
     # 2. Get Targets and Date Range
@@ -784,7 +784,7 @@ def run_training_pipeline():
     training_dates = sorted(list(set(targets_dict.keys()).intersection(graph_dates)))
     
     if not training_dates:
-        print("❌ CRITICAL: No overlapping dates found between graphs and targets. STOPPING.")
+        print(" CRITICAL: No overlapping dates found between graphs and targets. STOPPING.")
         return
         
     # 3. Split Data: Simple time-based split
@@ -795,13 +795,13 @@ def run_training_pipeline():
     val_dates = [d for d in training_dates if TRAIN_END_DATE < d <= VAL_END_DATE]
     test_dates = [d for d in training_dates if d > VAL_END_DATE]
     
-    print(f"\n📊 Data Split (Trading Days):")
+    print(f"\n Data Split (Trading Days):")
     print(f"   - Train: {len(train_dates)} days (End: {TRAIN_END_DATE.date()})")
     print(f"   - Val:   {len(val_dates)} days (End: {VAL_END_DATE.date()})")
     print(f"   - Test:  {len(test_dates)} days")
     
     # 4. Setup Loss Function (with class imbalance handling)
-    print(f"\n🎯 Loss Function Configuration: {LOSS_TYPE}")
+    print(f"\n Loss Function Configuration: {LOSS_TYPE}")
     
     if LOSS_TYPE == 'weighted':
         # Compute class weights from training data
@@ -812,19 +812,19 @@ def run_training_pipeline():
         # The weight parameter assigns a manual rescaling weight to each class
         # loss = -w[class] * log(p[class])
         criterion = lambda pred, target: F.cross_entropy(pred, target, weight=class_weights)
-        print(f"   ✅ Using Weighted Cross-Entropy with computed class weights")
+        print(f"    Using Weighted Cross-Entropy with computed class weights")
         
     elif LOSS_TYPE == 'focal':
         # Use Focal Loss to handle class imbalance
         criterion = FocalLoss(alpha=FOCAL_ALPHA, gamma=FOCAL_GAMMA)
-        print(f"   ✅ Using Focal Loss (alpha={FOCAL_ALPHA}, gamma={FOCAL_GAMMA})")
-        print(f"   💡 Focal loss automatically focuses on hard-to-classify examples")
+        print(f"    Using Focal Loss (alpha={FOCAL_ALPHA}, gamma={FOCAL_GAMMA})")
+        print(f"    Focal loss automatically focuses on hard-to-classify examples")
         
     else:  # 'standard'
         # Standard cross-entropy without any class balancing
         criterion = lambda pred, target: F.cross_entropy(pred, target)
-        print(f"   ⚠️  Using Standard Cross-Entropy (no class balancing)")
-        print(f"   💡 Consider using 'weighted' or 'focal' if classes are imbalanced")
+        print(f"     Using Standard Cross-Entropy (no class balancing)")
+        print(f"    Consider using 'weighted' or 'focal' if classes are imbalanced")
     
     # 5. Model and Optimizer Setup
     model = BaselineGNN(INPUT_DIM, HIDDEN_DIM, OUT_DIM).to(DEVICE)
@@ -842,7 +842,7 @@ def run_training_pipeline():
                 patience=LR_SCHEDULER_PATIENCE,
                 min_lr=LR_SCHEDULER_MIN_LR
             )
-            print(f"\n📉 Learning Rate Scheduler: ReduceLROnPlateau")
+            print(f"\n Learning Rate Scheduler: ReduceLROnPlateau")
             print(f"   - Patience: {LR_SCHEDULER_PATIENCE} epochs")
             print(f"   - Factor: {LR_SCHEDULER_FACTOR}")
             print(f"   - Min LR: {LR_SCHEDULER_MIN_LR}")
@@ -854,7 +854,7 @@ def run_training_pipeline():
                 step_size=LR_SCHEDULER_PATIENCE,
                 gamma=LR_SCHEDULER_FACTOR
             )
-            print(f"\n📉 Learning Rate Scheduler: StepLR")
+            print(f"\n Learning Rate Scheduler: StepLR")
             print(f"   - Step size: {LR_SCHEDULER_PATIENCE} epochs")
             print(f"   - Gamma: {LR_SCHEDULER_FACTOR}")
         
@@ -864,14 +864,14 @@ def run_training_pipeline():
                 optimizer,
                 gamma=LR_SCHEDULER_FACTOR
             )
-            print(f"\n📉 Learning Rate Scheduler: ExponentialLR")
+            print(f"\n Learning Rate Scheduler: ExponentialLR")
             print(f"   - Gamma: {LR_SCHEDULER_FACTOR}")
     
     # 5c. Early Stopping Setup
     early_stop_counter = 0
     early_stop_triggered = False
     if ENABLE_EARLY_STOPPING:
-        print(f"\n⏱️ Early Stopping Enabled:")
+        print(f"\n⏱ Early Stopping Enabled:")
         print(f"   - Patience: {EARLY_STOP_PATIENCE} epochs")
         print(f"   - Min delta: {EARLY_STOP_MIN_DELTA}")
     
@@ -894,7 +894,7 @@ def run_training_pipeline():
         # Create unique run name with timestamp
         run_name = f"baseline_{LOSS_TYPE}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         writer = SummaryWriter(log_dir=TENSORBOARD_DIR / run_name)
-        print(f"\n📊 TensorBoard initialized: {run_name}")
+        print(f"\n TensorBoard initialized: {run_name}")
         print(f"   Run: tensorboard --logdir={TENSORBOARD_DIR}")
         
         # Log hyperparameters
@@ -911,19 +911,19 @@ def run_training_pipeline():
     if RESUME_FROM_CHECKPOINT and ENABLE_CHECKPOINTING:
         checkpoint_path = CHECKPOINT_DIR / 'checkpoint_latest.pt'
         if checkpoint_path.exists():
-            print("\n🔄 Resuming from checkpoint...")
+            print("\n Resuming from checkpoint...")
             start_epoch, metrics = load_checkpoint(checkpoint_path, model, optimizer)
             
             # Restore best validation F1 from metrics history
             if metrics.get('val_f1'):
                 best_val_f1 = max(metrics['val_f1'])
-                print(f"  📊 Restored best validation F1: {best_val_f1:.4f}")
+                print(f"   Restored best validation F1: {best_val_f1:.4f}")
         else:
-            print(f"\n⚠️ No checkpoint found at {checkpoint_path}")
+            print(f"\n No checkpoint found at {checkpoint_path}")
             print("  Starting training from scratch...")
     
     # 8. Training Loop (Transductive/Sequential)
-    print("\n🔨 Starting Sequential Training...")
+    print("\n Starting Sequential Training...")
     print(f"   Training from epoch {start_epoch} to {NUM_EPOCHS}")
     
     for epoch in range(start_epoch, NUM_EPOCHS + 1):
@@ -966,7 +966,7 @@ def run_training_pipeline():
                 np.array(all_val_probs)
             )
             if epoch == start_epoch or epoch % 5 == 0:  # Print every 5 epochs or first epoch
-                print(f"   📊 Optimal threshold (validation): {optimal_threshold:.4f}")
+                print(f"    Optimal threshold (validation): {optimal_threshold:.4f}")
         
         # Re-evaluate with optimal threshold
         val_accs_opt, val_f1s_opt = [], []
@@ -1033,7 +1033,7 @@ def run_training_pipeline():
         if is_best:
             best_val_f1 = avg_val_f1
             torch.save(model.state_dict(), MODELS_DIR / 'baseline_gcn_model.pt')
-            print(f"  ⭐ New Best Model! F1: {best_val_f1:.4f}")
+            print(f"   New Best Model! F1: {best_val_f1:.4f}")
         
         # Save checkpoint (full training state)
         if ENABLE_CHECKPOINTING:
@@ -1068,7 +1068,7 @@ def run_training_pipeline():
             # Check if LR was reduced
             new_lr = optimizer.param_groups[0]['lr']
             if new_lr < old_lr:
-                print(f"  📉 Learning rate reduced: {old_lr:.2e} → {new_lr:.2e}")
+                print(f"   Learning rate reduced: {old_lr:.2e} → {new_lr:.2e}")
         
         # Early Stopping Check
         if ENABLE_EARLY_STOPPING:
@@ -1078,10 +1078,10 @@ def run_training_pipeline():
             else:
                 # Increment counter if no improvement
                 early_stop_counter += 1
-                print(f"  ⏱️ No improvement for {early_stop_counter}/{EARLY_STOP_PATIENCE} epochs")
+                print(f"  ⏱ No improvement for {early_stop_counter}/{EARLY_STOP_PATIENCE} epochs")
                 
                 if early_stop_counter >= EARLY_STOP_PATIENCE:
-                    print(f"\n🛑 Early stopping triggered after {epoch} epochs")
+                    print(f"\n Early stopping triggered after {epoch} epochs")
                     print(f"   Best validation F1: {best_val_f1:.4f}")
                     early_stop_triggered = True
                     break  # Exit training loop
@@ -1089,13 +1089,13 @@ def run_training_pipeline():
     # 9. Training Complete - Save Final Summary
     print("\n" + "=" * 60)
     if early_stop_triggered:
-        print("🛑 Training Stopped Early!")
+        print(" Training Stopped Early!")
     else:
-        print("✅ Training Complete!")
+        print(" Training Complete!")
     print("=" * 60)
     
     if ENABLE_CHECKPOINTING:
-        print(f"\n📊 Training Summary:")
+        print(f"\n Training Summary:")
         print(f"   Total epochs trained: {len(metrics['train_loss'])}")
         print(f"   Best validation F1: {best_val_f1:.4f}")
         print(f"   Total training time: {sum(metrics['epoch_times']):.1f}s ({sum(metrics['epoch_times'])/60:.1f}min)")
@@ -1107,19 +1107,19 @@ def run_training_pipeline():
             print(f"   Validation Acc: {metrics['val_acc'][0]:.4f} → {metrics['val_acc'][-1]:.4f}")
             print(f"   Validation F1:  {metrics['val_f1'][0]:.4f} → {metrics['val_f1'][-1]:.4f}")
         
-        print(f"\n💾 Checkpoints saved in: {CHECKPOINT_DIR}")
+        print(f"\n Checkpoints saved in: {CHECKPOINT_DIR}")
         print(f"   - Best model: checkpoint_best.pt")
         print(f"   - Latest state: checkpoint_latest.pt")
     
     # 10. Testing (Final Evaluation)
     print("\n" + "=" * 60)
-    print("📊 Final Testing Phase")
+    print(" Final Testing Phase")
     print("=" * 60)
     
     model.load_state_dict(torch.load(MODELS_DIR / 'baseline_gcn_model.pt', weights_only=False))
     
     # Find optimal threshold on validation set (use last validation run)
-    print("\n🔍 Finding optimal classification threshold on validation set...")
+    print("\n Finding optimal classification threshold on validation set...")
     all_val_true_final, all_val_probs_final = [], []
     for date in val_dates:
         data = load_graph_data(date)
@@ -1136,9 +1136,9 @@ def run_training_pipeline():
             np.array(all_val_true_final),
             np.array(all_val_probs_final)
         )
-        print(f"   ✅ Optimal threshold: {optimal_threshold:.4f} (default: 0.5)")
+        print(f"    Optimal threshold: {optimal_threshold:.4f} (default: 0.5)")
     else:
-        print(f"   ⚠️  Could not find optimal threshold, using default: 0.5")
+        print(f"     Could not find optimal threshold, using default: 0.5")
     
     # Test with optimal threshold
     test_accs, test_f1s = [], []
@@ -1169,7 +1169,7 @@ def run_training_pipeline():
     avg_test_f1 = np.mean(test_f1s)
     
     print("\n" + "=" * 60)
-    print(f"🚀 Final Test Results (Averaged over {len(test_dates)} days):")
+    print(f" Final Test Results (Averaged over {len(test_dates)} days):")
     print(f"   - Test Accuracy: {avg_test_acc:.4f}")
     print(f"   - Test F1 Score: {avg_test_f1:.4f}")
     
@@ -1188,7 +1188,7 @@ def run_training_pipeline():
     
     # Generate confusion matrix
     if ENABLE_CONFUSION_MATRIX and len(all_test_true) > 0:
-        print(f"\n📈 Generating confusion matrix...")
+        print(f"\n Generating confusion matrix...")
         cm, cm_path = plot_confusion_matrix(
             np.array(all_test_true),
             np.array(all_test_pred),
@@ -1196,7 +1196,7 @@ def run_training_pipeline():
             split='test',
             save_dir=PLOTS_DIR
         )
-        print(f"   ✅ Confusion matrix saved: {cm_path.name}")
+        print(f"    Confusion matrix saved: {cm_path.name}")
         
         # Log confusion matrix to TensorBoard
         if writer is not None:
@@ -1211,7 +1211,7 @@ def run_training_pipeline():
             plt.close(fig)
         
         # Print classification report
-        print(f"\n📋 Classification Report:")
+        print(f"\n Classification Report:")
         print(classification_report(
             all_test_true,
             all_test_pred,
@@ -1224,7 +1224,7 @@ def run_training_pipeline():
     # Close TensorBoard writer
     if writer is not None:
         writer.close()
-        print(f"\n📊 TensorBoard logs saved to: {TENSORBOARD_DIR}")
+        print(f"\n TensorBoard logs saved to: {TENSORBOARD_DIR}")
         print(f"   View with: tensorboard --logdir={TENSORBOARD_DIR}")
 
 

@@ -49,9 +49,9 @@ def load_phase3_model():
     
     if PHASE3_MODEL_PATH.exists():
         model.load_state_dict(torch.load(PHASE3_MODEL_PATH, map_location=DEVICE, weights_only=False))
-        print(f"✅ Phase 3 model loaded from: {PHASE3_MODEL_PATH}")
+        print(f" Phase 3 model loaded from: {PHASE3_MODEL_PATH}")
     else:
-        print(f"⚠️  Phase 3 model not found at {PHASE3_MODEL_PATH}")
+        print(f"  Phase 3 model not found at {PHASE3_MODEL_PATH}")
         print("   Using untrained model for comparison")
     
     model.to(DEVICE)
@@ -75,9 +75,9 @@ def load_phase4_model():
     
     if PHASE4_MODEL_PATH.exists():
         model.load_state_dict(torch.load(PHASE4_MODEL_PATH, map_location=DEVICE, weights_only=False))
-        print(f"✅ Phase 4 model loaded from: {PHASE4_MODEL_PATH}")
+        print(f" Phase 4 model loaded from: {PHASE4_MODEL_PATH}")
     else:
-        print(f"⚠️  Phase 4 model not found at {PHASE4_MODEL_PATH}")
+        print(f"  Phase 4 model not found at {PHASE4_MODEL_PATH}")
         print("   Using untrained model for comparison")
     
     model.to(DEVICE)
@@ -166,7 +166,7 @@ def evaluate_model_phase3(model, test_dates, targets_dict, tickers):
         pred_probs_up = probs_array[:, :, 1]
         ic_results = calculate_information_coefficient(pred_probs_up, actual_returns_array)
     except Exception as e:
-        print(f"⚠️  Could not calculate IC: {e}")
+        print(f"  Could not calculate IC: {e}")
         ic_results = {'IC_mean': 0.0, 'IC_std': 0.0, 'IC_IR': 0.0}
     
     return {
@@ -249,7 +249,7 @@ def evaluate_model_phase4(model, test_dates, targets_dict, tickers):
         pred_probs_up = probs_array[:, :, 1]
         ic_results = calculate_information_coefficient(pred_probs_up, actual_returns_array)
     except Exception as e:
-        print(f"⚠️  Could not calculate IC: {e}")
+        print(f"  Could not calculate IC: {e}")
         ic_results = {'IC_mean': 0.0, 'IC_std': 0.0, 'IC_IR': 0.0}
     
     return {
@@ -265,7 +265,7 @@ def evaluate_model_phase4(model, test_dates, targets_dict, tickers):
 def main():
     """Main comparison function."""
     print("=" * 60)
-    print("🔬 Phase 3 vs Phase 4 Model Comparison")
+    print(" Phase 3 vs Phase 4 Model Comparison")
     print("=" * 60)
     
     # Load models
@@ -291,7 +291,7 @@ def main():
     # Create targets
     targets_dict = create_target_labels(tickers, all_dates, lookahead_days=5)
     
-    print(f"\n📊 Test Set: {len(test_dates)} days, {len(tickers)} stocks")
+    print(f"\n Test Set: {len(test_dates)} days, {len(tickers)} stocks")
     
     # Evaluate both models
     phase3_metrics = evaluate_model_phase3(phase3_model, test_dates, targets_dict, tickers)
@@ -313,12 +313,12 @@ def main():
     
     # Calculate improvements
     print("\n" + "=" * 60)
-    print("📊 COMPARISON RESULTS")
+    print(" COMPARISON RESULTS")
     print("=" * 60)
     print(comparison_df.to_string(index=False))
     
     print("\n" + "=" * 60)
-    print("📈 IMPROVEMENTS (Phase 4 vs Phase 3)")
+    print(" IMPROVEMENTS (Phase 4 vs Phase 3)")
     print("=" * 60)
     
     improvements = {}
@@ -334,7 +334,7 @@ def main():
     
     # Save results
     comparison_df.to_csv(RESULTS_DIR / 'phase3_vs_phase4_comparison.csv', index=False)
-    print(f"\n✅ Comparison results saved to: {RESULTS_DIR / 'phase3_vs_phase4_comparison.csv'}")
+    print(f"\n Comparison results saved to: {RESULTS_DIR / 'phase3_vs_phase4_comparison.csv'}")
     
     return comparison_df
 

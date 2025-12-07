@@ -29,9 +29,9 @@ if __name__ == '__main__':
     results = run_baseline_comparison()
     
     if results is not None:
-        print("\n✅ Baseline comparison completed!")
+        print("\n Baseline comparison completed!")
         print(f"\nResults saved to: results/baseline_model_comparison.csv")
     else:
-        print("\n❌ Baseline comparison failed!")
+        print("\n Baseline comparison failed!")
         sys.exit(1)
 

@@ -32,7 +32,7 @@ END_DATE = pd.to_datetime('2024-12-31')
 def quick_test():
     """Quick test of final training."""
     print("=" * 80)
-    print("🧪 Quick Test: Final RL Training (5000 timesteps)")
+    print(" Quick Test: Final RL Training (5000 timesteps)")
     print("=" * 80)
     
     # Load GNN model
@@ -66,7 +66,7 @@ def quick_test():
     # Save
     save_path = RL_SAVE_PATH / "ppo_stock_agent_final_quick"
     agent.save(save_path)
-    print(f"\n✅ Quick test agent saved to: {save_path}")
+    print(f"\n Quick test agent saved to: {save_path}")
     
     return agent
 

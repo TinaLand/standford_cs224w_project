@@ -13,7 +13,7 @@ sys.path.append(str(PROJECT_ROOT / 'scripts'))
 def main():
     """Run all enhancement scripts."""
     print("="*60)
-    print("🚀 Running All Enhancement Scripts for A+ Grade")
+    print(" Running All Enhancement Scripts for A+ Grade")
     print("="*60)
     
     enhancements = [
@@ -56,24 +56,24 @@ def main():
             module = __import__(enhancement['script'])
             if hasattr(module, 'main'):
                 module.main()
-                results[enhancement['name']] = '✅ Success'
+                results[enhancement['name']] = ' Success'
             else:
-                results[enhancement['name']] = '⚠️  No main function'
+                results[enhancement['name']] = '  No main function'
         except Exception as e:
-            print(f"❌ Error: {e}")
-            results[enhancement['name']] = f'❌ Failed: {str(e)[:50]}'
+            print(f" Error: {e}")
+            results[enhancement['name']] = f' Failed: {str(e)[:50]}'
     
     # Summary
     print(f"\n{'='*60}")
-    print("📊 Enhancement Summary")
+    print(" Enhancement Summary")
     print("="*60)
     
     for name, status in results.items():
         print(f"  {status} {name}")
     
-    print(f"\n✅ All enhancements completed!")
-    print(f"📄 Results saved in: results/")
-    print(f"📊 Visualizations saved in: models/plots/")
+    print(f"\n All enhancements completed!")
+    print(f" Results saved in: results/")
+    print(f" Visualizations saved in: models/plots/")
 
 
 if __name__ == "__main__":

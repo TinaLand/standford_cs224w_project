@@ -41,7 +41,7 @@ def evaluate_period(
     Returns:
         Dictionary with performance metrics
     """
-    print(f"\n📊 Evaluating {period_name} period ({start_date.date()} to {end_date.date()})...")
+    print(f"\n Evaluating {period_name} period ({start_date.date()} to {end_date.date()})...")
     
     # Create environment for this period
     gnn_model = agent.gnn_model
@@ -84,7 +84,7 @@ def evaluate_period(
         
         except Exception as e:
             if episode < 3:
-                print(f"  ⚠️  Error in episode {episode}: {e}")
+                print(f"    Error in episode {episode}: {e}")
             continue
     
     if episode_returns:
@@ -155,7 +155,7 @@ def run_cross_period_validation(
         Dictionary with cross-period validation results
     """
     print("\n" + "="*60)
-    print("🔄 Cross-Period Validation")
+    print(" Cross-Period Validation")
     print("="*60)
     
     period_results = {}
@@ -175,7 +175,7 @@ def run_cross_period_validation(
         all_sharpe = [r['mean_sharpe'] for r in period_results.values()]
         all_max_dd = [r['mean_max_dd'] for r in period_results.values()]
         
-        print(f"\n📊 Cross-Period Summary:")
+        print(f"\n Cross-Period Summary:")
         print(f"   Periods Tested: {len(period_results)}")
         print(f"   Average Return: {np.mean(all_returns)*100:.2f}%")
         print(f"   Average Sharpe: {np.mean(all_sharpe):.2f}")
@@ -204,7 +204,7 @@ def visualize_cross_period_validation(
     output_dir: Path
 ):
     """Create visualizations for cross-period validation."""
-    print("\n📊 Creating Cross-Period Validation Visualizations...")
+    print("\n Creating Cross-Period Validation Visualizations...")
     
     if not validation_results.get('period_results'):
         return
@@ -240,30 +240,30 @@ def visualize_cross_period_validation(
     plt.tight_layout()
     plt.savefig(output_dir / 'cross_period_validation.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("   ✅ Saved: cross_period_validation.png")
+    print("    Saved: cross_period_validation.png")
 
 
 def main():
     """Main cross-period validation pipeline."""
-    print("🚀 Cross-Period Validation")
+    print(" Cross-Period Validation")
     print("="*60)
     
     # Load GNN model
-    print("\n📁 Loading GNN model...")
+    print("\n Loading GNN model...")
     try:
         gnn_model = load_gnn_model_for_rl()
         gnn_model.eval()
-        print("✅ GNN model loaded")
+        print(" GNN model loaded")
     except Exception as e:
-        print(f"❌ Error loading GNN model: {e}")
+        print(f" Error loading GNN model: {e}")
         return
     
     # Load RL agent
-    print("\n🤖 Loading RL agent...")
+    print("\n Loading RL agent...")
     try:
         agent_path = MODELS_DIR / "rl_ppo_agent_model_final" / "ppo_stock_agent_final.zip"
         if not agent_path.exists():
-            print("⚠️  RL agent not found, skipping validation")
+            print("  RL agent not found, skipping validation")
             return
         
         start_date = pd.to_datetime('2023-01-01')
@@ -280,9 +280,9 @@ def main():
         agent.agent = ppo_agent
         agent.is_trained = True
         
-        print("✅ RL agent loaded")
+        print(" RL agent loaded")
     except Exception as e:
-        print(f"❌ Error loading RL agent: {e}")
+        print(f" Error loading RL agent: {e}")
         return
     
     # Define test periods (different market regimes)
@@ -331,8 +331,8 @@ def main():
     with open(results_file, 'w') as f:
         json.dump(validation_results, f, indent=2, default=str)
     
-    print(f"\n✅ Results saved to: {results_file}")
-    print("\n🎉 Cross-Period Validation Complete!")
+    print(f"\n Results saved to: {results_file}")
+    print("\n Cross-Period Validation Complete!")
 
 
 if __name__ == "__main__":

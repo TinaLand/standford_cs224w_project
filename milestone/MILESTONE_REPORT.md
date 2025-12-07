@@ -18,11 +18,11 @@
 6. [Discussion & Future Work](#6-discussion--future-work)
 7. [Conclusion](#7-conclusion)
 
-**📚 Companion Documents**:
-- 📖 **[METRICS_QUICK_REFERENCE.md](METRICS_QUICK_REFERENCE.md)** - Fast metric lookup and formulas
-- 📁 **[docs/README_IMPLEMENTATION_DOCS.md](docs/README_IMPLEMENTATION_DOCS.md)** - 12 implementation guides (12,500+ lines)
+** Companion Documents**:
+-  **[METRICS_QUICK_REFERENCE.md](METRICS_QUICK_REFERENCE.md)** - Fast metric lookup and formulas
+-  **[docs/README_IMPLEMENTATION_DOCS.md](docs/README_IMPLEMENTATION_DOCS.md)** - 12 implementation guides (12,500+ lines)
 
-**📝 Note**: This report integrates content from previous documentation:
+** Note**: This report integrates content from previous documentation:
 - Mathematical analysis and GNN theory (formerly in TECHNICAL_DEEP_DIVE.md)
 - Comprehensive statistics and implementation details (formerly in PROJECT_MILESTONE.md)
 - Quick reference and submission guidance (formerly in FINAL_SUMMARY.md)
@@ -47,29 +47,29 @@ Overall:
   Macro F1: 0.4608
 
 Per-Class (Asymmetric Performance):
-  Down (0): Precision=46.88%, Recall=79.18%, F1=58.89% ✅
-  Up (1):   Precision=56.96%, Recall=23.50%, F1=33.27% ⚠️
+  Down (0): Precision=46.88%, Recall=79.18%, F1=58.89% 
+  Up (1):   Precision=56.96%, Recall=23.50%, F1=33.27% 
 
 Interpretation:
-  ✅ Model predicts BOTH classes (not collapsed)
-  ✅ Good at detecting downside (79% recall) - valuable for risk management
-  ⚠️ Poor at predicting upside (23% recall) - misses bull runs
-  ⚠️ Overall weak signal (ROC-AUC near 0.5)
+   Model predicts BOTH classes (not collapsed)
+   Good at detecting downside (79% recall) - valuable for risk management
+   Poor at predicting upside (23% recall) - misses bull runs
+   Overall weak signal (ROC-AUC near 0.5)
 ```
 
 ### Why These Results Are Actually Good for Milestone
 
-**1. Scientific Rigor** ✅
+**1. Scientific Rigor** 
 - Honest reporting (ROC-AUC = 0.51, not cherry-picked)
 - Complete ablation study (4 experiments)
 - Systematic debugging (3 critical bugs fixed)
 
-**2. Technical Achievement** ✅
+**2. Technical Achievement** 
 - Model learns meaningful patterns (not random)
 - 79% Down recall = useful for risk management
 - Complete pipeline (data → model → evaluation)
 
-**3. Domain Understanding** ✅
+**3. Domain Understanding** 
 - Acknowledged stock prediction difficulty (EMH)
 - Explained why metrics are low (market efficiency, noise)
 - Proposed future improvements (temporal GNN, better features)
@@ -102,13 +102,13 @@ Stock markets are inherently **networked systems** where assets are interconnect
 Traditional ML (LSTM):
 Input:  [Apple's price history, volume, RSI, MACD, ...]
 Output: P(Apple ↑ tomorrow)
-❌ Limitation: Ignores Microsoft, Nvidia, Samsung
+ Limitation: Ignores Microsoft, Nvidia, Samsung
 
 Our GNN Approach:
 Input:  [Apple's features] + [Graph structure]
 Graph: Apple ← edges → {Microsoft, Nvidia, Suppliers, Competitors}
 Output: P(Apple ↑ tomorrow | Network context)
-✅ Benefit: Captures network effects and structural position
+ Benefit: Captures network effects and structural position
 ```
 
 ### 1.3 Why Graph Neural Networks?
@@ -132,9 +132,9 @@ Where:
 
 | Model Type | Temporal Dependency | Structural Dependency | Limitation |
 |------------|--------------------:|----------------------:|------------|
-| LSTM/RNN   | ✅ Yes             | ❌ No                | Cannot model graph structure |
-| XGBoost/RF | ✅ Yes (manual)    | ❌ No                | Requires hand-crafted features |
-| **GNN**    | ✅ Yes             | ✅ **Yes**           | **Best of both worlds** |
+| LSTM/RNN   |  Yes             |  No                | Cannot model graph structure |
+| XGBoost/RF |  Yes (manual)    |  No                | Requires hand-crafted features |
+| **GNN**    |  Yes             |  **Yes**           | **Best of both worlds** |
 
 ### 1.4 Novel Contributions
 
@@ -264,9 +264,9 @@ Average: ~322 edges per graph, 13% density, 6.5 avg degree
 **Comparison (Before vs After Top-K)**:
 | Metric | Before Top-K | After Top-K | Improvement |
 |--------|--------------|-------------|-------------|
-| Density | 40-45% | 10-16% | ✅ 3× reduction |
-| Avg Degree | 19-22 | 5-8 | ✅ 3× reduction |
-| Fund Sim Edges | 904 | 243 | ✅ 3.7× reduction |
+| Density | 40-45% | 10-16% |  3× reduction |
+| Avg Degree | 19-22 | 5-8 |  3× reduction |
+| Fund Sim Edges | 904 | 243 |  3.7× reduction |
 
 #### Node Feature Normalization
 
@@ -286,26 +286,26 @@ features = (features - features.mean(dim=0)) / features.std(dim=0)
 ### 2.4 Dataset Statistics
 
 ```
-📊 Final Dataset (Built & Verified Nov 3-4, 2025):
-├─ Nodes (stocks): 50 per graph
-├─ Graphs (days): 2,467 ✓ (all successfully built)
-├─ Features per node: 15 ✓
-├─ Average edges per graph: 322 (measured)
-├─ Graph density: 10-16% (target: <20%)
-├─ Edge types: 2 (rolling_correlation + fund_similarity)
-└─ Target labels: 2,467 days × 50 stocks = 123,350 predictions ✓
+ Final Dataset (Built & Verified Nov 3-4, 2025):
+ Nodes (stocks): 50 per graph
+ Graphs (days): 2,467  (all successfully built)
+ Features per node: 15 
+ Average edges per graph: 322 (measured)
+ Graph density: 10-16% (target: <20%)
+ Edge types: 2 (rolling_correlation + fund_similarity)
+ Target labels: 2,467 days × 50 stocks = 123,350 predictions 
 
 Split (Temporal - No Look-Ahead Bias):
-├─ Train: 1,727 days (70%) - 2015-03-16 to 2022-01-20
-├─ Val:   370 days (15%)   - 2022-01-21 to 2023-07-13
-└─ Test:  370 days (15%)   - 2023-07-14 to 2024-11-01
+ Train: 1,727 days (70%) - 2015-03-16 to 2022-01-20
+ Val:   370 days (15%)   - 2022-01-21 to 2023-07-13
+ Test:  370 days (15%)   - 2023-07-14 to 2024-11-01
 
 Data Integrity Checks:
-✅ All graphs have consistent node count (50)
-✅ All graphs have consistent feature count (15)
-✅ Feature normalization applied (mean=0, std=1)
-✅ No NaN or Inf values in features
-✅ Target labels matched to all graphs (2,467/2,467)
+ All graphs have consistent node count (50)
+ All graphs have consistent feature count (15)
+ Feature normalization applied (mean=0, std=1)
+ No NaN or Inf values in features
+ Target labels matched to all graphs (2,467/2,467)
 ```
 
 ---
@@ -450,11 +450,11 @@ checkpoint = {
 
 ```python
 Metrics per epoch:
-├─ Training Loss (Focal Loss)
-├─ Validation Accuracy
-├─ Validation F1 Score (Binary)
-├─ Validation ROC-AUC
-└─ Confusion Matrix (Test set)
+ Training Loss (Focal Loss)
+ Validation Accuracy
+ Validation F1 Score (Binary)
+ Validation ROC-AUC
+ Confusion Matrix (Test set)
 
 Classification Report:
 - Precision (per class)
@@ -485,28 +485,28 @@ Epoch | Train Loss | Val Acc | Val F1  | ROC-AUC | LR      | Notes
   2   | 0.0443     | 0.4854  | 0.0815  | 0.5003  | 1.0e-4  |
   3   | 0.0439     | 0.4851  | 0.0677  | 0.5018  | 1.0e-4  |
   4   | 0.0436     | 0.4857  | 0.1282  | 0.5094  | 1.0e-4  |
-  5   | 0.0432     | 0.4855  | 0.2965  | 0.5094  | 1.0e-4  | ⭐ Best F1
-  6   | 0.0430     | 0.4854  | 0.0828  | 0.5138  | 1.0e-4  | 📉 LR → 5e-5
+  5   | 0.0432     | 0.4855  | 0.2965  | 0.5094  | 1.0e-4  |  Best F1
+  6   | 0.0430     | 0.4854  | 0.0828  | 0.5138  | 1.0e-4  |  LR → 5e-5
   7   | 0.0428     | 0.4854  | 0.0733  | 0.5159  | 5.0e-5  |
   8   | 0.0427     | 0.4857  | 0.0747  | 0.5163  | 5.0e-5  |
-  9   | 0.0426     | 0.4854  | 0.0754  | 0.5087  | 5.0e-5  | 📉 LR → 2.5e-5
+  9   | 0.0426     | 0.4854  | 0.0754  | 0.5087  | 5.0e-5  |  LR → 2.5e-5
  10   | 0.0425     | 0.4857  | 0.0697  | 0.5144  | 2.5e-5  |
 
-🛑 Early stopping triggered after epoch 10 (no improvement for 5 epochs)
-✅ Best model: Epoch 5 (Val F1 = 0.2965, ROC-AUC = 0.5094)
+ Early stopping triggered after epoch 10 (no improvement for 5 epochs)
+ Best model: Epoch 5 (Val F1 = 0.2965, ROC-AUC = 0.5094)
 
 Key Observations:
-- ✅ Loss steadily decreases: 0.0450 → 0.0425 (5.6% reduction)
-- ⚠️ Validation metrics unstable (F1 jumps from 0.08 to 0.30 to 0.07)
-- ✅ ROC-AUC slowly improves: 0.5012 → 0.5163 (max at epoch 8)
-- ⚠️ Learning rate reduced twice (epoch 6, 9) but no improvement
+-  Loss steadily decreases: 0.0450 → 0.0425 (5.6% reduction)
+-  Validation metrics unstable (F1 jumps from 0.08 to 0.30 to 0.07)
+-  ROC-AUC slowly improves: 0.5012 → 0.5163 (max at epoch 8)
+-  Learning rate reduced twice (epoch 6, 9) but no improvement
 ```
 
 ### 4.2 Test Set Performance
 
 ```
 ============================================================
-🚀 Final Test Results (370 days × 50 stocks = 18,500 predictions)
+ Final Test Results (370 days × 50 stocks = 18,500 predictions)
 ============================================================
 
 Overall Metrics:
@@ -545,9 +545,9 @@ Unlike initial experiments where model only predicted one class, current model s
 - Up: 2,318 correct predictions (23.5% recall)
 
 **What This Means**: 
-✅ Model is learning meaningful patterns (not just memorizing majority class)
-✅ GNN message passing is working (leveraging graph structure)
-⚠️ But has significant class imbalance (predicts Down more often)
+ Model is learning meaningful patterns (not just memorizing majority class)
+ GNN message passing is working (leveraging graph structure)
+ But has significant class imbalance (predicts Down more often)
 
 #### **2. Conservative Prediction Bias**
 
@@ -614,9 +614,9 @@ ROC-AUC Scale:
 ```
 
 **Our 0.5101**:
-- ✅ Slightly better than random (statistically)
-- ✅ Model has learned *some* signal
-- ⚠️ Signal is very weak (low discriminative power)
+-  Slightly better than random (statistically)
+-  Model has learned *some* signal
+-  Signal is very weak (low discriminative power)
 
 **Why So Low?**:
 1. **Efficient Market Hypothesis**: Most information already in prices
@@ -648,43 +648,43 @@ To demonstrate the value of our debugging work, here's how results changed with 
 
 ```
 Experiment Series (Chronological):
-════════════════════════════════════════════════════════════════
+
 
 Experiment 1: Initial Attempt (No Fixes)
-├─ Features: Not normalized (range [0.01, 76])
-├─ Graph: Dense (40-45% density, 19-22 avg degree)
-├─ Labels: Bug present (only 2/2,467 generated)
-└─ Result: ❌ Model predicts only Up class
+ Features: Not normalized (range [0.01, 76])
+ Graph: Dense (40-45% density, 19-22 avg degree)
+ Labels: Bug present (only 2/2,467 generated)
+ Result:  Model predicts only Up class
            Accuracy: 54%, F1: 0.70 (biased)
            ROC-AUC: 0.50 (random)
 
 Experiment 2: Fixed Feature Normalization
-├─ Features: ✅ Normalized (range [-5, 5], mean=0, std=1)
-├─ Graph: Dense (40-45% density)
-├─ Labels: Bug present
-└─ Result: ❌ Still predicts only Up class
+ Features:  Normalized (range [-5, 5], mean=0, std=1)
+ Graph: Dense (40-45% density)
+ Labels: Bug present
+ Result:  Still predicts only Up class
            Accuracy: 54%, F1: 0.70 (no change)
            ROC-AUC: 0.50 (no improvement)
 
 Experiment 3: Fixed Feature Normalization + Top-K Sparsification
-├─ Features: ✅ Normalized
-├─ Graph: ✅ Sparse (10-16% density, 5-8 avg degree)
-├─ Labels: Bug present
-└─ Result: ❌ Still predicts only Up class
+ Features:  Normalized
+ Graph:  Sparse (10-16% density, 5-8 avg degree)
+ Labels: Bug present
+ Result:  Still predicts only Up class
            Accuracy: 54%, F1: 0.70 (no change)
            ROC-AUC: 0.51 (tiny improvement)
 
 Experiment 4: All Fixes + Focal Loss (γ=3.0)
-├─ Features: ✅ Normalized
-├─ Graph: ✅ Sparse (Top-K = 5)
-├─ Labels: ✅ Fixed (2,467/2,467 generated)
-├─ Loss: ✅ Focal Loss with higher gamma (3.0)
-└─ Result: ✅ BREAKTHROUGH! Predicts both classes
+ Features:  Normalized
+ Graph:  Sparse (Top-K = 5)
+ Labels:  Fixed (2,467/2,467 generated)
+ Loss:  Focal Loss with higher gamma (3.0)
+ Result:  BREAKTHROUGH! Predicts both classes
            Accuracy: 49.12%
            Down F1: 0.59, Up F1: 0.33
            ROC-AUC: 0.51
            Down Recall: 79% ← Excellent for risk management!
-════════════════════════════════════════════════════════════════
+
 ```
 
 **Key Takeaways**:
@@ -743,7 +743,7 @@ def extract_node_features_for_date(...):
 
 **Result**: 
 - Before: Features ∈ [0.01, 76], std varies 1000×
-- After: Features ∈ [-5, 5], mean=0, std=1 ✓
+- After: Features ∈ [-5, 5], mean=0, std=1 
 
 ### 5.2 Challenge 2: Graph Over-smoothing
 
@@ -796,7 +796,7 @@ MAX_EDGES_PER_NODE_FUNDAMENTAL = 5
 
 **Result (Verified from Built Graphs)**:
 - Before: Density 40-45%, Avg degree 19-22
-- After: Density 10-16%, Avg degree 5-8 ✓
+- After: Density 10-16%, Avg degree 5-8 
 - Graph files: 2,467 graphs successfully built
 - File size: ~50KB per graph (compressed PyTorch format)
 - Interpretation: Each stock connects to 5-8 most relevant neighbors
@@ -830,7 +830,7 @@ for date in dates:
 # Fixed (lines 586-598):
 for date in dates:
     date_ts = pd.Timestamp(date)  # datetime → Timestamp
-    if date_ts in target_labels.index:  # Timestamp ∈ DatetimeIndex ✓
+    if date_ts in target_labels.index:  # Timestamp ∈ DatetimeIndex 
         target_vector = []
         for ticker in tickers:
             col_name = f'Close_{ticker}'
@@ -841,29 +841,29 @@ for date in dates:
 
 **Result**:
 - Before: 2 labels generated (99.9% data loss!)
-- After: 2,467 labels generated ✓
+- After: 2,467 labels generated 
 
 ### 5.4 Debugging Methodology
 
 **Systematic Approach**:
 ```
 1. Hypothesis Formation
-   ├─ Check model outputs (uniform predictions?)
-   ├─ Inspect training logs (loss decreasing?)
-   └─ Compare with baselines
+    Check model outputs (uniform predictions?)
+    Inspect training logs (loss decreasing?)
+    Compare with baselines
 
 2. Data Integrity Checks
-   ├─ Feature distributions (range, mean, std)
-   ├─ Graph statistics (density, degree distribution)
-   └─ Label distributions (class balance)
+    Feature distributions (range, mean, std)
+    Graph statistics (density, degree distribution)
+    Label distributions (class balance)
 
 3. Incremental Testing
-   ├─ Fix one issue at a time
-   ├─ Rebuild affected data (graphs, labels)
-   └─ Re-train and measure impact
+    Fix one issue at a time
+    Rebuild affected data (graphs, labels)
+    Re-train and measure impact
 
 4. Documentation
-   └─ Record each bug and solution for reproducibility
+    Record each bug and solution for reproducibility
 ```
 
 **Tools Used**:
@@ -938,51 +938,51 @@ Despite prediction difficulty, **our pipeline demonstrates several successes**:
 
 #### 1. Robust Data Processing
 ```
-✅ Multi-modal features (15 per stock)
-✅ Heterogeneous graph construction
-✅ Top-K sparsification (prevents over-smoothing)
-✅ Feature normalization (stable training)
-✅ 2,467 graphs built successfully (verified)
+ Multi-modal features (15 per stock)
+ Heterogeneous graph construction
+ Top-K sparsification (prevents over-smoothing)
+ Feature normalization (stable training)
+ 2,467 graphs built successfully (verified)
 ```
 
 #### 2. Rigorous Training Infrastructure
 ```
-✅ Focal loss (handles class imbalance)
-✅ Checkpointing (resume capability)
-✅ Early stopping (prevents overfitting)
-✅ Learning rate scheduling (adaptive optimization)
-✅ Comprehensive metrics (F1, ROC-AUC, confusion matrix)
-✅ TensorBoard logging (visualization)
+ Focal loss (handles class imbalance)
+ Checkpointing (resume capability)
+ Early stopping (prevents overfitting)
+ Learning rate scheduling (adaptive optimization)
+ Comprehensive metrics (F1, ROC-AUC, confusion matrix)
+ TensorBoard logging (visualization)
 ```
 
 #### 3. Systematic Debugging (Critical Success!)
 ```
-✅ Identified over-smoothing issue
+ Identified over-smoothing issue
    → Reduced density from 45% to 13%
    → Improved model diversity
 
-✅ Fixed feature scale problem
+ Fixed feature scale problem
    → Features now [-5, 5] instead of [0.01, 76]
    → Stable gradients
 
-✅ Corrected label generation bug
+ Corrected label generation bug
    → 2 labels → 2,467 labels (100% coverage)
    → Model can actually learn now
 
-✅ Experimented with loss functions
+ Experimented with loss functions
    → Standard CE: Model predicts only Up
-   → Focal Loss (γ=3.0): Model predicts both classes ✓
+   → Focal Loss (γ=3.0): Model predicts both classes 
 ```
 
 #### 4. Model Successfully Learns Patterns
 
 **Evidence**:
 ```
-✅ Predicts both classes (not collapsed to one)
-✅ High Down recall (79.18%) - catches most crashes
-✅ High Up precision (56.96%) - reliable when predicts Up
-✅ ROC-AUC > 0.5 - statistically better than random
-✅ Asymmetric performance - useful for risk management
+ Predicts both classes (not collapsed to one)
+ High Down recall (79.18%) - catches most crashes
+ High Up precision (56.96%) - reliable when predicts Up
+ ROC-AUC > 0.5 - statistically better than random
+ Asymmetric performance - useful for risk management
 ```
 
 **What This Proves**:
@@ -995,19 +995,19 @@ Despite prediction difficulty, **our pipeline demonstrates several successes**:
 
 **Code Quality**:
 ```
-✅ 3,179 lines of documented code
-✅ Modular design (6 phases, 12 scripts)
-✅ Comprehensive error handling
-✅ Reproducible experiments (checkpoints, configs)
-✅ Professional logging (TensorBoard, metrics)
+ 3,179 lines of documented code
+ Modular design (6 phases, 12 scripts)
+ Comprehensive error handling
+ Reproducible experiments (checkpoints, configs)
+ Professional logging (TensorBoard, metrics)
 ```
 
 **Documentation**:
 ```
-✅ 4,135 lines of technical documentation
-✅ 12 implementation guides
-✅ Mathematical derivations (TECHNICAL_DEEP_DIVE.md)
-✅ Complete metric explanations (this report)
+ 4,135 lines of technical documentation
+ 12 implementation guides
+ Mathematical derivations (TECHNICAL_DEEP_DIVE.md)
+ Complete metric explanations (this report)
 ```
 
 ### 6.3 Lessons Learned
@@ -1116,17 +1116,17 @@ class TradingEnvironment(gym.Env):
 **3. Phase 6: Comprehensive Evaluation**
 ```
 Metrics:
-├─ Sharpe Ratio (risk-adjusted return)
-├─ Maximum Drawdown (downside risk)
-├─ Portfolio Turnover (transaction costs)
-├─ Information Ratio (vs. benchmark)
-└─ Calmar Ratio (return / max drawdown)
+ Sharpe Ratio (risk-adjusted return)
+ Maximum Drawdown (downside risk)
+ Portfolio Turnover (transaction costs)
+ Information Ratio (vs. benchmark)
+ Calmar Ratio (return / max drawdown)
 
 Baselines:
-├─ Buy-and-hold SPY
-├─ Equal-weight portfolio
-├─ LSTM-based prediction
-└─ XGBoost ranking
+ Buy-and-hold SPY
+ Equal-weight portfolio
+ LSTM-based prediction
+ XGBoost ranking
 ```
 
 #### Research Directions
@@ -1167,24 +1167,24 @@ Future: Causal edges (directed)
 
 This milestone demonstrates a **complete end-to-end pipeline** for applying Graph Neural Networks to stock market prediction:
 
-**✅ Deliverables Completed**:
+** Deliverables Completed**:
 
 | Component | Status | Lines of Code | Documentation |
 |-----------|--------|---------------|---------------|
-| Data Processing (Phase 1) | ✅ 100% | 1,349 lines | 4 guides |
-| Graph Construction (Phase 2) | ✅ 100% | 699 lines | 1 guide + fixes |
-| Baseline Training (Phase 3) | ✅ 100% | 1,131 lines | 3 guides |
+| Data Processing (Phase 1) |  100% | 1,349 lines | 4 guides |
+| Graph Construction (Phase 2) |  100% | 699 lines | 1 guide + fixes |
+| Baseline Training (Phase 3) |  100% | 1,131 lines | 3 guides |
 | **Total Code** | | **3,179 lines** | **8 documents** |
 | **Total Documentation** | | **4,135 lines** | **3 reports** |
 
-**🔧 Technical Contributions**:
+** Technical Contributions**:
 1. Heterogeneous graph construction with dynamic + static edges
 2. Top-K sparsification to prevent over-smoothing (novel for finance)
 3. Focal loss adaptation for financial time-series
 4. Comprehensive training infrastructure (checkpointing, early stopping, metrics)
 5. Systematic debugging methodology
 
-**📊 Experimental Insights**:
+** Experimental Insights**:
 - ROC-AUC ≈ 0.5 confirms stock prediction difficulty (EMH)
 - Model collapse to majority class is common in imbalanced learning
 - Over-smoothing is a critical issue in dense financial graphs
@@ -1249,25 +1249,25 @@ However, the **value of this project lies not in predictive accuracy**, but in:
 
 ```
 cs224_project/
-├── data/
-│   ├── raw/               # OHLCV, fundamentals
-│   ├── processed/         # Engineered features
-│   ├── edges/            # Correlation, similarity matrices
-│   └── graphs/           # 2,467 PyG graph snapshots
-├── scripts/
-│   ├── phase1_data_collection.py         (304 lines)
-│   ├── phase1_feature_engineering.py     (480 lines)
-│   ├── phase1_edge_parameter_calc.py     (438 lines)
-│   ├── phase1_static_data_collection.py  (127 lines)
-│   ├── phase2_graph_construction.py      (699 lines)
-│   └── phase3_baseline_training.py      (1,131 lines)
-├── models/
-│   ├── checkpoints/      # Saved model states
-│   └── plots/           # Confusion matrices
-├── docs/                 # 12 implementation guides
-├── TECHNICAL_DEEP_DIVE.md       (1,334 lines)
-├── PROJECT_MILESTONE.md         (1,467 lines)
-└── MILESTONE_REPORT.md          (this document)
+ data/
+    raw/               # OHLCV, fundamentals
+    processed/         # Engineered features
+    edges/            # Correlation, similarity matrices
+    graphs/           # 2,467 PyG graph snapshots
+ scripts/
+    phase1_data_collection.py         (304 lines)
+    phase1_feature_engineering.py     (480 lines)
+    phase1_edge_parameter_calc.py     (438 lines)
+    phase1_static_data_collection.py  (127 lines)
+    phase2_graph_construction.py      (699 lines)
+    phase3_baseline_training.py      (1,131 lines)
+ models/
+    checkpoints/      # Saved model states
+    plots/           # Confusion matrices
+ docs/                 # 12 implementation guides
+ TECHNICAL_DEEP_DIVE.md       (1,334 lines)
+ PROJECT_MILESTONE.md         (1,467 lines)
+ MILESTONE_REPORT.md          (this document)
 ```
 
 ### B. Key Hyperparameters
@@ -1308,39 +1308,39 @@ LR_SCHEDULER_FACTOR = 0.5
 
 ```
 Phase 1 (Data Processing):
-├─ Data collection: ~2 min
-├─ Feature engineering: ~5 min
-├─ Edge calculation: ~8 min
-└─ Total: ~15 min
+ Data collection: ~2 min
+ Feature engineering: ~5 min
+ Edge calculation: ~8 min
+ Total: ~15 min
 
 Phase 2 (Graph Construction):
-├─ Build 2,467 graphs: 1.8 min (measured)
-├─ Average: 0.044 sec/graph
-├─ With Top-K filtering: +0.005 sec/graph (minimal overhead)
-└─ Total size: ~123 MB (all graphs)
+ Build 2,467 graphs: 1.8 min (measured)
+ Average: 0.044 sec/graph
+ With Top-K filtering: +0.005 sec/graph (minimal overhead)
+ Total size: ~123 MB (all graphs)
 
 Phase 3 (Training - Final Run):
-├─ 10 epochs: 124.0 sec (measured)
-├─ Average: 12.4 sec/epoch
-├─ Epoch 1: 13.2 sec (includes checkpoint save)
-├─ Epoch 5: 12.8 sec (best model, checkpoint save)
-├─ Epoch 10: 12.8 sec
-└─ Hardware: Apple M2 chip (CPU only)
+ 10 epochs: 124.0 sec (measured)
+ Average: 12.4 sec/epoch
+ Epoch 1: 13.2 sec (includes checkpoint save)
+ Epoch 5: 12.8 sec (best model, checkpoint save)
+ Epoch 10: 12.8 sec
+ Hardware: Apple M2 chip (CPU only)
 
 Why Slower Than Initial Runs?
-├─ Higher gamma (3.0 vs 2.0) → more complex loss computation
-├─ More validation checks per epoch
-└─ Still very fast for GNN standards!
+ Higher gamma (3.0 vs 2.0) → more complex loss computation
+ More validation checks per epoch
+ Still very fast for GNN standards!
 
 Phase 3 (Inference - Test Set):
-├─ 370 days × 50 stocks = 18,500 predictions
-├─ Time: ~11 sec (estimated from epoch time)
-└─ Throughput: ~1,682 predictions/sec
+ 370 days × 50 stocks = 18,500 predictions
+ Time: ~11 sec (estimated from epoch time)
+ Throughput: ~1,682 predictions/sec
 
 Total Pipeline: ~19 min (end-to-end)
-├─ Phase 1: 15 min
-├─ Phase 2: 2 min
-└─ Phase 3: 2 min
+ Phase 1: 15 min
+ Phase 2: 2 min
+ Phase 3: 2 min
 ```
 
 ### D. Complete Metrics Explanation Guide
@@ -1349,7 +1349,7 @@ This appendix provides detailed interpretation of every metric in our results.
 
 ---
 
-#### 📊 **Test Accuracy: 49.12%**
+####  **Test Accuracy: 49.12%**
 
 **Formula**: `(True Positives + True Negatives) / Total Predictions`
 
@@ -1378,7 +1378,7 @@ Accuracy = 9,060 / 18,500 = 49.12%
 
 ---
 
-#### 🎯 **Per-Class Metrics Breakdown**
+####  **Per-Class Metrics Breakdown**
 
 ##### **Class 0 (Down): F1 = 0.5889**
 
@@ -1474,7 +1474,7 @@ Interpretation:
 
 ---
 
-#### 📈 **ROC-AUC: 0.5101**
+####  **ROC-AUC: 0.5101**
 
 **What is ROC-AUC?**
 ```
@@ -1519,7 +1519,7 @@ Interpretation by Range:
 
 ---
 
-#### ⚖️ **Macro vs Weighted Averages**
+####  **Macro vs Weighted Averages**
 
 **Macro Average**:
 ```
@@ -1552,7 +1552,7 @@ Interpretation:
 
 ---
 
-#### 📉 **Training Loss: 0.0425 (Final)**
+####  **Training Loss: 0.0425 (Final)**
 
 **What is Focal Loss?**
 ```
@@ -1583,9 +1583,9 @@ Interpretation:
   - Reduction: 5.6%
 
 Good or Bad?
-  ✅ Loss is decreasing (model learning)
-  ⚠️ Decrease is small (hitting limits)
-  ⚠️ Validation metrics not improving (overfitting)
+   Loss is decreasing (model learning)
+   Decrease is small (hitting limits)
+   Validation metrics not improving (overfitting)
 ```
 
 **Why So Low?**
@@ -1595,7 +1595,7 @@ Good or Bad?
 
 ---
 
-#### 🎓 **Support Numbers**
+####  **Support Numbers**
 
 **Down (0): 8,515**
 **Up (1): 9,985**
@@ -1619,14 +1619,14 @@ Calculation:
 
 ---
 
-#### 📊 **Confusion Matrix Explained**
+####  **Confusion Matrix Explained**
 
 ```
             Predicted
             Down     Up
 Actual Down  6742   1773   (Total: 8,515)
        Up    7667   2318   (Total: 9,985)
-            ─────  ─────
+              
 Total:      14409   4091   (Total: 18,500)
 ```
 
@@ -1647,7 +1647,7 @@ Total:      14409   4091   (Total: 18,500)
 
 ---
 
-#### 🕒 **Training Time: 124.0s (2.1 min)**
+####  **Training Time: 124.0s (2.1 min)**
 
 **Breakdown**:
 ```
@@ -1676,27 +1676,27 @@ Large-scale GNN: 50-100ms per graph
 
 ---
 
-#### 🎯 **Summary Table: All Metrics**
+####  **Summary Table: All Metrics**
 
 | Metric | Value | Interpretation | Good/Bad |
 |--------|-------|----------------|----------|
-| **Test Accuracy** | 49.12% | Slightly below random | ⚠️ Neutral |
-| **Test F1 (macro)** | 46.08% | Average of both classes | ⚠️ Below target |
-| **ROC-AUC** | 0.5101 | Barely above random | ⚠️ Weak |
-| **Down Precision** | 46.88% | False alarm rate: 53% | ⚠️ High FP |
-| **Down Recall** | 79.18% | Catches most crashes | ✅ **Good** |
-| **Down F1** | 58.89% | Balanced metric | ✅ Decent |
-| **Up Precision** | 56.96% | Reliable when predicts Up | ✅ Good |
-| **Up Recall** | 23.50% | Misses most bull runs | ❌ **Poor** |
-| **Up F1** | 33.27% | Overall weak on Up | ❌ Needs work |
-| **Training Time** | 2.1 min | Fast for GNN | ✅ Excellent |
+| **Test Accuracy** | 49.12% | Slightly below random |  Neutral |
+| **Test F1 (macro)** | 46.08% | Average of both classes |  Below target |
+| **ROC-AUC** | 0.5101 | Barely above random |  Weak |
+| **Down Precision** | 46.88% | False alarm rate: 53% |  High FP |
+| **Down Recall** | 79.18% | Catches most crashes |  **Good** |
+| **Down F1** | 58.89% | Balanced metric |  Decent |
+| **Up Precision** | 56.96% | Reliable when predicts Up |  Good |
+| **Up Recall** | 23.50% | Misses most bull runs |  **Poor** |
+| **Up F1** | 33.27% | Overall weak on Up |  Needs work |
+| **Training Time** | 2.1 min | Fast for GNN |  Excellent |
 
 **Overall Assessment**:
-- ✅ Model learns meaningful patterns (not random)
-- ✅ Good at detecting downside risk (79% recall)
-- ❌ Poor at predicting upside (23% recall)
-- ⚠️ Asymmetric performance (useful for risk management)
-- ⚠️ Needs improvement for general prediction
+-  Model learns meaningful patterns (not random)
+-  Good at detecting downside risk (79% recall)
+-  Poor at predicting upside (23% recall)
+-  Asymmetric performance (useful for risk management)
+-  Needs improvement for general prediction
 
 ---
 
@@ -1838,20 +1838,20 @@ Interpretation:
 **From FINAL_SUMMARY.md - For Fast Recall**
 
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
              MEMORIZE THESE 6 NUMBERS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 
 1. 2,467    Number of graphs built
 2. 15       Features per stock  
 3. 49.12%   Test accuracy (near random 50%)
-4. 79.18%   Down recall ⭐ MOST IMPORTANT!
+4. 79.18%   Down recall  MOST IMPORTANT!
 5. 0.5101   ROC-AUC (above random 0.50)
 6. 3,179    Lines of code
 
 ONE-SENTENCE PITCH:
 "2,467 graphs, 3,179 lines of code, 79% crash detection"
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 ```
 
 ### F.4 Common TA Questions & Answers
@@ -1905,18 +1905,18 @@ ONE-SENTENCE PITCH:
 **Files to Submit**:
 ```
 Primary (Required):
-✅ MILESTONE_REPORT.md       - This document
-✅ scripts/                  - All Python code (7 files)
-✅ README.md                 - Project overview
+ MILESTONE_REPORT.md       - This document
+ scripts/                  - All Python code (7 files)
+ README.md                 - Project overview
 
 Supporting (Recommended):
-✅ METRICS_QUICK_REFERENCE.md - Fast metric lookup
-✅ requirements.txt           - Dependencies
-✅ models/checkpoints/        - checkpoint_best.pt (if space allows)
-✅ models/plots/              - confusion_matrix_*.png
+ METRICS_QUICK_REFERENCE.md - Fast metric lookup
+ requirements.txt           - Dependencies
+ models/checkpoints/        - checkpoint_best.pt (if space allows)
+ models/plots/              - confusion_matrix_*.png
 
 Optional (If Requested):
-✅ docs/                      - 12 implementation guides
+ docs/                      - 12 implementation guides
 ```
 
 **Pre-Submission Checklist**:
@@ -1961,6 +1961,6 @@ Highlights:
 **Essential Companion**:
 - METRICS_QUICK_REFERENCE.md: Fast lookup during TA meeting
 
-**Status**: ✅ Complete, Self-Contained Milestone Report  
+**Status**:  Complete, Self-Contained Milestone Report  
 **Ready for**: Submission to Canvas/Gradescope (Credit/No Credit)
 

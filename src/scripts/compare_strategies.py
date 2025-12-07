@@ -21,7 +21,7 @@ def load_rl_metrics():
     rl_metrics_path = RESULTS_DIR / 'final_metrics.csv'
     
     if not rl_metrics_path.exists():
-        print("⚠️  RL metrics not found. Run phase6_evaluation.py first.")
+        print("  RL metrics not found. Run phase6_evaluation.py first.")
         return None
     
     rl_df = pd.read_csv(rl_metrics_path)
@@ -42,7 +42,7 @@ def load_rl_metrics():
 def main():
     """Main comparison function."""
     print("=" * 70)
-    print("🔬 Comprehensive Strategy Comparison: RL vs Baselines")
+    print(" Comprehensive Strategy Comparison: RL vs Baselines")
     print("=" * 70)
     
     # Load RL metrics
@@ -62,20 +62,20 @@ def main():
         all_results = pd.concat([rl_row, baseline_df], ignore_index=True)
     else:
         all_results = baseline_df
-        print("\n⚠️  RL metrics not available. Showing baseline strategies only.")
+        print("\n  RL metrics not available. Showing baseline strategies only.")
     
     # Sort by Sharpe Ratio (descending)
     all_results = all_results.sort_values('Sharpe_Ratio', ascending=False)
     
     print("\n" + "=" * 70)
-    print("📊 COMPREHENSIVE STRATEGY COMPARISON")
+    print(" COMPREHENSIVE STRATEGY COMPARISON")
     print("=" * 70)
     print(all_results.to_string(index=False))
     
     # Calculate relative performance
     if rl_metrics:
         print("\n" + "=" * 70)
-        print("📈 RL Agent vs Best Baseline")
+        print(" RL Agent vs Best Baseline")
         print("=" * 70)
         
         best_baseline = baseline_df.loc[baseline_df['Sharpe_Ratio'].idxmax()]
@@ -102,7 +102,7 @@ def main():
     
     # Save comprehensive results
     all_results.to_csv(RESULTS_DIR / 'comprehensive_strategy_comparison.csv', index=False)
-    print(f"\n✅ Comprehensive comparison saved to: {RESULTS_DIR / 'comprehensive_strategy_comparison.csv'}")
+    print(f"\n Comprehensive comparison saved to: {RESULTS_DIR / 'comprehensive_strategy_comparison.csv'}")
     
     return all_results
 

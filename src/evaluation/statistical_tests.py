@@ -234,7 +234,7 @@ def print_statistical_summary(results: Dict[str, any]):
     Print a formatted summary of statistical test results.
     """
     print("\n" + "=" * 60)
-    print("📊 Statistical Test Results")
+    print(" Statistical Test Results")
     print("=" * 60)
     
     print("\nModel 1 Metrics:")

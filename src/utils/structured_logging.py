@@ -95,12 +95,12 @@ class StructuredLogger:
     
     def phase_start(self, phase_name: str, **kwargs):
         """Log phase start with metadata."""
-        msg = f"🚀 Starting {phase_name}"
+        msg = f" Starting {phase_name}"
         self.info(msg, event='phase_start', phase=phase_name, **kwargs)
     
     def phase_complete(self, phase_name: str, duration: float, **kwargs):
         """Log phase completion with duration."""
-        msg = f"✅ Completed {phase_name} in {duration:.2f}s"
+        msg = f" Completed {phase_name} in {duration:.2f}s"
         self.info(msg, event='phase_complete', phase=phase_name, duration=duration, **kwargs)
     
     def training_epoch(self, epoch: int, loss: float, metrics: Dict[str, float], **kwargs):

@@ -23,7 +23,7 @@ try:
     UMAP_AVAILABLE = True
 except ImportError:
     UMAP_AVAILABLE = False
-    print("⚠️  UMAP not available. Install with: pip install umap-learn")
+    print("  UMAP not available. Install with: pip install umap-learn")
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -76,7 +76,7 @@ def extract_embeddings(model, dates, tickers):
     Extract node embeddings from the trained model for multiple dates.
     Returns: embeddings_dict[date] = np.array of shape (num_stocks, embedding_dim)
     """
-    print(f"\n📊 Extracting embeddings for {len(dates)} dates...")
+    print(f"\n Extracting embeddings for {len(dates)} dates...")
     embeddings_dict = {}
     
     with torch.no_grad():
@@ -91,7 +91,7 @@ def extract_embeddings(model, dates, tickers):
             embeddings = model(data)  # Shape: (num_stocks, embedding_dim)
             embeddings_dict[date] = embeddings.cpu().numpy()
     
-    print(f"✅ Extracted embeddings for {len(embeddings_dict)} dates")
+    print(f" Extracted embeddings for {len(embeddings_dict)} dates")
     return embeddings_dict
 
 
@@ -99,11 +99,11 @@ def visualize_embeddings_tsne(embeddings_dict, tickers, output_path=None):
     """
     Visualize embeddings using t-SNE.
     """
-    print("\n🎨 Creating t-SNE visualization...")
+    print("\n Creating t-SNE visualization...")
     
     # Use embeddings from the most recent date
     if not embeddings_dict:
-        print("❌ No embeddings available")
+        print(" No embeddings available")
         return
     
     latest_date = max(embeddings_dict.keys())
@@ -133,7 +133,7 @@ def visualize_embeddings_tsne(embeddings_dict, tickers, output_path=None):
     if output_path is None:
         output_path = PLOTS_DIR / 'embeddings_tsne.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"✅ Saved t-SNE plot to: {output_path}")
+    print(f" Saved t-SNE plot to: {output_path}")
     plt.close()
 
 
@@ -142,13 +142,13 @@ def visualize_embeddings_umap(embeddings_dict, tickers, output_path=None):
     Visualize embeddings using UMAP (if available).
     """
     if not UMAP_AVAILABLE:
-        print("⚠️  UMAP not available, skipping UMAP visualization")
+        print("  UMAP not available, skipping UMAP visualization")
         return
     
-    print("\n🎨 Creating UMAP visualization...")
+    print("\n Creating UMAP visualization...")
     
     if not embeddings_dict:
-        print("❌ No embeddings available")
+        print(" No embeddings available")
         return
     
     latest_date = max(embeddings_dict.keys())
@@ -178,7 +178,7 @@ def visualize_embeddings_umap(embeddings_dict, tickers, output_path=None):
     if output_path is None:
         output_path = PLOTS_DIR / 'embeddings_umap.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"✅ Saved UMAP plot to: {output_path}")
+    print(f" Saved UMAP plot to: {output_path}")
     plt.close()
 
 
@@ -188,7 +188,7 @@ def visualize_attention_weights(model, data, tickers, output_path=None):
     Note: This requires modifying the model to return attention weights.
     For now, we'll create a placeholder visualization.
     """
-    print("\n🎨 Creating attention weights heatmap...")
+    print("\n Creating attention weights heatmap...")
     
     # TODO: Modify model to return attention weights
     # For now, create a placeholder based on graph structure
@@ -227,7 +227,7 @@ def visualize_attention_weights(model, data, tickers, output_path=None):
     if output_path is None:
         output_path = PLOTS_DIR / 'attention_weights_heatmap.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"✅ Saved attention heatmap to: {output_path}")
+    print(f" Saved attention heatmap to: {output_path}")
     plt.close()
 
 
@@ -235,10 +235,10 @@ def analyze_roles(embeddings_dict, tickers, output_path=None):
     """
     Analyze and visualize stock roles (Hubs, Bridges, Role Twins).
     """
-    print("\n🎨 Analyzing stock roles...")
+    print("\n Analyzing stock roles...")
     
     if not embeddings_dict:
-        print("❌ No embeddings available")
+        print(" No embeddings available")
         return
     
     # Use embeddings from multiple dates to get average
@@ -301,7 +301,7 @@ def analyze_roles(embeddings_dict, tickers, output_path=None):
     if output_path is None:
         output_path = PLOTS_DIR / 'role_analysis.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"✅ Saved role analysis to: {output_path}")
+    print(f" Saved role analysis to: {output_path}")
     plt.close()
     
     # Save results to CSV
@@ -311,20 +311,20 @@ def analyze_roles(embeddings_dict, tickers, output_path=None):
     })
     results_df = results_df.sort_values('hub_score', ascending=False)
     results_df.to_csv(RESULTS_DIR / 'role_analysis.csv', index=False)
-    print(f"✅ Saved role analysis results to: {RESULTS_DIR / 'role_analysis.csv'}")
+    print(f" Saved role analysis results to: {RESULTS_DIR / 'role_analysis.csv'}")
 
 
 def main():
     """Main function to run all visualizations."""
-    print("🎨 Starting Visualization Pipeline")
+    print(" Starting Visualization Pipeline")
     print("=" * 50)
     
     # Load model
     try:
         model, INPUT_DIM = load_trained_model()
-        print("✅ Model loaded successfully")
+        print(" Model loaded successfully")
     except Exception as e:
-        print(f"❌ Error loading model: {e}")
+        print(f" Error loading model: {e}")
         return
     
     # Get tickers from a sample graph
@@ -335,7 +335,7 @@ def main():
     else:
         # Fallback: use default ticker list
         tickers = [f"STOCK_{i}" for i in range(50)]
-        print("⚠️  Tickers not found in graph, using default")
+        print("  Tickers not found in graph, using default")
     
     # Get dates for embedding extraction (use recent dates)
     all_dates = sorted([pd.to_datetime(f.stem.split('_')[-1]) 
@@ -346,7 +346,7 @@ def main():
     try:
         embeddings_dict = extract_embeddings(model, recent_dates, tickers)
     except Exception as e:
-        print(f"❌ Error extracting embeddings: {e}")
+        print(f" Error extracting embeddings: {e}")
         import traceback
         traceback.print_exc()
         return
@@ -365,12 +365,12 @@ def main():
         analyze_roles(embeddings_dict, tickers)
         
         print("\n" + "=" * 50)
-        print("✅ All visualizations completed!")
-        print(f"📁 Plots saved to: {PLOTS_DIR}")
-        print(f"📁 Results saved to: {RESULTS_DIR}")
+        print(" All visualizations completed!")
+        print(f" Plots saved to: {PLOTS_DIR}")
+        print(f" Results saved to: {RESULTS_DIR}")
         
     except Exception as e:
-        print(f"❌ Error creating visualizations: {e}")
+        print(f" Error creating visualizations: {e}")
         import traceback
         traceback.print_exc()
 

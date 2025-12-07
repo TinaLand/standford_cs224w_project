@@ -86,7 +86,7 @@ def analyze_edge_importance(
         Dictionary with edge importance analysis
     """
     print("\n" + "="*60)
-    print("🔍 Analyzing Edge Importance")
+    print(" Analyzing Edge Importance")
     print("="*60)
     
     edge_importance_stats = defaultdict(lambda: {'total_attention': 0, 'count': 0, 'avg_attention': 0})
@@ -123,7 +123,7 @@ def analyze_edge_importance(
         reverse=True
     )
     
-    print(f"\n📊 Edge Importance Rankings:")
+    print(f"\n Edge Importance Rankings:")
     for i, (edge_type, stats) in enumerate(edge_importance_ranked):
         edge_name = '_'.join(edge_type) if isinstance(edge_type, tuple) else str(edge_type)
         print(f"   {i+1}. {edge_name}: Avg Attention = {stats['avg_attention']:.4f}")
@@ -146,7 +146,7 @@ def analyze_sector_subgraphs(
         Dictionary with sector subgraph analysis
     """
     print("\n" + "="*60)
-    print("🔍 Analyzing Sector Subgraphs")
+    print(" Analyzing Sector Subgraphs")
     print("="*60)
     
     # Load sector mapping
@@ -235,7 +235,7 @@ def analyze_correlation_vs_fundamental_importance(
         Dictionary with comparison analysis
     """
     print("\n" + "="*60)
-    print("🔍 Analyzing Correlation vs Fundamental Importance")
+    print(" Analyzing Correlation vs Fundamental Importance")
     print("="*60)
     
     correlation_importance = []
@@ -276,7 +276,7 @@ def analyze_correlation_vs_fundamental_importance(
         avg_corr = np.mean(correlation_importance)
         avg_fund = np.mean(fundamental_importance)
         
-        print(f"\n📊 Edge Type Comparison:")
+        print(f"\n Edge Type Comparison:")
         print(f"   Average Correlation Edges: {avg_corr:.0f}")
         print(f"   Average Fundamental Edges: {avg_fund:.0f}")
         print(f"   Ratio (Corr/Fund): {avg_corr/max(avg_fund, 1):.2f}")
@@ -305,7 +305,7 @@ def visualize_edge_importance(
     output_dir: Path
 ):
     """Create visualizations for edge importance analysis."""
-    print("\n📊 Creating Edge Importance Visualizations...")
+    print("\n Creating Edge Importance Visualizations...")
     
     # 1. Edge Importance Rankings
     if edge_importance.get('rankings'):
@@ -322,7 +322,7 @@ def visualize_edge_importance(
         plt.tight_layout()
         plt.savefig(output_dir / 'edge_importance_rankings.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: edge_importance_rankings.png")
+        print("    Saved: edge_importance_rankings.png")
     
     # 2. Sector Performance Comparison
     if sector_subgraphs.get('sector_performance'):
@@ -340,7 +340,7 @@ def visualize_edge_importance(
         plt.tight_layout()
         plt.savefig(output_dir / 'sector_subgraph_performance.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: sector_subgraph_performance.png")
+        print("    Saved: sector_subgraph_performance.png")
     
     # 3. Correlation vs Fundamental Comparison
     if corr_vs_fund.get('correlation_importance'):
@@ -360,19 +360,19 @@ def visualize_edge_importance(
         plt.tight_layout()
         plt.savefig(output_dir / 'correlation_vs_fundamental_edges.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: correlation_vs_fundamental_edges.png")
+        print("    Saved: correlation_vs_fundamental_edges.png")
 
 
 def main():
     """Main edge importance analysis pipeline."""
-    print("🚀 Edge Importance Analysis")
+    print(" Edge Importance Analysis")
     print("="*60)
     
     # Load model
-    print("\n📁 Loading GNN model...")
+    print("\n Loading GNN model...")
     model_path = MODELS_DIR / 'core_transformer_model.pt'
     if not model_path.exists():
-        print(f"❌ Model not found: {model_path}")
+        print(f" Model not found: {model_path}")
         return
     
     # Load sample graph to get dimensions
@@ -386,7 +386,7 @@ def main():
     model = RoleAwareGraphTransformer(INPUT_DIM, HIDDEN_CHANNELS, OUT_CHANNELS, NUM_LAYERS, NUM_HEADS).to(DEVICE)
     model.load_state_dict(torch.load(model_path, map_location=DEVICE, weights_only=False), strict=False)
     model.eval()
-    print("✅ Model loaded")
+    print(" Model loaded")
     
     # Get test dates and tickers (simplified)
     # Get sample dates from graph files
@@ -441,8 +441,8 @@ def main():
     with open(results_file, 'w') as f:
         json.dump(results, f, indent=2, default=str)
     
-    print(f"\n✅ Results saved to: {results_file}")
-    print("\n🎉 Edge Importance Analysis Complete!")
+    print(f"\n Results saved to: {results_file}")
+    print("\n Edge Importance Analysis Complete!")
 
 
 if __name__ == "__main__":

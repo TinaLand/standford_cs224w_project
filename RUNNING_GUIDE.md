@@ -205,42 +205,42 @@ This includes:
 ### Data Files
 ```
 data/
-├── raw/
-│   ├── stock_prices_ohlcv_raw.csv
-│   └── static_sector_industry.csv
-├── processed/
-│   └── node_features_X_t_final.csv
-├── edges/
-│   ├── edges_dynamic_corr_params.pkl
-│   └── edges_dynamic_fund_sim_params.csv
-└── graphs/
-    └── graph_t_YYYYMMDD.pt (one per trading day)
+ raw/
+    stock_prices_ohlcv_raw.csv
+    static_sector_industry.csv
+ processed/
+    node_features_X_t_final.csv
+ edges/
+    edges_dynamic_corr_params.pkl
+    edges_dynamic_fund_sim_params.csv
+ graphs/
+     graph_t_YYYYMMDD.pt (one per trading day)
 ```
 
 ### Models
 ```
 models/
-├── baseline_gcn_model.pt
-├── core_transformer_model.pt
-├── rl_ppo_agent_model/
-│   └── ppo_stock_agent.zip
-└── checkpoints/
-    ├── checkpoint_best.pt
-    └── checkpoint_latest.pt
+ baseline_gcn_model.pt
+ core_transformer_model.pt
+ rl_ppo_agent_model/
+    ppo_stock_agent.zip
+ checkpoints/
+     checkpoint_best.pt
+     checkpoint_latest.pt
 ```
 
 ### Results
 ```
 results/
-├── gnn_node_metrics.csv
-├── comprehensive_strategy_comparison.csv
-├── ablation_results.csv
-└── enhancements/
-    ├── multi_agent_analysis/
-    ├── failure_analysis/
-    ├── edge_importance/
-    ├── cross_period_validation/
-    └── sensitivity_analysis/
+ gnn_node_metrics.csv
+ comprehensive_strategy_comparison.csv
+ ablation_results.csv
+ enhancements/
+     multi_agent_analysis/
+     failure_analysis/
+     edge_importance/
+     cross_period_validation/
+     sensitivity_analysis/
 ```
 
 ---

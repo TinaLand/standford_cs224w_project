@@ -151,7 +151,7 @@ def filter_graph_edges(data, config: Dict):
         self_loops = torch.arange(num_nodes, dtype=torch.long, device=filtered_data['stock'].x.device).repeat(2, 1)
         fallback_key = ('stock', 'rolling_correlation', 'stock')
         filtered_data.edge_index_dict[fallback_key] = self_loops
-        print(f"⚠️  Warning: No edges found for config, using self-loops as fallback")
+        print(f"  Warning: No edges found for config, using self-loops as fallback")
     
     # Copy tickers if they exist
     if hasattr(data, 'tickers'):
@@ -173,7 +173,7 @@ def train_ablation_model(
     Train a model for a specific ablation configuration.
     """
     print(f"\n{'='*60}")
-    print(f"🔬 Training Ablation Model: {config_name}")
+    print(f" Training Ablation Model: {config_name}")
     print(f"   {config['description']}")
     print(f"{'='*60}")
     
@@ -397,7 +397,7 @@ def run_enhanced_ablation_studies():
     Run enhanced ablation studies with actual retraining.
     """
     print("=" * 60)
-    print("🔬 Enhanced Ablation Studies for A+ Grade")
+    print(" Enhanced Ablation Studies for A+ Grade")
     print("=" * 60)
     
     # Get all dates
@@ -412,7 +412,7 @@ def run_enhanced_ablation_studies():
     val_dates = all_dates[split_70_idx:split_85_idx]
     test_dates = all_dates[split_85_idx:]
     
-    print(f"\n📅 Date Split:")
+    print(f"\n Date Split:")
     print(f"   Train: {len(train_dates)} dates ({train_dates[0]} to {train_dates[-1]})")
     print(f"   Val: {len(val_dates)} dates ({val_dates[0]} to {val_dates[-1]})")
     print(f"   Test: {len(test_dates)} dates ({test_dates[0]} to {test_dates[-1]})")
@@ -433,7 +433,7 @@ def run_enhanced_ablation_studies():
     
     for config_name, config in ABLATION_CONFIGS.items():
         print(f"\n{'='*60}")
-        print(f"🔬 Processing: {config_name}")
+        print(f" Processing: {config_name}")
         print(f"{'='*60}")
         
         try:
@@ -463,13 +463,13 @@ def run_enhanced_ablation_studies():
                 'description': config['description']
             }
             
-            print(f"\n✅ {config_name} Results:")
+            print(f"\n {config_name} Results:")
             print(f"   Test Accuracy: {test_metrics['accuracy']:.4f}")
             print(f"   Test F1: {test_metrics['f1_score']:.4f}")
             print(f"   Precision@Top-10: {test_metrics['precision_at_top10']:.4f}")
             
         except Exception as e:
-            print(f"❌ Error training {config_name}: {e}")
+            print(f" Error training {config_name}: {e}")
             import traceback
             traceback.print_exc()
             ablation_results[config_name] = {
@@ -487,9 +487,9 @@ def run_enhanced_ablation_studies():
         json.dump(ablation_results, f, indent=2, default=str)
     
     print("\n" + "=" * 60)
-    print("✅ Enhanced Ablation Studies Complete!")
+    print(" Enhanced Ablation Studies Complete!")
     print("=" * 60)
-    print(f"\n📁 Results saved to:")
+    print(f"\n Results saved to:")
     print(f"  - {RESULTS_DIR / 'enhanced_ablation_results.csv'}")
     print(f"  - {RESULTS_DIR / 'enhanced_ablation_results.json'}")
     

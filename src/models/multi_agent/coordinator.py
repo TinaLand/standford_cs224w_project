@@ -259,7 +259,7 @@ class MultiAgentCoordinator:
         # Optimizer for mixing network
         self.mixer_optimizer = torch.optim.Adam(self.mixing_network.parameters(), lr=learning_rate)
         
-        print(f"✅ Created {len(self.agents)} sector agents:")
+        print(f" Created {len(self.agents)} sector agents:")
         for sector, agent in self.agents.items():
             print(f"   - {sector}: {agent.num_stocks} stocks")
     
@@ -534,21 +534,21 @@ def create_multi_agent_system(
 
 
 if __name__ == "__main__":
-    print("🤖 Multi-Agent RL System")
+    print(" Multi-Agent RL System")
     print("="*60)
     
     # Load GNN model
     gnn_model_path = MODELS_DIR / "core_transformer_model.pt"
     if not gnn_model_path.exists():
-        print(f"❌ GNN model not found: {gnn_model_path}")
+        print(f" GNN model not found: {gnn_model_path}")
         print("   Please train Phase 4 model first.")
         sys.exit(1)
     
     # Load model (simplified - actual loading needs proper initialization)
-    print("📁 Loading GNN model...")
+    print(" Loading GNN model...")
     # gnn_model = load_gnn_model_for_rl()  # Use existing function
     
-    print("\n✅ Multi-Agent RL system structure created!")
+    print("\n Multi-Agent RL system structure created!")
     print("\nNext steps:")
     print("1. Implement training loop with CTDE")
     print("2. Create sector-specific environments")

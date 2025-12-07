@@ -75,7 +75,7 @@ def load_gnn_model_for_rl() -> torch.nn.Module:
     missing, unexpected = gnn_model.load_state_dict(state_dict, strict=False)
     
     if missing or unexpected:
-        print("⚠️  Warning when loading GNN state_dict for RL:")
+        print("  Warning when loading GNN state_dict for RL:")
         if missing:
             print(f"   Missing keys: {missing}")
         if unexpected:
@@ -85,7 +85,7 @@ def load_gnn_model_for_rl() -> torch.nn.Module:
     for param in gnn_model.parameters():
         param.requires_grad = False
         
-    print(f"✅ GNN Model loaded and frozen (Input Dim: {INPUT_DIM})")
+    print(f" GNN Model loaded and frozen (Input Dim: {INPUT_DIM})")
     return gnn_model
 
 
@@ -113,7 +113,7 @@ def determine_training_period():
     start_date = graph_start + pd.Timedelta(days=start_offset_days)
     end_date = graph_end
     
-    print(f"📅 RL Training period: {start_date.date()} to {end_date.date()}")
+    print(f" RL Training period: {start_date.date()} to {end_date.date()}")
     print(f"   (Graph files available: {graph_start.date()} to {graph_end.date()})")
     print(f"   (Using last {int((date_range_days - start_offset_days) / date_range_days * 100)}% of data)")
     
@@ -159,14 +159,14 @@ def run_single_agent_training(
     Returns:
         Trained StockTradingAgent
     """
-    print("\n🚀 Starting Single-Agent RL Training Pipeline")
+    print("\n Starting Single-Agent RL Training Pipeline")
     print("=" * 60)
     
     # 1. Load GNN Model
     try:
         gnn_model = load_gnn_model_for_rl()
     except FileNotFoundError as e:
-        print(f"❌ Error: {e}")
+        print(f" Error: {e}")
         print("   Ensure Phase 4 training completed successfully.")
         raise
     
@@ -179,9 +179,9 @@ def run_single_agent_training(
     # 4. Setup TensorBoard Logging
     tensorboard_log_path = RL_LOG_PATH if TENSORBOARD_AVAILABLE else None
     if TENSORBOARD_AVAILABLE:
-        print("✅ TensorBoard logging enabled")
+        print(" TensorBoard logging enabled")
     else:
-        print("⚠️  TensorBoard not available, logging disabled")
+        print("  TensorBoard not available, logging disabled")
     
     # 5. Create RL Agent
     print(f"\n--- Creating Single-Agent RL Agent ---")
@@ -203,9 +203,9 @@ def run_single_agent_training(
             total_timesteps=total_timesteps,
             progress_bar=False  # Disable progress bar to avoid tqdm/rich dependency
         )
-        print(f"\n📊 Training Statistics: {training_stats}")
+        print(f"\n Training Statistics: {training_stats}")
     except Exception as e:
-        print(f"❌ Training failed: {e}")
+        print(f" Training failed: {e}")
         import traceback
         traceback.print_exc()
         raise
@@ -213,7 +213,7 @@ def run_single_agent_training(
     # 7. Save Agent (Original location)
     save_path = RL_SAVE_PATH / "ppo_stock_agent"
     agent.save(save_path)
-    print(f"\n✅ Agent saved to: {save_path}.zip")
+    print(f"\n Agent saved to: {save_path}.zip")
     
     # 8. Copy Agent to Results Directory
     results_dir = PROJECT_ROOT / "results"
@@ -221,7 +221,7 @@ def run_single_agent_training(
     
     results_agent_path = results_dir / "ppo_stock_agent"
     agent.save(results_agent_path)
-    print(f"✅ Agent also saved to results: {results_agent_path}.zip")
+    print(f" Agent also saved to results: {results_agent_path}.zip")
     
     # 9. Generate Results JSON
     def convert_to_json_serializable(obj):
@@ -264,10 +264,10 @@ def run_single_agent_training(
     try:
         test_env = env_factory()
         eval_results = agent.evaluate(test_env, n_episodes=5, deterministic=True)
-        print(f"📈 Evaluation Results: {eval_results}")
+        print(f" Evaluation Results: {eval_results}")
         results_json["evaluation_results"] = convert_to_json_serializable(eval_results)
     except Exception as e:
-        print(f"⚠️  Evaluation failed: {e}")
+        print(f"  Evaluation failed: {e}")
         results_json["evaluation_results"] = {"error": str(e)}
     
     # 11. Save Results JSON
@@ -275,9 +275,9 @@ def run_single_agent_training(
     results_json_path = results_dir / "single_agent_results.json"
     with open(results_json_path, 'w') as f:
         json.dump(results_json, f, indent=2)
-    print(f"✅ Results JSON saved to: {results_json_path}")
+    print(f" Results JSON saved to: {results_json_path}")
     
-    print("\n✅ Single-Agent RL Training Complete!")
+    print("\n Single-Agent RL Training Complete!")
     return agent
 
 
@@ -287,7 +287,7 @@ def main():
         agent = run_single_agent_training()
         return agent
     except Exception as e:
-        print(f"\n❌ Single-Agent Training Failed: {e}")
+        print(f"\n Single-Agent Training Failed: {e}")
         raise
 
 

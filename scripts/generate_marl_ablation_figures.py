@@ -143,7 +143,7 @@ def create_marl_comparison_chart():
     plt.tight_layout()
     output_path = FIGS_DIR / "figure_marl_ablation_comparison.png"
     plt.savefig(output_path, bbox_inches='tight', facecolor='white')
-    print(f"✅ Saved: {output_path}")
+    print(f" Saved: {output_path}")
     plt.close()
 
 def create_sector_performance_chart():
@@ -204,7 +204,7 @@ def create_sector_performance_chart():
     plt.tight_layout()
     output_path = FIGS_DIR / "figure_marl_sector_performance.png"
     plt.savefig(output_path, bbox_inches='tight', facecolor='white')
-    print(f"✅ Saved: {output_path}")
+    print(f" Saved: {output_path}")
     plt.close()
 
 def create_training_curves_comparison():
@@ -255,7 +255,7 @@ def create_training_curves_comparison():
     plt.tight_layout()
     output_path = FIGS_DIR / "figure_marl_training_curves.png"
     plt.savefig(output_path, bbox_inches='tight', facecolor='white')
-    print(f"✅ Saved: {output_path}")
+    print(f" Saved: {output_path}")
     plt.close()
 
 def main():
@@ -270,7 +270,7 @@ def main():
         create_training_curves_comparison()
         
         print("\n" + "=" * 60)
-        print("✅ All MARL ablation figures generated successfully!")
+        print(" All MARL ablation figures generated successfully!")
         print("=" * 60)
         print("\nGenerated figures:")
         print("  1. figure_marl_ablation_comparison.png - Method comparison")
@@ -278,7 +278,7 @@ def main():
         print("  3. figure_marl_training_curves.png - Training curves")
         
     except Exception as e:
-        print(f"\n❌ Error generating figures: {e}")
+        print(f"\n Error generating figures: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

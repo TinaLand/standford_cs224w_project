@@ -50,10 +50,10 @@ def check_figures():
         if fig_path.exists():
             size_kb = fig_path.stat().st_size / 1024
             existing.append((fig_name, description, size_kb))
-            print(f"✅ {fig_name:50s} ({size_kb:.1f} KB) - {description}")
+            print(f" {fig_name:50s} ({size_kb:.1f} KB) - {description}")
         else:
             missing.append((fig_name, description))
-            print(f"❌ {fig_name:50s} MISSING - {description}")
+            print(f" {fig_name:50s} MISSING - {description}")
     
     print()
     print("=" * 60)
@@ -61,12 +61,12 @@ def check_figures():
     print("=" * 60)
     
     if missing:
-        print(f"\n⚠️  Missing {len(missing)} figures:")
+        print(f"\n  Missing {len(missing)} figures:")
         for fig_name, description in missing:
             print(f"   - {fig_name}: {description}")
         return False
     else:
-        print("\n✅ All required figures exist!")
+        print("\n All required figures exist!")
         return True
 
 def generate_missing_figures():
@@ -105,7 +105,7 @@ def generate_missing_figures():
             missing_figures.append(fig_name)
     
     if not missing_figures:
-        print("✅ All figures already exist!")
+        print(" All figures already exist!")
         return
     
     # Generate based on missing figures
@@ -131,9 +131,9 @@ def generate_missing_figures():
             print(f"\nGenerating {fig_name}...")
             try:
                 figure_generators[fig_name]()
-                print(f"✅ Generated: {fig_name}")
+                print(f" Generated: {fig_name}")
             except Exception as e:
-                print(f"❌ Error generating {fig_name}: {e}")
+                print(f" Error generating {fig_name}: {e}")
                 import traceback
                 traceback.print_exc()
 
@@ -151,5 +151,5 @@ if __name__ == "__main__":
             print("=" * 60)
             check_figures()
     else:
-        print("\n✅ All figures are ready!")
+        print("\n All figures are ready!")
 

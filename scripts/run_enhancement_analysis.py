@@ -24,7 +24,7 @@ def run_enhancement_module(module_name, description):
     module_path = ENHANCEMENTS_DIR / f"{module_name}.py"
     
     if not module_path.exists():
-        print(f"⚠️  Module not found: {module_path}")
+        print(f"  Module not found: {module_path}")
         return False
     
     try:
@@ -38,22 +38,22 @@ def run_enhancement_module(module_name, description):
         )
         
         if result.returncode == 0:
-            print(f"✅ {description} completed successfully")
+            print(f" {description} completed successfully")
             if result.stdout:
                 print(result.stdout[-500:])  # Print last 500 chars
             return True
         else:
-            print(f"❌ {description} failed with return code {result.returncode}")
+            print(f" {description} failed with return code {result.returncode}")
             if result.stderr:
                 print("Error output:")
                 print(result.stderr[-500:])
             return False
             
     except subprocess.TimeoutExpired:
-        print(f"⏱️  {description} timed out after 30 minutes")
+        print(f"⏱  {description} timed out after 30 minutes")
         return False
     except Exception as e:
-        print(f"❌ Error running {description}: {e}")
+        print(f" Error running {description}: {e}")
         return False
 
 def main():
@@ -90,7 +90,7 @@ def main():
         }
         
         if success:
-            print(f"⏱️  Time taken: {module_time:.1f} seconds")
+            print(f"⏱  Time taken: {module_time:.1f} seconds")
         print()
     
     total_time = time.time() - start_time
@@ -104,16 +104,16 @@ def main():
     total = len(results)
     
     for desc, result in results.items():
-        status = "✅" if result['success'] else "❌"
+        status = "" if result['success'] else ""
         print(f"{status} {desc}: {result['time']:.1f}s")
     
     print(f"\nTotal: {successful}/{total} modules completed successfully")
     print(f"Total time: {total_time:.1f} seconds ({total_time/60:.1f} minutes)")
     
     if successful == total:
-        print("\n✅ All enhancement analysis modules completed!")
+        print("\n All enhancement analysis modules completed!")
     else:
-        print(f"\n⚠️  {total - successful} module(s) failed. Check logs above for details.")
+        print(f"\n  {total - successful} module(s) failed. Check logs above for details.")
 
 if __name__ == "__main__":
     main()

@@ -25,7 +25,7 @@ def log_message(message, log_file=OUTPUT_LOG):
 def run_command(cmd, description, log_file=OUTPUT_LOG):
     """Run a command and log output."""
     log_message(f"\n{'='*60}")
-    log_message(f"🔄 {description}")
+    log_message(f" {description}")
     log_message(f"{'='*60}")
     log_message(f"Command: {' '.join(cmd) if isinstance(cmd, list) else cmd}")
     log_message("")
@@ -42,13 +42,13 @@ def run_command(cmd, description, log_file=OUTPUT_LOG):
             )
         
         if result.returncode == 0:
-            log_message(f"✅ {description} completed successfully!")
+            log_message(f" {description} completed successfully!")
             return True
         else:
-            log_message(f"⚠️  {description} completed with exit code {result.returncode}")
+            log_message(f"  {description} completed with exit code {result.returncode}")
             return False
     except Exception as e:
-        log_message(f"❌ Error running {description}: {e}")
+        log_message(f" Error running {description}: {e}")
         import traceback
         with open(log_file, 'a', encoding='utf-8') as f:
             traceback.print_exc(file=f)
@@ -61,8 +61,8 @@ def main():
         f.write(f"Complete Pipeline Run - Started at {datetime.now()}\n")
         f.write("="*60 + "\n\n")
     
-    log_message("🚀 Starting Complete Pipeline and Evaluation")
-    log_message(f"📝 All output will be logged to: {OUTPUT_LOG}")
+    log_message(" Starting Complete Pipeline and Evaluation")
+    log_message(f" All output will be logged to: {OUTPUT_LOG}")
     log_message(f"⏰ Start time: {datetime.now()}")
     
     # Step 1: Run Full Pipeline
@@ -100,7 +100,7 @@ def main():
             )
             time.sleep(1)  # Small delay between scripts
         else:
-            log_message(f"⚠️  Script not found: {script_path}")
+            log_message(f"  Script not found: {script_path}")
     
     # Step 3: Run All Evaluation Modules
     log_message("\n" + "="*60)
@@ -146,16 +146,16 @@ def main():
     
     # Final Summary
     log_message("\n" + "="*60)
-    log_message("✅ Complete Pipeline and Evaluation Finished!")
+    log_message(" Complete Pipeline and Evaluation Finished!")
     log_message("="*60)
-    log_message(f"📝 All output has been logged to: {OUTPUT_LOG}")
+    log_message(f" All output has been logged to: {OUTPUT_LOG}")
     log_message(f"⏰ Completed at: {datetime.now()}")
     
     # Show log file size
     if OUTPUT_LOG.exists():
         size_mb = OUTPUT_LOG.stat().st_size / (1024 * 1024)
-        log_message(f"📊 Log file size: {size_mb:.2f} MB")
-        log_message(f"📄 Log file lines: {sum(1 for _ in open(OUTPUT_LOG))}")
+        log_message(f" Log file size: {size_mb:.2f} MB")
+        log_message(f" Log file lines: {sum(1 for _ in open(OUTPUT_LOG))}")
 
 if __name__ == "__main__":
     main()

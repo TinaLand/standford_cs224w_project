@@ -87,16 +87,16 @@ The `scripts/` folder contains **standalone utility scripts** for:
 ## When to Use Scripts
 
 ### Use `scripts/` for:
-- ✅ Generating figures for reports
-- ✅ Running one-off experiments
-- ✅ Quick analysis and visualization
-- ✅ Testing specific configurations
+-  Generating figures for reports
+-  Running one-off experiments
+-  Quick analysis and visualization
+-  Testing specific configurations
 
 ### Use `src/` modules for:
-- ✅ Core functionality (training, evaluation)
-- ✅ Reusable components
-- ✅ Main pipeline execution
-- ✅ Production code
+-  Core functionality (training, evaluation)
+-  Reusable components
+-  Main pipeline execution
+-  Production code
 
 ## Integration with Main Pipeline
 

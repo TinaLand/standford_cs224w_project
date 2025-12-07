@@ -89,7 +89,7 @@ def load_gnn_model_for_rl():
     state_dict = torch.load(CORE_GNN_MODEL_PATH, map_location=DEVICE, weights_only=False)
     missing, unexpected = gnn_model.load_state_dict(state_dict, strict=False)
     if missing or unexpected:
-        print("⚠️  Warning when loading GNN state_dict for RL:")
+        print("  Warning when loading GNN state_dict for RL:")
         if missing:
             print(f"   Missing keys: {missing}")
         if unexpected:
@@ -99,7 +99,7 @@ def load_gnn_model_for_rl():
     for param in gnn_model.parameters():
         param.requires_grad = False
         
-    print(f"✅ Core GNN Model loaded and frozen (Input Dim: {INPUT_DIM}).")
+    print(f" Core GNN Model loaded and frozen (Input Dim: {INPUT_DIM}).")
     return gnn_model
 
 
@@ -110,7 +110,7 @@ def run_rl_pipeline():
     try:
         gnn_model = load_gnn_model_for_rl()
     except FileNotFoundError as e:
-        print(f"❌ Error: {e}. Ensure phase4_core_training.py ran successfully.")
+        print(f" Error: {e}. Ensure phase4_core_training.py ran successfully.")
         return
 
     # 2. Define Backtesting Period (Use dynamic dates corresponding to test/evaluation split)
@@ -132,7 +132,7 @@ def run_rl_pipeline():
     START_DATE = graph_start + pd.Timedelta(days=start_offset_days)
     END_DATE = graph_end
     
-    print(f"📅 Backtesting period: {START_DATE.date()} to {END_DATE.date()}")
+    print(f" Backtesting period: {START_DATE.date()} to {END_DATE.date()}")
     print(f"   (Graph files available: {graph_start.date()} to {graph_end.date()})")
     print(f"   (Using last {int((date_range_days - start_offset_days) / date_range_days * 100)}% of graph data)")
     
@@ -151,9 +151,9 @@ def run_rl_pipeline():
     # Configure tensorboard logging (optional)
     tensorboard_log_path = RL_LOG_PATH if TENSORBOARD_AVAILABLE else None
     if TENSORBOARD_AVAILABLE:
-        print("✅ TensorBoard logging enabled")
+        print(" TensorBoard logging enabled")
     else:
-        print("⚠️  TensorBoard not available, logging disabled")
+        print("  TensorBoard not available, logging disabled")
     
     # Create agent using the wrapper class
     agent = StockTradingAgent(
@@ -169,20 +169,20 @@ def run_rl_pipeline():
     # 5. Train Agent
     try:
         training_stats = agent.train(total_timesteps=TOTAL_TIMESTEPS)
-        print(f"\n📊 Training Statistics: {training_stats}")
+        print(f"\n Training Statistics: {training_stats}")
     except Exception as e:
-        print(f"❌ RL Training failed: {e}")
+        print(f" RL Training failed: {e}")
         import traceback
         traceback.print_exc()
         return
     
     # 6. Save Agent
     agent.save(RL_SAVE_PATH / "ppo_stock_agent")
-    print(f"\n✅ RL Agent trained and saved to: {RL_SAVE_PATH / 'ppo_stock_agent.zip'}")
+    print(f"\n RL Agent trained and saved to: {RL_SAVE_PATH / 'ppo_stock_agent.zip'}")
     
     return agent
 
-    print("\n🎯 Phase 5: RL Integration and Training Complete! Ready for Phase 6: Evaluation.")
+    print("\n Phase 5: RL Integration and Training Complete! Ready for Phase 6: Evaluation.")
 
 if __name__ == '__main__':
     run_rl_pipeline()

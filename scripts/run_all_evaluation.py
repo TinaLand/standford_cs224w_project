@@ -16,7 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 def run_module(module_path, description=""):
     """Run a module and return success status."""
     print("\n" + "="*60)
-    print(f"🔄 Running: {module_path}")
+    print(f" Running: {module_path}")
     if description:
         print(f"   Description: {description}")
     print("="*60)
@@ -29,19 +29,19 @@ def run_module(module_path, description=""):
         )
         
         if result.returncode == 0:
-            print(f"✅ {module_path} completed successfully!")
+            print(f" {module_path} completed successfully!")
             return True
         else:
-            print(f"⚠️  {module_path} completed with warnings (exit code {result.returncode})")
+            print(f"  {module_path} completed with warnings (exit code {result.returncode})")
             return True  # Don't fail pipeline for optional modules
     except Exception as e:
-        print(f"❌ Error running {module_path}: {e}")
+        print(f" Error running {module_path}: {e}")
         return False
 
 def main():
     """Main function to run all evaluation modules."""
     print("="*60)
-    print("🚀 Run All Evaluation Modules")
+    print(" Run All Evaluation Modules")
     print("="*60)
     print("\nThis script will run all evaluation modules in src/evaluation/.")
     print("You can choose to run all modules or select specific ones.")
@@ -106,22 +106,22 @@ def main():
     results = {}
     for module_path, description in modules_to_run:
         success = run_module(module_path, description)
-        results[module_path] = "✅ Success" if success else "❌ Failed"
+        results[module_path] = " Success" if success else " Failed"
         time.sleep(1)  # Small delay between modules
     
     # Summary
     print("\n" + "="*60)
-    print("📊 Evaluation Module Execution Summary")
+    print(" Evaluation Module Execution Summary")
     print("="*60)
     
     for module_path, status in results.items():
         print(f"  {status} {module_path}")
     
-    successful = sum(1 for s in results.values() if "✅" in s)
+    successful = sum(1 for s in results.values() if "" in s)
     total = len(results)
     
-    print(f"\n✅ Completed: {successful}/{total} modules")
-    print(f"📁 Check results in:")
+    print(f"\n Completed: {successful}/{total} modules")
+    print(f" Check results in:")
     print(f"  - results/ - Evaluation results")
     print(f"  - models/plots/ - Visualizations")
 

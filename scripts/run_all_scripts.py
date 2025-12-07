@@ -18,11 +18,11 @@ def run_script(script_name, description=""):
     """Run a single script and return success status."""
     script_path = SCRIPTS_DIR / script_name
     if not script_path.exists():
-        print(f"⚠️  Script not found: {script_name}")
+        print(f"  Script not found: {script_name}")
         return False
     
     print("\n" + "="*60)
-    print(f"🔄 Running: {script_name}")
+    print(f" Running: {script_name}")
     if description:
         print(f"   Description: {description}")
     print("="*60)
@@ -35,19 +35,19 @@ def run_script(script_name, description=""):
         )
         
         if result.returncode == 0:
-            print(f"✅ {script_name} completed successfully!")
+            print(f" {script_name} completed successfully!")
             return True
         else:
-            print(f"⚠️  {script_name} completed with warnings (exit code {result.returncode})")
+            print(f"  {script_name} completed with warnings (exit code {result.returncode})")
             return True  # Don't fail pipeline for optional scripts
     except Exception as e:
-        print(f"❌ Error running {script_name}: {e}")
+        print(f" Error running {script_name}: {e}")
         return False
 
 def main():
     """Main function to run all scripts."""
     print("="*60)
-    print("🚀 Run All Scripts in scripts/ Folder")
+    print(" Run All Scripts in scripts/ Folder")
     print("="*60)
     print("\nThis script will run all utility scripts in the scripts/ folder.")
     print("You can choose to run all scripts or select specific categories.")
@@ -116,22 +116,22 @@ def main():
     results = {}
     for script_name, description in scripts_to_run:
         success = run_script(script_name, description)
-        results[script_name] = "✅ Success" if success else "❌ Failed"
+        results[script_name] = " Success" if success else " Failed"
         time.sleep(1)  # Small delay between scripts
     
     # Summary
     print("\n" + "="*60)
-    print("📊 Script Execution Summary")
+    print(" Script Execution Summary")
     print("="*60)
     
     for script_name, status in results.items():
         print(f"  {status} {script_name}")
     
-    successful = sum(1 for s in results.values() if "✅" in s)
+    successful = sum(1 for s in results.values() if "" in s)
     total = len(results)
     
-    print(f"\n✅ Completed: {successful}/{total} scripts")
-    print(f"📁 Check results in:")
+    print(f"\n Completed: {successful}/{total} scripts")
+    print(f" Check results in:")
     print(f"  - results/ - Analysis results")
     print(f"  - figures/ - Generated figures")
 

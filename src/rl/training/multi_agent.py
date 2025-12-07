@@ -67,7 +67,7 @@ def load_gnn_model_for_multi_agent() -> torch.nn.Module:
     for param in gnn_model.parameters():
         param.requires_grad = False
     
-    print(f"✅ GNN Model loaded and frozen for multi-agent training")
+    print(f" GNN Model loaded and frozen for multi-agent training")
     return gnn_model
 
 
@@ -94,7 +94,7 @@ def determine_multi_agent_training_period():
     start_date = graph_start + pd.Timedelta(days=start_offset_days)
     end_date = graph_end
     
-    print(f"📅 Multi-Agent Training period: {start_date.date()} to {end_date.date()}")
+    print(f" Multi-Agent Training period: {start_date.date()} to {end_date.date()}")
     
     return start_date, end_date
 
@@ -138,7 +138,7 @@ class MultiAgentTrainer:
         Returns:
             Training statistics
         """
-        print(f"\n🔨 Starting Multi-Agent Training ({self.total_timesteps} timesteps)")
+        print(f"\n Starting Multi-Agent Training ({self.total_timesteps} timesteps)")
         
         current_timestep = 0
         episode = 0
@@ -161,7 +161,7 @@ class MultiAgentTrainer:
                 avg_return = np.mean(self.training_stats['episode_returns'][-10:])
                 print(f"Episode {episode}, Timestep {current_timestep}, Avg Return: {avg_return:.4f}")
         
-        print(f"✅ Multi-Agent Training completed after {episode} episodes")
+        print(f" Multi-Agent Training completed after {episode} episodes")
         return self.training_stats
     
     def _train_episode(self, episode: int) -> Dict[str, Any]:
@@ -261,7 +261,7 @@ class MultiAgentTrainer:
             
         except Exception as e:
             # Handle training errors gracefully
-            print(f"⚠️  Centralized training step failed: {e}")
+            print(f"  Centralized training step failed: {e}")
 
 
 def run_multi_agent_training(
@@ -278,14 +278,14 @@ def run_multi_agent_training(
     Returns:
         Tuple of (coordinator, training_stats)
     """
-    print("\n🤖 Starting Multi-Agent RL Training Pipeline")
+    print("\n Starting Multi-Agent RL Training Pipeline")
     print("=" * 60)
     
     # 1. Load GNN Model
     try:
         gnn_model = load_gnn_model_for_multi_agent()
     except FileNotFoundError as e:
-        print(f"❌ Error: {e}")
+        print(f" Error: {e}")
         raise
     
     # 2. Create Multi-Agent System
@@ -305,9 +305,9 @@ def run_multi_agent_training(
             embeddings = gnn_model.get_embeddings(sample_data, date_tensor)
             embedding_dim = embeddings.shape[1]
             
-        print(f"✅ Detected embedding dimension: {embedding_dim}")
+        print(f" Detected embedding dimension: {embedding_dim}")
     except Exception as e:
-        print(f"⚠️  Could not detect embedding dimension, using default: {embedding_dim}")
+        print(f"  Could not detect embedding dimension, using default: {embedding_dim}")
     
     # Get actual tickers from the data
     actual_tickers = None
@@ -315,9 +315,9 @@ def run_multi_agent_training(
         sample_data = torch.load(sample_graph_path, weights_only=False)
         if hasattr(sample_data, 'tickers'):
             actual_tickers = sample_data.tickers
-            print(f"✅ Using actual tickers from data: {len(actual_tickers)} stocks")
+            print(f" Using actual tickers from data: {len(actual_tickers)} stocks")
     except Exception as e:
-        print(f"⚠️  Could not get actual tickers from data: {e}")
+        print(f"  Could not get actual tickers from data: {e}")
     
     coordinator = create_multi_agent_system(
         gnn_model=gnn_model,
@@ -372,7 +372,7 @@ def run_multi_agent_training(
         serializable_stats = convert_to_serializable(training_stats)
         json.dump(serializable_stats, f, indent=2)
     
-    print(f"\n✅ Multi-Agent Training Results saved to: {save_path}")
+    print(f"\n Multi-Agent Training Results saved to: {save_path}")
     
     # 6b. Save Results to /results Directory
     results_dir = PROJECT_ROOT / "results"
@@ -408,10 +408,10 @@ def run_multi_agent_training(
     results_json_path = results_dir / "multi_agent_results.json"
     with open(results_json_path, 'w') as f:
         json.dump(multi_agent_results, f, indent=2)
-    print(f"✅ Multi-Agent Results JSON saved to: {results_json_path}")
+    print(f" Multi-Agent Results JSON saved to: {results_json_path}")
     
     # 7. Print Summary
-    print(f"\n📊 Training Summary:")
+    print(f"\n Training Summary:")
     print(f"   Episodes: {len(training_stats['episode_returns'])}")
     print(f"   Average Return: {np.mean(training_stats['episode_returns']):.4f}")
     print(f"   Total Timesteps: {sum(training_stats['episode_lengths'])}")
@@ -421,7 +421,7 @@ def run_multi_agent_training(
         if sector_perf:
             print(f"   {sector} Avg Performance: {np.mean(sector_perf):.4f}")
     
-    print("\n✅ Multi-Agent RL Training Complete!")
+    print("\n Multi-Agent RL Training Complete!")
     
     return coordinator, training_stats
 
@@ -432,7 +432,7 @@ def main():
         coordinator, stats = run_multi_agent_training()
         return coordinator, stats
     except Exception as e:
-        print(f"\n❌ Multi-Agent Training Failed: {e}")
+        print(f"\n Multi-Agent Training Failed: {e}")
         raise
 
 

@@ -154,7 +154,7 @@ def analyze_feature_importance(
         return results
     
     except Exception as e:
-        print(f"   ⚠️  Feature importance analysis failed: {e}")
+        print(f"     Feature importance analysis failed: {e}")
         # Return empty results
         return {
             'feature_importance': [],
@@ -186,7 +186,7 @@ def visualize_feature_importance(
     plots_dir.mkdir(parents=True, exist_ok=True)
     
     if 'feature_importance' not in feature_importance or len(feature_importance['feature_importance']) == 0:
-        print("   ⚠️  No feature importance data to visualize")
+        print("     No feature importance data to visualize")
         return
     
     importance_array = np.array(feature_importance['feature_importance'])
@@ -213,7 +213,7 @@ def visualize_feature_importance(
     plt.tight_layout()
     plt.savefig(plots_dir / 'feature_importance_topk.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"   ✅ Top-{top_k} feature importance chart saved")
+    print(f"    Top-{top_k} feature importance chart saved")
     
     # 2. Feature Importance Distribution
     plt.figure(figsize=(10, 6))
@@ -230,7 +230,7 @@ def visualize_feature_importance(
     plt.tight_layout()
     plt.savefig(plots_dir / 'feature_importance_distribution.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("   ✅ Feature importance distribution chart saved")
+    print("    Feature importance distribution chart saved")
     
     # 3. Cumulative Importance (Top Features)
     cumulative_importance = np.cumsum(np.sort(importance_array)[::-1])
@@ -249,9 +249,9 @@ def visualize_feature_importance(
     plt.tight_layout()
     plt.savefig(plots_dir / 'feature_importance_cumulative.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("   ✅ Cumulative feature importance chart saved")
+    print("    Cumulative feature importance chart saved")
     
-    print(f"   📁 All feature importance visualizations saved to: {plots_dir}")
+    print(f"    All feature importance visualizations saved to: {plots_dir}")
 
 
 def get_feature_names_from_engineering() -> List[str]:
@@ -409,7 +409,7 @@ def create_visualizations(
     plt.tight_layout()
     plt.savefig(plots_dir / 'portfolio_value_over_time.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("   ✅ Portfolio value chart saved")
+    print("    Portfolio value chart saved")
     
     # 2. Drawdown Analysis
     if len(portfolio_values) > 1:
@@ -427,7 +427,7 @@ def create_visualizations(
         plt.tight_layout()
         plt.savefig(plots_dir / 'drawdown_analysis.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Drawdown chart saved")
+        print("    Drawdown chart saved")
     
     # 3. Daily Returns Distribution
     if daily_returns:
@@ -442,9 +442,9 @@ def create_visualizations(
         plt.tight_layout()
         plt.savefig(plots_dir / 'daily_returns_distribution.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Returns distribution chart saved")
+        print("    Returns distribution chart saved")
     
-    print(f"   📁 All visualizations saved to: {plots_dir}")
+    print(f"    All visualizations saved to: {plots_dir}")
 
 
 def generate_comprehensive_report(
@@ -478,6 +478,6 @@ def generate_comprehensive_report(
     with open(output_path, 'w') as f:
         json.dump(report, f, indent=2, default=str)
     
-    print(f"\n✅ Comprehensive analysis report saved to: {output_path}")
+    print(f"\n Comprehensive analysis report saved to: {output_path}")
     return report
 

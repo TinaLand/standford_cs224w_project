@@ -223,7 +223,7 @@ if __name__ == '__main__':
     from src.evaluation.evaluation import START_DATE_TEST, END_DATE_TEST
     
     print("=" * 70)
-    print("🧪 Testing Balanced Trading Environment")
+    print(" Testing Balanced Trading Environment")
     print("=" * 70)
     
     gnn_model = load_gnn_model_for_rl()
@@ -270,7 +270,7 @@ if __name__ == '__main__':
     
     # Compare
     print("\n" + "=" * 70)
-    print("📊 Comparison Results (50 steps)")
+    print(" Comparison Results (50 steps)")
     print("=" * 70)
     print(f"Original Environment:")
     print(f"  Final Value: ${original_values[-1]:.2f}")
@@ -283,5 +283,5 @@ if __name__ == '__main__':
     improvement = ((balanced_values[-1] / balanced_values[0]) / (original_values[-1] / original_values[0]) - 1) * 100
     print(f"\nImprovement: {improvement:+.2f}%")
     
-    print("\n✅ Balanced environment allows faster position building in uptrends!")
+    print("\n Balanced environment allows faster position building in uptrends!")
 

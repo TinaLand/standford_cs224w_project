@@ -225,63 +225,63 @@ This section presents our complete model architecture, from high-level system de
 Our complete system follows a modular pipeline architecture that integrates graph-based prediction with reinforcement learning for portfolio optimization. The high-level architecture consists of four main stages:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Stage 1: Data & Graph Construction          │
-│                                                                 │
-│  Raw Data (OHLCV, Fundamentals)                                │
-│       ↓                                                         │
-│  Feature Engineering (1450+ features per stock)               │
-│       ↓                                                         │
-│  Heterogeneous Graph Construction                              │
-│  - Rolling Correlation Edges (dynamic, time-varying)          │
-│  - Fundamental Similarity Edges (static, feature-based)        │
-│  - Sector/Industry Edges (static, domain knowledge)           │
-│  - Supply Chain/Competitor Edges (static, business relations) │
-└─────────────────────────────────────────────────────────────────┘
+
+                    Stage 1: Data & Graph Construction           
+                                                                 
+  Raw Data (OHLCV, Fundamentals)                                 
+       ↓                                                         
+  Feature Engineering (1450+ features per stock)                 
+       ↓                                                         
+  Heterogeneous Graph Construction                               
+  - Rolling Correlation Edges (dynamic, time-varying)            
+  - Fundamental Similarity Edges (static, feature-based)         
+  - Sector/Industry Edges (static, domain knowledge)             
+  - Supply Chain/Competitor Edges (static, business relations)   
+
                             ↓
-┌─────────────────────────────────────────────────────────────────┐
-│              Stage 2: Role-Aware Graph Transformer              │
-│                                                                 │
-│  Input: Heterogeneous Graph G_t                                │
-│       ↓                                                         │
-│  [Node Features] + [PEARL Embeddings] + [Time Encoding]       │
-│       ↓                                                         │
-│  Multi-Relational Graph Transformer Layers                     │
-│  - Edge-type-specific attention (8 attention heads)            │
-│  - Message passing across relationship types                   │
-│  - Temporal pattern capture                                    │
-│       ↓                                                         │
-│  Output: Stock Embeddings + Predictions (Up/Down, Returns)     │
-└─────────────────────────────────────────────────────────────────┘
+
+              Stage 2: Role-Aware Graph Transformer              
+                                                                 
+  Input: Heterogeneous Graph G_t                                 
+       ↓                                                         
+  [Node Features] + [PEARL Embeddings] + [Time Encoding]         
+       ↓                                                         
+  Multi-Relational Graph Transformer Layers                      
+  - Edge-type-specific attention (8 attention heads)             
+  - Message passing across relationship types                    
+  - Temporal pattern capture                                     
+       ↓                                                         
+  Output: Stock Embeddings + Predictions (Up/Down, Returns)      
+
                             ↓
-┌─────────────────────────────────────────────────────────────────┐
-│              Stage 3: Single-Agent RL (PPO)                    │
-│                                                                 │
-│  State: [Portfolio Holdings] + [GNN Embeddings]               │
-│       ↓                                                         │
-│  PPO Agent (Policy Network)                                    │
-│       ↓                                                         │
-│  Actions: [Buy/Hold/Sell] for each stock                       │
-│       ↓                                                         │
-│  Environment: Execute trades, compute rewards                   │
-│       ↓                                                         │
-│  Portfolio Optimization (Sharpe Ratio, Returns)               │
-└─────────────────────────────────────────────────────────────────┘
+
+              Stage 3: Single-Agent RL (PPO)                     
+                                                                 
+  State: [Portfolio Holdings] + [GNN Embeddings]                 
+       ↓                                                         
+  PPO Agent (Policy Network)                                     
+       ↓                                                         
+  Actions: [Buy/Hold/Sell] for each stock                        
+       ↓                                                         
+  Environment: Execute trades, compute rewards                   
+       ↓                                                         
+  Portfolio Optimization (Sharpe Ratio, Returns)                 
+
                             ↓
-┌─────────────────────────────────────────────────────────────────┐
-│              Stage 4: Multi-Agent RL Extension                  │
-│                                                                 │
-│  Sector-Based Agents (Technology, Healthcare, Finance, ...)    │
-│       ↓                                                         │
-│  Individual Agent Decisions (per sector)                       │
-│       ↓                                                         │
-│  QMIX-Style Mixing Network                                     │
-│  - Value decomposition for cooperative learning                │
-│       ↓                                                         │
-│  Global Portfolio Coordination                                 │
-│  - Sector-specific strategies                                  │
-│  - Global risk management                                      │
-└─────────────────────────────────────────────────────────────────┘
+
+              Stage 4: Multi-Agent RL Extension                  
+                                                                 
+  Sector-Based Agents (Technology, Healthcare, Finance, ...)     
+       ↓                                                         
+  Individual Agent Decisions (per sector)                        
+       ↓                                                         
+  QMIX-Style Mixing Network                                      
+  - Value decomposition for cooperative learning                 
+       ↓                                                         
+  Global Portfolio Coordination                                  
+  - Sector-specific strategies                                   
+  - Global risk management                                       
+
 ```
 
 **Key Architectural Principles**:
@@ -486,21 +486,21 @@ Our experiments (Section 4.3) show that:
 
 ```
 Standard GAT Architecture:
-┌─────────────────────────────────────┐
-│  All Edge Types → Single Attention  │
-│  (Cannot specialize per edge type)  │
-└─────────────────────────────────────┘
+
+  All Edge Types → Single Attention  
+  (Cannot specialize per edge type)  
+
 
 Our Role-Aware Transformer:
-┌─────────────────────────────────────┐
-│  Correlation Edges → Attention Head 1 │
-│  Sector Edges      → Attention Head 2 │
-│  Fundamental Edges  → Attention Head 3 │
-│  Supply Chain Edges → Attention Head 4 │
-│                                     │
-│  + PEARL (Structural Roles)         │
-│  + Time-Aware Encoding              │
-└─────────────────────────────────────┘
+
+  Correlation Edges → Attention Head 1 
+  Sector Edges      → Attention Head 2 
+  Fundamental Edges  → Attention Head 3 
+  Supply Chain Edges → Attention Head 4 
+                                     
+  + PEARL (Structural Roles)         
+  + Time-Aware Encoding              
+
 ```
 
 **Key Takeaway**: Our architecture's **specialization** (separate attention per edge type + structural role encoding) enables it to capture the nuanced relationships in financial graphs that standard GNNs miss.
@@ -552,7 +552,7 @@ Without positional encoding, the model cannot distinguish these roles, leading t
 | **Sinusoidal Positional Encoding** | Fixed sinusoidal patterns (like in Transformers) | **Not graph-aware**: Doesn't consider graph structure; **Arbitrary**: Position indices don't reflect actual graph topology |
 | **Laplacian Eigenvectors** | Spectral graph theory (eigenvectors of Laplacian) | **Computationally expensive**: O(N³) for large graphs; **Sensitive to graph changes**: Small graph changes cause large eigenvector shifts |
 | **Random Walk Embeddings** | Node2Vec, DeepWalk | **Requires separate training**: Additional training phase; **Static**: Cannot adapt to dynamic graphs; **Less interpretable**: Hard to understand what embeddings represent |
-| **PEARL (Our Choice)** | Structural features (PageRank, centrality) | ✅ **Stable**: Structural roles are inherent to graph topology; ✅ **Interpretable**: Can identify hubs/bridges; ✅ **Efficient**: Computed from graph structure alone; ✅ **Generalizable**: Works with limited data |
+| **PEARL (Our Choice)** | Structural features (PageRank, centrality) | **Stable**: Structural roles are inherent to graph topology; **Interpretable**: Can identify hubs/bridges; **Efficient**: Computed from graph structure alone; **Generalizable**: Works with limited data |
 
 **Why PEARL Solves Our Specific Problems:**
 
@@ -1191,12 +1191,12 @@ Our multi-agent system consists of:
 4. **Global Portfolio Coordination**: All agents work together to optimize overall portfolio performance
 
 **Key Benefits of This Architecture**:
-- ✅ **Specialization**: Each agent becomes an expert in its sector
-- ✅ **Scalability**: Can easily add more sectors or stocks per sector
-- ✅ **Coordination**: QMIX ensures agents work together, not against each other
-- ✅ **Interpretability**: Can analyze sector-level contributions
-- ✅ **Robustness**: Sector-specific failures don't cascade
-- ✅ **Practical**: Decentralized execution enables real-world deployment
+- **Specialization**: Each agent becomes an expert in its sector
+- **Scalability**: Can easily add more sectors or stocks per sector
+- **Coordination**: QMIX ensures agents work together, not against each other
+- **Interpretability**: Can analyze sector-level contributions
+- **Robustness**: Sector-specific failures don't cascade
+- **Practical**: Decentralized execution enables real-world deployment
 
 **Training Results**:
 

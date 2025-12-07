@@ -36,7 +36,7 @@ def run_enhanced_evaluation():
     Run enhanced evaluation with deep analysis for A+ grade.
     """
     print("=" * 60)
-    print("🚀 Enhanced Evaluation for A+ Grade")
+    print(" Enhanced Evaluation for A+ Grade")
     print("=" * 60)
     
     # Import necessary modules
@@ -77,7 +77,7 @@ def run_enhanced_evaluation():
     
     # 1. GNN Metrics with Error Analysis
     print("\n" + "=" * 60)
-    print("📊 Step 1: Enhanced GNN Evaluation")
+    print(" Step 1: Enhanced GNN Evaluation")
     print("=" * 60)
     
     # Collect predictions for error analysis
@@ -140,7 +140,7 @@ def run_enhanced_evaluation():
     
     # 2. RL Metrics with Trading Behavior Analysis
     print("\n" + "=" * 60)
-    print("📊 Step 2: Enhanced RL Evaluation")
+    print(" Step 2: Enhanced RL Evaluation")
     print("=" * 60)
     
     rl_agent_file = PROJECT_ROOT / "models" / "rl_ppo_agent_model" / "ppo_stock_agent.zip"
@@ -209,13 +209,13 @@ def run_enhanced_evaluation():
         )
         
     else:
-        print("⚠️  RL agent not found, skipping RL analysis")
+        print("  RL agent not found, skipping RL analysis")
         rl_metrics = {}
         trading_behavior = {}
     
     # 3. Generate Comprehensive Report
     print("\n" + "=" * 60)
-    print("📊 Step 3: Generating Comprehensive Report")
+    print(" Step 3: Generating Comprehensive Report")
     print("=" * 60)
     
     comprehensive_report = generate_comprehensive_report(
@@ -243,9 +243,9 @@ def run_enhanced_evaluation():
     summary_df.to_csv(RESULTS_DIR / 'enhanced_evaluation_summary.csv', index=False)
     
     print("\n" + "=" * 60)
-    print("✅ Enhanced Evaluation Complete!")
+    print(" Enhanced Evaluation Complete!")
     print("=" * 60)
-    print(f"\n📁 Results saved to:")
+    print(f"\n Results saved to:")
     print(f"  - {RESULTS_DIR / 'comprehensive_analysis_report.json'}")
     print(f"  - {RESULTS_DIR / 'enhanced_evaluation_summary.csv'}")
     print(f"  - {PLOTS_DIR} (visualizations)")

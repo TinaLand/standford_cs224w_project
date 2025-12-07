@@ -21,7 +21,7 @@ def get_ticker_list():
     """
     ohlcv_file = DATA_RAW_DIR / 'stock_prices_ohlcv_raw.csv'
     if not ohlcv_file.exists():
-        print(f"❌ Error: OHLCV raw data not found at {ohlcv_file}. Please run phase1_data_collection.py first.")
+        print(f" Error: OHLCV raw data not found at {ohlcv_file}. Please run phase1_data_collection.py first.")
         return []
     
     # Load just the header to extract tickers
@@ -38,7 +38,7 @@ def get_ticker_list():
             'ACN', 'CRM', 'TMO', 'QCOM', 'TXN', 'UNH', 'BAC', 'MCD', 'ORCL', 'INTC',
             'SBUX', 'CAT', 'GE', 'NKE', 'AXP', 'IBM', 'MMM', 'VZ', 'FDX', 'GOOG'
         ]
-        print("⚠️  Warning: Unable to infer ticker list from OHLCV data. Falling back to default SPY top-50 list.")
+        print("  Warning: Unable to infer ticker list from OHLCV data. Falling back to default SPY top-50 list.")
         tickers = fallback_tickers
     
     return tickers
@@ -173,12 +173,12 @@ def download_sector_industry_data(tickers, output_path):
         if ticker in ticker_classifications:
             sector = ticker_classifications[ticker]['Sector']
             industry = ticker_classifications[ticker]['Industry']
-            print(f"  ✅ {ticker}: {sector} - {industry}")
+            print(f"   {ticker}: {sector} - {industry}")
         else:
             # For unknown tickers, try to infer from ticker patterns or use fallback
             sector = 'Technology'  # Conservative fallback to largest sector
             industry = 'Software'
-            print(f"  ⚠️  {ticker}: Using fallback classification - {sector}")
+            print(f"    {ticker}: Using fallback classification - {sector}")
         
         data.append({'Ticker': ticker, 'Sector': sector, 'Industry': industry})
         
@@ -188,12 +188,12 @@ def download_sector_industry_data(tickers, output_path):
     
     # Show distribution
     sector_counts = sector_df['Sector'].value_counts()
-    print(f"✅ Real Sector/Industry data saved to: {file_path}")
-    print(f"📊 Sector Distribution:")
+    print(f" Real Sector/Industry data saved to: {file_path}")
+    print(f" Sector Distribution:")
     for sector, count in sector_counts.items():
         percentage = count / len(sector_df) * 100
         print(f"   {sector}: {count} stocks ({percentage:.1f}%)")
-    print(f"🎯 FIXED: No more random 'Other' category - using real financial sectors!")
+    print(f" FIXED: No more random 'Other' category - using real financial sectors!")
 
 
 def download_supply_chain_competitor_data(tickers, output_path):
@@ -232,7 +232,7 @@ def download_supply_chain_competitor_data(tickers, output_path):
     edges_df = pd.DataFrame(edges)
     file_path = output_path / 'static_supply_competitor_edges.csv'
     edges_df.to_csv(file_path, index=False)
-    print(f"✅ Simulated Static Edge data saved to: {file_path}")
+    print(f" Simulated Static Edge data saved to: {file_path}")
 
 
 def main():

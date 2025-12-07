@@ -156,7 +156,7 @@ def find_optimal_threshold(y_true, y_prob):
         
         return float(best_threshold)
     except Exception as e:
-        print(f"  ⚠️ Could not find optimal threshold: {e}, using default 0.5")
+        print(f"   Could not find optimal threshold: {e}, using default 0.5")
         return 0.5
 
 def _read_time_series_csv(path: Path) -> pd.DataFrame:
@@ -531,7 +531,7 @@ def create_target_labels(tickers, dates, lookahead_days):
     Calculates the 5-day ahead return **sign** (classification label)
     and **continuous return** (regression target) for all stocks and dates.
     """
-    print(f"\n🏷️ Calculating {lookahead_days}-day ahead return signs and returns...")
+    print(f"\n Calculating {lookahead_days}-day ahead return signs and returns...")
     
     ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
     
@@ -561,7 +561,7 @@ def create_target_labels(tickers, dates, lookahead_days):
             targets_class_dict[date] = torch.tensor(class_vec, dtype=torch.long)
             targets_reg_dict[date] = torch.tensor(reg_vec, dtype=torch.float32)
             
-    print(f"✅ Targets calculated for {len(targets_class_dict)} trading days.")
+    print(f" Targets calculated for {len(targets_class_dict)} trading days.")
     return targets_class_dict, targets_reg_dict
 
 # --- 3. Training and Evaluation Functions ---
@@ -761,7 +761,7 @@ def create_neighbor_loader(data, targets, batch_size, num_neighbors, shuffle=Tru
 
 def run_training_pipeline():
     """Main function to run the time-series training loop."""
-    print("🚀 Starting Phase 4: Core GNN Training")
+    print(" Starting Phase 4: Core GNN Training")
     print("=" * 50)
     
     # 1. Setup and Data Alignment
@@ -769,7 +769,7 @@ def run_training_pipeline():
     # Get all graph dates from the directory first
     graph_files = sorted(list(DATA_GRAPHS_DIR.glob('graph_t_*.pt')))
     if not graph_files:
-        print("❌ CRITICAL: No graph files found. Run Phase 2 first.")
+        print(" CRITICAL: No graph files found. Run Phase 2 first.")
         return
     
     # Determine input dimensions by loading the first available graph file
@@ -778,14 +778,14 @@ def run_training_pipeline():
     
     # Use robust check for HeteroData contents
     if temp_data is None or not hasattr(temp_data, 'node_types') or 'stock' not in temp_data.node_types:
-        print("❌ CRITICAL: Cannot load a sample graph. Phase 2 output files are invalid. STOPPING.")
+        print(" CRITICAL: Cannot load a sample graph. Phase 2 output files are invalid. STOPPING.")
         return
 
     # Assuming the features are stored as [N, F] tensor under 'stock'
     INPUT_DIM = temp_data['stock'].x.shape[1]
     tickers = list(getattr(temp_data, 'tickers', []))
     if not tickers:
-        print("⚠️ Sample graph missing tickers metadata. Using placeholder ticker list.")
+        print(" Sample graph missing tickers metadata. Using placeholder ticker list.")
         # Fallback: infer from node count (53 stocks from Phase 2 logs)
         tickers = [f'TICKER_{i}' for i in range(temp_data['stock'].x.shape[0])]
     
@@ -799,7 +799,7 @@ def run_training_pipeline():
     training_dates = sorted(list(set(targets_class_dict.keys()).intersection(graph_dates)))
     
     if not training_dates:
-        print("❌ CRITICAL: No overlapping dates found between graphs and targets. STOPPING.")
+        print(" CRITICAL: No overlapping dates found between graphs and targets. STOPPING.")
         return
         
     # 3. Split Data: Simple time-based split
@@ -810,7 +810,7 @@ def run_training_pipeline():
     val_dates = [d for d in training_dates if split_70 < d <= split_85]
     test_dates = [d for d in training_dates if d > split_85]
     
-    print(f"\n📊 Data Split (Trading Days):")
+    print(f"\n Data Split (Trading Days):")
     print(f"   - Input Dim: {INPUT_DIM}")
     print(f"   - Train: {len(train_dates)} days (End: {split_70.date()})")
     print(f"   - Val:   {len(val_dates)} days (End: {split_85.date()})")
@@ -849,18 +849,18 @@ def run_training_pipeline():
                 class_weights_list.append(weight)
             
             class_weights = torch.tensor(class_weights_list, dtype=torch.float32).to(DEVICE)
-            print(f"📊 Class weights calculated: Down/Flat={class_weights[0]:.3f}, Up={class_weights[1]:.3f}")
+            print(f" Class weights calculated: Down/Flat={class_weights[0]:.3f}, Up={class_weights[1]:.3f}")
             print(f"   Class distribution: Down/Flat={class_counts.get(0, 0)}, Up={class_counts.get(1, 0)}")
         else:
-            print("⚠️  Could not calculate class weights, using default")
+            print("  Could not calculate class weights, using default")
     
     # Print loss function configuration
     if LOSS_TYPE == 'focal':
-        print(f"✅ Using Focal Loss (alpha={FOCAL_ALPHA}, gamma={FOCAL_GAMMA}) for class imbalance handling")
+        print(f" Using Focal Loss (alpha={FOCAL_ALPHA}, gamma={FOCAL_GAMMA}) for class imbalance handling")
         if USE_CLASS_WEIGHTS and class_weights is not None:
             print(f"   + Class weights enabled for additional balancing")
     else:
-        print(f"⚠️  Using Standard Cross-Entropy (consider 'focal' for imbalanced data)")
+        print(f"  Using Standard Cross-Entropy (consider 'focal' for imbalanced data)")
     
     # Learning Rate Scheduler
     if ENABLE_LR_SCHEDULER:
@@ -871,32 +871,32 @@ def run_training_pipeline():
             patience=LR_SCHEDULER_PATIENCE,
             min_lr=LR_SCHEDULER_MIN_LR
         )
-        print(f"📉 LR Scheduler enabled: ReduceLROnPlateau (patience={LR_SCHEDULER_PATIENCE}, factor={LR_SCHEDULER_FACTOR})")
+        print(f" LR Scheduler enabled: ReduceLROnPlateau (patience={LR_SCHEDULER_PATIENCE}, factor={LR_SCHEDULER_FACTOR})")
     else:
         scheduler = None
     
     # 4.1. Mini-batch Training Setup (if enabled and available)
     use_mini_batch = ENABLE_MINI_BATCH and MINI_BATCH_AVAILABLE
     if use_mini_batch:
-        print(f"🚀 Mini-batch training enabled: batch_size={BATCH_SIZE}, neighbors={NUM_NEIGHBORS}")
+        print(f" Mini-batch training enabled: batch_size={BATCH_SIZE}, neighbors={NUM_NEIGHBORS}")
     else:
         if ENABLE_MINI_BATCH and not MINI_BATCH_AVAILABLE:
-            print("⚠️  Mini-batch training requested but sparse libraries not available")
+            print("  Mini-batch training requested but sparse libraries not available")
             print("   Install: pip install torch-sparse pyg-lib")
-        print("🚀 Full-batch training enabled")
+        print(" Full-batch training enabled")
     
     if scaler.is_enabled():
-        print("⚡ AMP Enabled: Using torch.cuda.amp for mixed precision training")
+        print(" AMP Enabled: Using torch.cuda.amp for mixed precision training")
     else:
-        print("ℹ️ AMP Disabled: Running in float32")
+        print("ℹ AMP Disabled: Running in float32")
     
     if GRAD_CLIP_MAX_NORM and GRAD_CLIP_MAX_NORM > 0:
-        print(f"✂️ Gradient clipping active (max norm = {GRAD_CLIP_MAX_NORM})")
+        print(f" Gradient clipping active (max norm = {GRAD_CLIP_MAX_NORM})")
     else:
-        print("ℹ️ Gradient clipping disabled")
+        print("ℹ Gradient clipping disabled")
     
     # 5. Training Loop
-    print("\n🔨 Starting Sequential Training...")
+    print("\n Starting Sequential Training...")
     best_val_f1 = 0.0
     epochs_without_improvement = 0
     training_history = {
@@ -992,7 +992,7 @@ def run_training_pipeline():
                 np.array(all_val_probs)
             )
             if epoch == 1 or epoch % 5 == 0:
-                print(f"   📊 Optimal threshold (validation): {optimal_threshold:.4f}")
+                print(f"    Optimal threshold (validation): {optimal_threshold:.4f}")
         
         # Re-evaluate with optimal threshold for better F1 score
         if len(all_val_true) > 0 and len(all_val_probs) > 0 and not use_mini_batch:
@@ -1028,7 +1028,7 @@ def run_training_pipeline():
             scheduler.step(avg_val_f1)
             new_lr = optimizer.param_groups[0]['lr']
             if new_lr < current_lr:
-                print(f"  📉 LR reduced: {current_lr:.2e} -> {new_lr:.2e}")
+                print(f"   LR reduced: {current_lr:.2e} -> {new_lr:.2e}")
 
         # Record history
         training_history['train_loss'].append(avg_loss)
@@ -1043,15 +1043,15 @@ def run_training_pipeline():
             best_val_f1 = avg_val_f1
             epochs_without_improvement = 0
             torch.save(model.state_dict(), model_path)
-            print(f"  ✅ Model Saved (New Best F1: {best_val_f1:.4f}, Improvement: {improvement:.4f})")
+            print(f"   Model Saved (New Best F1: {best_val_f1:.4f}, Improvement: {improvement:.4f})")
         else:
             epochs_without_improvement += 1
             if improvement > 0:
-                print(f"  ⚠️  No significant improvement (delta: {improvement:.4f} < {EARLY_STOP_MIN_DELTA})")
+                print(f"    No significant improvement (delta: {improvement:.4f} < {EARLY_STOP_MIN_DELTA})")
         
         # Early stopping check
         if ENABLE_EARLY_STOPPING and epochs_without_improvement >= EARLY_STOP_PATIENCE:
-            print(f"\n🛑 Early stopping triggered after {epoch} epochs (no improvement for {EARLY_STOP_PATIENCE} epochs)")
+            print(f"\n Early stopping triggered after {epoch} epochs (no improvement for {EARLY_STOP_PATIENCE} epochs)")
             print(f"   Best validation F1: {best_val_f1:.4f}")
             break
     
@@ -1059,10 +1059,10 @@ def run_training_pipeline():
     if model_path.exists():
         model.load_state_dict(torch.load(model_path, weights_only=False))
     else:
-        print("⚠️  Warning: Best model checkpoint not found. Using final weights.")
+        print("  Warning: Best model checkpoint not found. Using final weights.")
     
     # Find optimal threshold on validation set
-    print("\n🔍 Finding optimal classification threshold on validation set...")
+    print("\n Finding optimal classification threshold on validation set...")
     all_val_true_final, all_val_probs_final = [], []
     for date in val_dates:
         data = load_graph_data(date)
@@ -1090,11 +1090,11 @@ def run_training_pipeline():
         # Ensure threshold is valid (not inf/nan)
         if np.isfinite(computed_threshold) and 0 <= computed_threshold <= 1:
             optimal_threshold = computed_threshold
-            print(f"   ✅ Optimal threshold: {optimal_threshold:.4f}")
+            print(f"    Optimal threshold: {optimal_threshold:.4f}")
         else:
-            print(f"   ⚠️  Computed threshold invalid ({computed_threshold}), using default: 0.5")
+            print(f"     Computed threshold invalid ({computed_threshold}), using default: 0.5")
     else:
-        print(f"   ⚠️  Could not find optimal threshold, using default: 0.5")
+        print(f"     Could not find optimal threshold, using default: 0.5")
     
     # Test with optimal threshold
     test_accs, test_f1s = [], []
@@ -1135,7 +1135,7 @@ def run_training_pipeline():
     
     # Print classification report if we have predictions
     if len(all_test_true) > 0 and len(all_test_pred) > 0:
-        print(f"\n📋 Classification Report:")
+        print(f"\n Classification Report:")
         print(classification_report(
             all_test_true,
             all_test_pred,
@@ -1144,14 +1144,14 @@ def run_training_pipeline():
         ))
 
     print("\n" + "=" * 50)
-    print(f"🚀 Final Test Results (Core GNN, Averaged over {len(test_dates)} days):")
+    print(f" Final Test Results (Core GNN, Averaged over {len(test_dates)} days):")
     print(f"   - Test Accuracy: {mean_test_acc:.4f}")
     print(f"   - Test F1 Score: {mean_test_f1:.4f}")
     print(f"   - Baseline F1: 0.6725 (Goal: Exceed Baseline)")
     print("=" * 50)
     
     # Now the Core Model is trained and ready for RL integration
-    print("\n🎯 Core Model Trained. Ready for Phase 5: RL Integration.")
+    print("\n Core Model Trained. Ready for Phase 5: RL Integration.")
 
     return {
         "best_val_f1": float(best_val_f1),

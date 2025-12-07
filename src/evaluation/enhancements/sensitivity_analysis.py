@@ -43,7 +43,7 @@ def test_transaction_cost_sensitivity(
         Dictionary with transaction cost sensitivity results
     """
     print("\n" + "="*60)
-    print("💰 Testing Transaction Cost Sensitivity")
+    print(" Testing Transaction Cost Sensitivity")
     print("="*60)
     
     sensitivity_results = {}
@@ -119,7 +119,7 @@ def test_parameter_sensitivity(
         Dictionary with parameter sensitivity results
     """
     print(f"\n" + "="*60)
-    print(f"⚙️  Testing {parameter_name} Sensitivity")
+    print(f"  Testing {parameter_name} Sensitivity")
     print("="*60)
     
     from src.training.transformer_trainer import RoleAwareGraphTransformer
@@ -193,7 +193,7 @@ def test_slippage_impact(
         Dictionary with slippage impact results
     """
     print("\n" + "="*60)
-    print("📉 Testing Slippage Impact")
+    print(" Testing Slippage Impact")
     print("="*60)
     
     slippage_results = {}
@@ -252,7 +252,7 @@ def visualize_sensitivity_analysis(
     output_dir: Path
 ):
     """Create visualizations for sensitivity analysis."""
-    print("\n📊 Creating Sensitivity Analysis Visualizations...")
+    print("\n Creating Sensitivity Analysis Visualizations...")
     
     # 1. Transaction Cost Sensitivity
     if transaction_cost_results:
@@ -277,7 +277,7 @@ def visualize_sensitivity_analysis(
         plt.tight_layout()
         plt.savefig(output_dir / 'transaction_cost_sensitivity.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: transaction_cost_sensitivity.png")
+        print("    Saved: transaction_cost_sensitivity.png")
     
     # 2. Parameter Sensitivity
     if parameter_results:
@@ -295,7 +295,7 @@ def visualize_sensitivity_analysis(
         plt.tight_layout()
         plt.savefig(output_dir / 'parameter_sensitivity.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: parameter_sensitivity.png")
+        print("    Saved: parameter_sensitivity.png")
     
     # 3. Slippage Impact
     if slippage_results:
@@ -313,30 +313,30 @@ def visualize_sensitivity_analysis(
         plt.tight_layout()
         plt.savefig(output_dir / 'slippage_impact.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: slippage_impact.png")
+        print("    Saved: slippage_impact.png")
 
 
 def main():
     """Main sensitivity analysis pipeline."""
-    print("🚀 Sensitivity Analysis")
+    print(" Sensitivity Analysis")
     print("="*60)
     
     # Load GNN model
-    print("\n📁 Loading GNN model...")
+    print("\n Loading GNN model...")
     try:
         gnn_model = load_gnn_model_for_rl()
         gnn_model.eval()
-        print("✅ GNN model loaded")
+        print(" GNN model loaded")
     except Exception as e:
-        print(f"❌ Error loading GNN model: {e}")
+        print(f" Error loading GNN model: {e}")
         return
     
     # Load RL agent
-    print("\n🤖 Loading RL agent...")
+    print("\n Loading RL agent...")
     try:
         agent_path = MODELS_DIR / "rl_ppo_agent_model_final" / "ppo_stock_agent_final.zip"
         if not agent_path.exists():
-            print("⚠️  RL agent not found, skipping agent-based sensitivity")
+            print("  RL agent not found, skipping agent-based sensitivity")
             agent = None
         else:
             start_date = pd.to_datetime('2023-01-01')
@@ -353,9 +353,9 @@ def main():
             agent.agent = ppo_agent
             agent.is_trained = True
             
-            print("✅ RL agent loaded")
+            print(" RL agent loaded")
     except Exception as e:
-        print(f"⚠️  Error loading RL agent: {e}")
+        print(f"  Error loading RL agent: {e}")
         agent = None
     
     # Run sensitivity analyses
@@ -369,7 +369,7 @@ def main():
         transaction_cost_results = test_transaction_cost_sensitivity(agent, n_episodes=3)
     
     # 2. Parameter Sensitivity (GNN) - Simplified
-    print("\n⚠️  Skipping Parameter Sensitivity (requires full training)")
+    print("\n  Skipping Parameter Sensitivity (requires full training)")
     parameter_results = {}
     
     # 3. Slippage Impact
@@ -392,8 +392,8 @@ def main():
     with open(results_file, 'w') as f:
         json.dump(results, f, indent=2, default=str)
     
-    print(f"\n✅ Results saved to: {results_file}")
-    print("\n🎉 Sensitivity Analysis Complete!")
+    print(f"\n Results saved to: {results_file}")
+    print("\n Sensitivity Analysis Complete!")
 
 
 if __name__ == "__main__":

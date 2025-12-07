@@ -8,18 +8,18 @@ The `src/evaluation/` module contains **core evaluation and analysis functionali
 
 ```
 src/evaluation/
-├── evaluation.py              # Core evaluation metrics
-├── ablation.py                # Ablation studies
-├── visualization.py           # Visualization utilities
-├── enhanced_evaluation.py     # Enhanced evaluation with RL
-├── deep_analysis.py           # Deep analysis tools
-└── enhancements/              # Advanced analysis modules
-    ├── failure_analysis.py
-    ├── sensitivity_analysis.py
-    ├── edge_importance.py
-    ├── multi_agent_analysis.py
-    ├── cross_period_validation.py
-    └── enhanced_ablation.py
+ evaluation.py              # Core evaluation metrics
+ ablation.py                # Ablation studies
+ visualization.py           # Visualization utilities
+ enhanced_evaluation.py     # Enhanced evaluation with RL
+ deep_analysis.py           # Deep analysis tools
+ enhancements/              # Advanced analysis modules
+     failure_analysis.py
+     sensitivity_analysis.py
+     edge_importance.py
+     multi_agent_analysis.py
+     cross_period_validation.py
+     enhanced_ablation.py
 ```
 
 ## Core Modules

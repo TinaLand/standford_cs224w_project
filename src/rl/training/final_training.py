@@ -171,12 +171,12 @@ def run_final_rl_training():
     Train RL agent with all improvements.
     """
     print("=" * 80)
-    print("🚀 Phase 5: Final RL Training with All Improvements")
+    print(" Phase 5: Final RL Training with All Improvements")
     print("=" * 80)
     print("Improvements:")
-    print("  1. ✅ Balanced trading environment (dynamic position sizing)")
-    print("  2. ✅ Risk-adjusted reward function (Sharpe, drawdown, volatility)")
-    print("  3. ✅ Faster position building in uptrends")
+    print("  1.  Balanced trading environment (dynamic position sizing)")
+    print("  2.  Risk-adjusted reward function (Sharpe, drawdown, volatility)")
+    print("  3.  Faster position building in uptrends")
     print("=" * 80)
     print(f"Reward Type: {REWARD_TYPE}")
     print(f"Total Timesteps: {TOTAL_TIMESTEPS}")
@@ -219,16 +219,16 @@ def run_final_rl_training():
     # Save agent
     save_path = RL_SAVE_PATH / "ppo_stock_agent_final"
     agent.save(save_path)
-    print(f"\n✅ Final RL Agent saved to: {save_path}")
+    print(f"\n Final RL Agent saved to: {save_path}")
     
     # Print training summary
     print("\n" + "=" * 80)
-    print("📊 Training Summary")
+    print(" Training Summary")
     print("=" * 80)
     print(f"Total Timesteps: {TOTAL_TIMESTEPS}")
     print(f"Reward Type: {REWARD_TYPE}")
     print(f"Model saved: {save_path}")
-    print("\n💡 Next Steps:")
+    print("\n Next Steps:")
     print("  1. Evaluate the final agent using phase6_evaluation.py")
     print("  2. Compare with baseline strategies")
     print("  3. Check if Sharpe ratio > 2.18 (beat Buy-and-Hold)")

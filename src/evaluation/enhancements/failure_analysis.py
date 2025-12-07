@@ -39,7 +39,7 @@ def analyze_worst_periods(
         Dictionary with worst period analysis
     """
     print("\n" + "="*60)
-    print("🔍 Analyzing Worst-Performing Periods")
+    print(" Analyzing Worst-Performing Periods")
     print("="*60)
     
     episode_performances = []
@@ -93,7 +93,7 @@ def analyze_worst_periods(
         
         except Exception as e:
             if episode < 3:
-                print(f"  ⚠️  Error in episode {episode}: {e}")
+                print(f"    Error in episode {episode}: {e}")
             continue
     
     # Identify worst periods
@@ -106,7 +106,7 @@ def analyze_worst_periods(
         sorted_by_dd = sorted(episode_performances, key=lambda x: x['max_dd'], reverse=True)
         worst_dd_episodes = sorted_by_dd[:5]  # Top 5 worst drawdowns
         
-        print(f"\n📊 Worst Period Analysis:")
+        print(f"\n Worst Period Analysis:")
         print(f"   Total Episodes Analyzed: {len(episode_performances)}")
         print(f"\n   Worst Returns:")
         for i, ep in enumerate(worst_episodes[:3]):
@@ -145,7 +145,7 @@ def analyze_error_patterns(
         Dictionary with error pattern analysis
     """
     print("\n" + "="*60)
-    print("🔍 Analyzing Error Patterns")
+    print(" Analyzing Error Patterns")
     print("="*60)
     
     from src.utils.graph_loader import load_graph_data
@@ -210,7 +210,7 @@ def analyze_error_patterns(
         fp_rate = len(false_positives) / len(all_predictions)
         fn_rate = len(false_negatives) / len(all_predictions)
         
-        print(f"\n📊 Error Pattern Statistics:")
+        print(f"\n Error Pattern Statistics:")
         print(f"   Overall Accuracy: {accuracy*100:.2f}%")
         print(f"   False Positive Rate: {fp_rate*100:.2f}%")
         print(f"   False Negative Rate: {fn_rate*100:.2f}%")
@@ -252,7 +252,7 @@ def analyze_drawdown_periods(
         Dictionary with drawdown period analysis
     """
     print("\n" + "="*60)
-    print("🔍 Analyzing Drawdown Periods")
+    print(" Analyzing Drawdown Periods")
     print("="*60)
     
     if len(portfolio_values) < 2:
@@ -290,7 +290,7 @@ def analyze_drawdown_periods(
     if drawdown_periods:
         max_dd_period = max(drawdown_periods, key=lambda x: x['max_dd'])
         
-        print(f"\n📊 Drawdown Analysis:")
+        print(f"\n Drawdown Analysis:")
         print(f"   Total Drawdown Periods (>5%): {len(drawdown_periods)}")
         print(f"   Maximum Drawdown: {max_dd_period['max_dd']*100:.2f}%")
         print(f"   Max DD Period: {max_dd_period['start']} to {max_dd_period['end']}")
@@ -316,7 +316,7 @@ def visualize_failure_analysis(
     output_dir: Path
 ):
     """Create visualizations for failure analysis."""
-    print("\n📊 Creating Failure Analysis Visualizations...")
+    print("\n Creating Failure Analysis Visualizations...")
     
     # 1. Worst Periods Portfolio Values
     if worst_periods.get('worst_episodes_by_return'):
@@ -336,7 +336,7 @@ def visualize_failure_analysis(
         plt.tight_layout()
         plt.savefig(output_dir / 'worst_periods_analysis.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: worst_periods_analysis.png")
+        print("    Saved: worst_periods_analysis.png")
     
     # 2. Error Pattern by Sector
     if error_patterns.get('sector_errors'):
@@ -364,7 +364,7 @@ def visualize_failure_analysis(
         plt.tight_layout()
         plt.savefig(output_dir / 'error_patterns_by_sector.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: error_patterns_by_sector.png")
+        print("    Saved: error_patterns_by_sector.png")
     
     # 3. Drawdown Periods Timeline
     if drawdown_analysis.get('drawdown_periods'):
@@ -385,32 +385,32 @@ def visualize_failure_analysis(
         plt.tight_layout()
         plt.savefig(output_dir / 'drawdown_periods_timeline.png', dpi=300, bbox_inches='tight')
         plt.close()
-        print("   ✅ Saved: drawdown_periods_timeline.png")
+        print("    Saved: drawdown_periods_timeline.png")
 
 
 def main():
     """Main failure analysis pipeline."""
-    print("🚀 Failure Analysis")
+    print(" Failure Analysis")
     print("="*60)
     
     # Load GNN model
-    print("\n📁 Loading GNN model...")
+    print("\n Loading GNN model...")
     try:
         gnn_model = load_gnn_model_for_rl()
         gnn_model.eval()
-        print("✅ GNN model loaded")
+        print(" GNN model loaded")
     except Exception as e:
-        print(f"❌ Error loading GNN model: {e}")
+        print(f" Error loading GNN model: {e}")
         return
     
     # Create environment first (needed for agent loading)
-    print("\n🌍 Creating environment...")
+    print("\n Creating environment...")
     start_date = pd.to_datetime('2023-01-01')
     end_date = pd.to_datetime('2024-12-31')
     env = StockTradingEnv(start_date, end_date, gnn_model, DEVICE)
     
     # Load RL agent
-    print("\n🤖 Loading RL agent...")
+    print("\n Loading RL agent...")
     try:
         agent_path = MODELS_DIR / "rl_ppo_agent_model_final" / "ppo_stock_agent_final.zip"
         if agent_path.exists():
@@ -429,12 +429,12 @@ def main():
             trading_agent.agent = agent
             trading_agent.is_trained = True
             
-            print("✅ RL agent loaded")
+            print(" RL agent loaded")
         else:
-            print("⚠️  RL agent not found, skipping agent-based analysis")
+            print("  RL agent not found, skipping agent-based analysis")
             trading_agent = None
     except Exception as e:
-        print(f"⚠️  Error loading RL agent: {e}")
+        print(f"  Error loading RL agent: {e}")
         trading_agent = None
     
     # Run analyses
@@ -450,7 +450,7 @@ def main():
     # 2. Error Pattern Analysis
     # Simplified: Skip error pattern analysis for now due to import issues
     # Can be run separately if needed
-    print("\n⚠️  Skipping Error Pattern Analysis (import issues)")
+    print("\n  Skipping Error Pattern Analysis (import issues)")
     error_patterns = {}
     
     # 3. Drawdown Analysis (if worst periods available)
@@ -488,8 +488,8 @@ def main():
     with open(results_file, 'w') as f:
         json.dump(results, f, indent=2, default=str)
     
-    print(f"\n✅ Results saved to: {results_file}")
-    print("\n🎉 Failure Analysis Complete!")
+    print(f"\n Results saved to: {results_file}")
+    print("\n Failure Analysis Complete!")
 
 
 if __name__ == "__main__":

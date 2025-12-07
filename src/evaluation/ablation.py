@@ -45,7 +45,7 @@ try:
     LAPLACIAN_AVAILABLE = True
 except ImportError:
     LAPLACIAN_AVAILABLE = False
-    print("⚠️  LaplacianEigenvectorPE not available, skipping Laplacian ablation")
+    print("  LaplacianEigenvectorPE not available, skipping Laplacian ablation")
 
 
 def get_train_val_test_dates():
@@ -235,7 +235,7 @@ def train_ablation_model(config: Dict, ablation_name: str) -> Dict[str, Any]:
     # Get input dimension from first graph
     sample_data = load_graph_data(train_dates[0])
     if sample_data is None:
-        print(f"❌ Could not load sample graph for {ablation_name}")
+        print(f" Could not load sample graph for {ablation_name}")
         return {}
     
     in_dim = sample_data['stock'].x.shape[1]
@@ -381,7 +381,7 @@ def train_ablation_model(config: Dict, ablation_name: str) -> Dict[str, Any]:
         'best_val_f1': best_val_f1
     }
     
-    print(f"\n✅ {ablation_name} Results:")
+    print(f"\n {ablation_name} Results:")
     print(f"   Accuracy: {accuracy:.4f}")
     print(f"   F1 Score: {f1:.4f}")
     print(f"   Precision@Top-10: {precision_k:.4f}")
@@ -393,7 +393,7 @@ def train_ablation_model(config: Dict, ablation_name: str) -> Dict[str, Any]:
 def run_complete_ablation_studies():
     """Run all ablation studies with full retraining."""
     
-    print("🔬 Starting Complete Ablation Studies (with Retraining)")
+    print(" Starting Complete Ablation Studies (with Retraining)")
     print("="*60)
     
     ablation_configs = []
@@ -465,7 +465,7 @@ def run_complete_ablation_studies():
             if result:
                 results.append(result)
         except Exception as e:
-            print(f"❌ Error in {abl_config['name']}: {e}")
+            print(f" Error in {abl_config['name']}: {e}")
             import traceback
             traceback.print_exc()
     
@@ -473,25 +473,25 @@ def run_complete_ablation_studies():
     if results:
         df = pd.DataFrame(results)
         df.to_csv(RESULTS_DIR / 'complete_ablation_results.csv', index=False)
-        print(f"\n✅ Complete ablation results saved to: {RESULTS_DIR / 'complete_ablation_results.csv'}")
-        print("\n📊 Results Summary:")
+        print(f"\n Complete ablation results saved to: {RESULTS_DIR / 'complete_ablation_results.csv'}")
+        print("\n Results Summary:")
         print(df.to_string(index=False))
         return df
     else:
-        print("❌ No ablation results generated")
+        print(" No ablation results generated")
         return pd.DataFrame()
 
 
 if __name__ == "__main__":
-    print("🚀 Phase 6: Complete Ablation Studies")
+    print(" Phase 6: Complete Ablation Studies")
     print("Note: This will train models for each ablation configuration.")
     print("This may take several hours depending on your hardware.\n")
     
     results_df = run_complete_ablation_studies()
     
     if not results_df.empty:
-        print("\n✅ Complete Ablation Studies Finished!")
-        print(f"📁 Results: {RESULTS_DIR / 'complete_ablation_results.csv'}")
+        print("\n Complete Ablation Studies Finished!")
+        print(f" Results: {RESULTS_DIR / 'complete_ablation_results.csv'}")
     else:
-        print("\n⚠️  Ablation studies completed with errors. Check logs above.")
+        print("\n  Ablation studies completed with errors. Check logs above.")
 

@@ -260,13 +260,13 @@ def run_robustness_experiment():
     results_df = pd.DataFrame(results)
     results_file = RESULTS_DIR / "robustness_checks_results.csv"
     results_df.to_csv(results_file, index=False)
-    print(f"\n✅ Results saved to: {results_file}")
+    print(f"\n Results saved to: {results_file}")
     
     # Save JSON for detailed analysis
     results_json = RESULTS_DIR / "robustness_checks_results.json"
     with open(results_json, 'w') as f:
         json.dump(results, f, indent=2, default=str)
-    print(f"✅ Detailed results saved to: {results_json}")
+    print(f" Detailed results saved to: {results_json}")
     
     # Print summary
     print("\n" + "=" * 60)
@@ -295,9 +295,9 @@ def run_robustness_experiment():
 if __name__ == '__main__':
     try:
         results = run_robustness_experiment()
-        print("\n✅ Robustness checks completed successfully!")
+        print("\n Robustness checks completed successfully!")
     except Exception as e:
-        print(f"\n❌ Error during robustness checks: {e}")
+        print(f"\n Error during robustness checks: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

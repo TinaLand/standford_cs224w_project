@@ -41,7 +41,7 @@ def validate_ohlcv_data(ohlcv_df: pd.DataFrame, tickers: List[str]) -> Dict:
     Returns:
         Dictionary with validation results and issues found
     """
-    print("\n🔍 Validating OHLCV Data Quality...")
+    print("\n Validating OHLCV Data Quality...")
     
     validation_results = {
         'is_valid': True,
@@ -56,7 +56,7 @@ def validate_ohlcv_data(ohlcv_df: pd.DataFrame, tickers: List[str]) -> Dict:
     if negative_prices:
         validation_results['is_valid'] = False
         validation_results['issues'].append("Negative prices detected")
-        print("  ❌ ERROR: Negative prices found")
+        print("   ERROR: Negative prices found")
     
     # 2. Check OHLC price relationships
     for ticker in tickers:
@@ -99,7 +99,7 @@ def validate_ohlcv_data(ohlcv_df: pd.DataFrame, tickers: List[str]) -> Dict:
     if negative_volume:
         validation_results['is_valid'] = False
         validation_results['issues'].append("Negative volume detected")
-        print("  ❌ ERROR: Negative volume found")
+        print("   ERROR: Negative volume found")
     
     # 4. Check missing values
     missing_pct = ohlcv_df.isnull().sum() / len(ohlcv_df) * 100
@@ -109,7 +109,7 @@ def validate_ohlcv_data(ohlcv_df: pd.DataFrame, tickers: List[str]) -> Dict:
         validation_results['warnings'].append(
             f"{len(high_missing)} columns with >10% missing values"
         )
-        print(f"  ⚠️  WARNING: {len(high_missing)} columns have >10% missing data")
+        print(f"    WARNING: {len(high_missing)} columns have >10% missing data")
     
     # 5. Check date alignment
     if not isinstance(ohlcv_df.index, pd.DatetimeIndex):
@@ -148,11 +148,11 @@ def validate_ohlcv_data(ohlcv_df: pd.DataFrame, tickers: List[str]) -> Dict:
     }
     
     if validation_results['is_valid'] and len(validation_results['warnings']) == 0:
-        print("  ✅ Data validation passed")
+        print("   Data validation passed")
     elif validation_results['is_valid']:
-        print(f"  ⚠️  Data validation passed with {len(validation_results['warnings'])} warnings")
+        print(f"    Data validation passed with {len(validation_results['warnings'])} warnings")
     else:
-        print(f"  ❌ Data validation failed with {len(validation_results['issues'])} critical issues")
+        print(f"   Data validation failed with {len(validation_results['issues'])} critical issues")
     
     return validation_results
 
@@ -178,7 +178,7 @@ def align_trading_calendars(ohlcv_df: pd.DataFrame, tickers: List[str]) -> pd.Da
     Returns:
         DataFrame with aligned trading calendar
     """
-    print("\n📅 Aligning Trading Calendars...")
+    print("\n Aligning Trading Calendars...")
     
     # Get all unique dates from all tickers
     all_dates = set(ohlcv_df.index)
@@ -208,10 +208,10 @@ def align_trading_calendars(ohlcv_df: pd.DataFrame, tickers: List[str]) -> pd.Da
             if existing_cols:
                 aligned_df[existing_cols] = aligned_df[existing_cols].ffill()
         
-        print(f"  ✅ Calendar aligned: {len(aligned_df)} common trading days")
+        print(f"   Calendar aligned: {len(aligned_df)} common trading days")
         return aligned_df
     else:
-        print("  ⚠️  No ticker data found, returning original DataFrame")
+        print("    No ticker data found, returning original DataFrame")
         return ohlcv_df
 
 
@@ -233,7 +233,7 @@ def handle_stock_suspensions(ohlcv_df: pd.DataFrame, tickers: List[str],
     Returns:
         Tuple of (cleaned DataFrame, suspension report dictionary)
     """
-    print("\n⏸️  Handling Stock Suspensions...")
+    print("\n⏸  Handling Stock Suspensions...")
     
     suspension_report = {}
     cleaned_df = ohlcv_df.copy()
@@ -276,7 +276,7 @@ def handle_stock_suspensions(ohlcv_df: pd.DataFrame, tickers: List[str],
                     'end': end_date,
                     'duration_days': duration
                 })
-                print(f"  ⚠️  {ticker}: Suspension detected {start_date.date()} to {end_date.date()} ({duration} days)")
+                print(f"    {ticker}: Suspension detected {start_date.date()} to {end_date.date()} ({duration} days)")
             
             # Forward-fill prices and volume
             price_cols = [f'{col}_{ticker}' for col in ['Open', 'High', 'Low', 'Close']]
@@ -293,9 +293,9 @@ def handle_stock_suspensions(ohlcv_df: pd.DataFrame, tickers: List[str],
             suspension_report[ticker] = ticker_suspensions
     
     if suspension_report:
-        print(f"  ⚠️  Found suspensions for {len(suspension_report)} tickers")
+        print(f"    Found suspensions for {len(suspension_report)} tickers")
     else:
-        print("  ✅ No significant suspensions detected")
+        print("   No significant suspensions detected")
     
     return cleaned_df, suspension_report
 
@@ -317,7 +317,7 @@ def handle_splits_dividends(ohlcv_df: pd.DataFrame, tickers: List[str]) -> pd.Da
     Returns:
         DataFrame with split-adjusted prices
     """
-    print("\n📊 Handling Stock Splits and Dividends...")
+    print("\n Handling Stock Splits and Dividends...")
     
     adjusted_df = ohlcv_df.copy()
     
@@ -337,11 +337,11 @@ def handle_splits_dividends(ohlcv_df: pd.DataFrame, tickers: List[str]) -> pd.Da
         potential_splits = returns[returns < -0.2]  # More than 20% drop
         
         if len(potential_splits) > 0:
-            print(f"  ⚠️  {ticker}: {len(potential_splits)} potential split events detected")
+            print(f"    {ticker}: {len(potential_splits)} potential split events detected")
             # Note: In production, you'd fetch actual split data from yfinance or other sources
             # For now, we assume yfinance provides adjusted prices
     
-    print("  ✅ Split/dividend handling complete (assuming yfinance provides adjusted prices)")
+    print("   Split/dividend handling complete (assuming yfinance provides adjusted prices)")
     return adjusted_df
 
 
@@ -364,7 +364,7 @@ def impute_missing_values(ohlcv_df: pd.DataFrame, tickers: List[str],
     Returns:
         DataFrame with imputed values
     """
-    print(f"\n🔧 Imputing Missing Values (method: {method})...")
+    print(f"\n Imputing Missing Values (method: {method})...")
     
     imputed_df = ohlcv_df.copy()
     initial_missing = imputed_df.isnull().sum().sum()
@@ -380,13 +380,13 @@ def impute_missing_values(ohlcv_df: pd.DataFrame, tickers: List[str],
     elif method == 'drop':
         imputed_df = imputed_df.dropna()
     else:
-        print(f"  ⚠️  Unknown method '{method}', using forward_fill")
+        print(f"    Unknown method '{method}', using forward_fill")
         imputed_df = imputed_df.fillna(method='ffill').fillna(method='bfill')
     
     final_missing = imputed_df.isnull().sum().sum()
     imputed_count = initial_missing - final_missing
     
-    print(f"  ✅ Imputed {imputed_count:,} missing values ({initial_missing:,} → {final_missing:,})")
+    print(f"   Imputed {imputed_count:,} missing values ({initial_missing:,} → {final_missing:,})")
     
     return imputed_df
 
@@ -436,6 +436,6 @@ def create_data_collection_log(output_dir: Path, tickers: List[str],
     with open(log_file, 'w') as f:
         json.dump(log_data, f, indent=2, default=str)
     
-    print(f"\n📝 Data collection log saved to: {log_file}")
+    print(f"\n Data collection log saved to: {log_file}")
     return log_file
 

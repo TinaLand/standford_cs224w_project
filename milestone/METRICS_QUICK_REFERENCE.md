@@ -1,25 +1,25 @@
-# 📊 Metrics Quick Reference Card
+#  Metrics Quick Reference Card
 
 **For**: CS224W Milestone - Stock Prediction with GNNs  
 **Purpose**: Fast lookup of any metric mentioned in report
 
 ---
 
-## 🎯 Top-Level Results
+##  Top-Level Results
 
 | Metric | Value | What It Means | Good/Bad? |
 |--------|-------|---------------|-----------|
-| **Test Accuracy** | 49.12% | We get 49% of predictions right | ⚠️ Slightly below random (50%) |
-| **Test F1** | 0.4608 | Balanced metric across classes | ⚠️ Mediocre |
-| **ROC-AUC** | 0.5101 | Model discrimination ability | ⚠️ Barely above random (0.50) |
-| **Down Recall** | 79.18% | We catch 79% of crashes | ✅ **Good!** |
-| **Up Recall** | 23.50% | We catch 23% of rallies | ❌ Poor |
+| **Test Accuracy** | 49.12% | We get 49% of predictions right |  Slightly below random (50%) |
+| **Test F1** | 0.4608 | Balanced metric across classes |  Mediocre |
+| **ROC-AUC** | 0.5101 | Model discrimination ability |  Barely above random (0.50) |
+| **Down Recall** | 79.18% | We catch 79% of crashes |  **Good!** |
+| **Up Recall** | 23.50% | We catch 23% of rallies |  Poor |
 
 **One-Sentence Summary**: *Model learns to detect crashes well (79% recall) but misses most rallies (23% recall), resulting in conservative predictions with weak overall accuracy (49%).*
 
 ---
 
-## 📈 Detailed Breakdown
+##  Detailed Breakdown
 
 ### Class 0 (Down/Bearish Movement)
 
@@ -46,8 +46,8 @@ False Positives: 1,773  (predicted Up, actually Down)
 ```
 
 **Interpretation**:
-- ✅ **High recall** (79%) means we don't miss many crashes
-- ⚠️ **Low precision** (47%) means many false alarms
+-  **High recall** (79%) means we don't miss many crashes
+-  **Low precision** (47%) means many false alarms
 - **Trade-off**: Better safe than sorry (risk-averse)
 
 ---
@@ -77,13 +77,13 @@ False Negatives: 7,667  (predicted Down, actually Up)
 ```
 
 **Interpretation**:
-- ❌ **Low recall** (23.5%) means we miss most bull runs
-- ✅ **Decent precision** (57%) means Up predictions are reliable
+-  **Low recall** (23.5%) means we miss most bull runs
+-  **Decent precision** (57%) means Up predictions are reliable
 - **Trade-off**: When we predict Up, we're usually right, but we rarely predict Up
 
 ---
 
-## 🔢 Formula Reference
+##  Formula Reference
 
 ### Precision
 ```
@@ -125,14 +125,14 @@ Ours: 0.5101
 
 ---
 
-## 🎭 Confusion Matrix Explained
+##  Confusion Matrix Explained
 
 ```
                 Predicted
                 Down    Up      Total
 Actual  Down    6742   1773    8,515
         Up      7667   2318    9,985
-        ─────────────────────────────
+        
 Total           14409  4091   18,500
 ```
 
@@ -146,7 +146,7 @@ Total           14409  4091   18,500
 
 ---
 
-## 📊 Training Metrics
+##  Training Metrics
 
 ### Loss: 0.0425 (Final)
 
@@ -189,14 +189,14 @@ Why Unstable?
   Epoch 7-10: 0.07-0.08
 
 Large fluctuations indicate:
-  ⚠️ Small validation set (370 days)
-  ⚠️ Non-stationary data (market regimes change)
-  ⚠️ Model sensitivity to random initialization
+   Small validation set (370 days)
+   Non-stationary data (market regimes change)
+   Model sensitivity to random initialization
 ```
 
 ---
 
-## 🎯 What Each Number Tells You
+##  What Each Number Tells You
 
 ### **Accuracy: 49.12%**
 **Layman**: "We're right 49% of the time"  
@@ -230,7 +230,7 @@ Large fluctuations indicate:
 
 ---
 
-## 💡 Comparing to Baselines
+##  Comparing to Baselines
 
 ### Random Baseline
 ```
@@ -268,9 +268,9 @@ Our Model:
 
 ---
 
-## 🏆 Strengths vs Weaknesses
+##  Strengths vs Weaknesses
 
-### ✅ Strengths
+###  Strengths
 
 1. **High Down Recall (79.18%)**
    - Best metric
@@ -290,7 +290,7 @@ Our Model:
    - Enables rapid iteration
    - Top-K sparsification helps
 
-### ❌ Weaknesses
+###  Weaknesses
 
 1. **Low Up Recall (23.50%)**
    - Biggest weakness
@@ -312,7 +312,7 @@ Our Model:
 
 ---
 
-## 📝 Quick Answers to TA Questions
+##  Quick Answers to TA Questions
 
 **Q: "Is 49% accuracy good?"**  
 A: "For stock prediction, it's near expected (market efficiency). But our 79% crash detection is valuable for risk management."
@@ -334,7 +334,7 @@ A: "For milestone: Yes (demonstrates rigor). For publication: Needs better accur
 
 ---
 
-## 🔍 How to Verify These Numbers
+##  How to Verify These Numbers
 
 All metrics can be reproduced from:
 
@@ -365,7 +365,7 @@ print(graph.edge_index_dict)   # 2 edge types
 
 ---
 
-## 💼 For Your Defense
+##  For Your Defense
 
 If asked "Why such low accuracy?", respond with:
 
@@ -391,7 +391,7 @@ If asked "Why such low accuracy?", respond with:
 
 ---
 
-## 📚 Where to Find Details
+##  Where to Find Details
 
 | Topic | Section in MILESTONE_REPORT.md |
 |-------|-------------------------------|
@@ -409,5 +409,5 @@ If asked "Why such low accuracy?", respond with:
 ---
 
 **Last Updated**: November 4, 2025  
-**Status**: ✅ Ready for Milestone Submission
+**Status**:  Ready for Milestone Submission
 

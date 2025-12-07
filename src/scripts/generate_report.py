@@ -18,7 +18,7 @@ RESULTS_DIR = PROJECT_ROOT / "results"
 def generate_final_report():
     """Generate comprehensive final report."""
     print("=" * 80)
-    print("📊 Final Project Report Summary")
+    print(" Final Project Report Summary")
     print("=" * 80)
     
     # Load all results
@@ -28,53 +28,53 @@ def generate_final_report():
     try:
         gnn_metrics = pd.read_csv(RESULTS_DIR / 'gnn_node_metrics.csv')
         results['gnn_metrics'] = gnn_metrics.iloc[0].to_dict()
-        print("\n✅ GNN Node-Level Metrics loaded")
+        print("\n GNN Node-Level Metrics loaded")
     except:
-        print("⚠️  GNN metrics not found")
+        print("  GNN metrics not found")
     
     # 2. RL Agent Metrics
     try:
         final_metrics = pd.read_csv(RESULTS_DIR / 'final_metrics.csv')
         results['rl_original'] = final_metrics.iloc[0].to_dict()
-        print("✅ Original RL Agent metrics loaded")
+        print(" Original RL Agent metrics loaded")
     except:
-        print("⚠️  Original RL metrics not found")
+        print("  Original RL metrics not found")
     
     # 3. Quick Test Agent Metrics
     try:
         quick_metrics = pd.read_csv(RESULTS_DIR / 'quick_agent_comparison.csv')
         results['rl_quick'] = quick_metrics[quick_metrics['Strategy'] == 'RL Agent (Quick Test - Improved)'].iloc[0].to_dict()
-        print("✅ Quick Test Agent metrics loaded")
+        print(" Quick Test Agent metrics loaded")
     except:
-        print("⚠️  Quick test metrics not found")
+        print("  Quick test metrics not found")
     
     # 4. Baseline Strategies
     try:
         baseline_df = pd.read_csv(RESULTS_DIR / 'comprehensive_strategy_comparison.csv')
         results['baselines'] = baseline_df
-        print("✅ Baseline strategies loaded")
+        print(" Baseline strategies loaded")
     except:
-        print("⚠️  Baseline strategies not found")
+        print("  Baseline strategies not found")
     
     # 5. Phase 3 vs Phase 4 Comparison
     try:
         phase_comparison = pd.read_csv(RESULTS_DIR / 'phase3_vs_phase4_comparison.csv')
         results['phase_comparison'] = phase_comparison
-        print("✅ Phase comparison loaded")
+        print(" Phase comparison loaded")
     except:
-        print("⚠️  Phase comparison not found")
+        print("  Phase comparison not found")
     
     # 6. Ablation Results
     try:
         ablation_df = pd.read_csv(RESULTS_DIR / 'ablation_results.csv')
         results['ablation'] = ablation_df
-        print("✅ Ablation results loaded")
+        print(" Ablation results loaded")
     except:
-        print("⚠️  Ablation results not found")
+        print("  Ablation results not found")
     
     # Generate report
     print("\n" + "=" * 80)
-    print("📈 KEY PERFORMANCE METRICS")
+    print(" KEY PERFORMANCE METRICS")
     print("=" * 80)
     
     # GNN Metrics
@@ -154,7 +154,7 @@ def generate_final_report():
             f.write(f"  Sharpe: {quick.get('Sharpe', 0):.4f}\n")
             f.write(f"  Max DD: {quick.get('Max_DD', 0):.2f}%\n")
     
-    print(f"\n✅ Final report saved to: {report_path}")
+    print(f"\n Final report saved to: {report_path}")
     
     return results
 

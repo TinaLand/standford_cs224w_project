@@ -20,7 +20,7 @@ sys.path.insert(0, str(SRC_DIR))
 def run_phase(phase_name, module_path, description):
     """Run a phase script using subprocess."""
     print("\n" + "="*60)
-    print(f"🔄 Phase: {phase_name}")
+    print(f" Phase: {phase_name}")
     print("="*60)
     print(f"Description: {description}")
     print(f"Module: {module_path}")
@@ -45,14 +45,14 @@ def run_phase(phase_name, module_path, description):
         os.chdir(original_cwd)
         
         if result.returncode == 0:
-            print(f"\n✅ {phase_name} completed successfully!")
+            print(f"\n {phase_name} completed successfully!")
             return True
         else:
-            print(f"\n❌ {phase_name} failed with exit code {result.returncode}")
+            print(f"\n {phase_name} failed with exit code {result.returncode}")
             return False
             
     except Exception as e:
-        print(f"❌ Error running {phase_name}: {e}")
+        print(f" Error running {phase_name}: {e}")
         import traceback
         traceback.print_exc()
         os.chdir(original_cwd)
@@ -61,7 +61,7 @@ def run_phase(phase_name, module_path, description):
 def run_optional_experiment(experiment_name, script_path, description):
     """Run an optional experiment script."""
     print("\n" + "="*60)
-    print(f"🔬 Optional Experiment: {experiment_name}")
+    print(f" Optional Experiment: {experiment_name}")
     print("="*60)
     print(f"Description: {description}")
     print(f"Script: {script_path}")
@@ -84,14 +84,14 @@ def run_optional_experiment(experiment_name, script_path, description):
         os.chdir(original_cwd)
         
         if result.returncode == 0:
-            print(f"\n✅ {experiment_name} completed successfully!")
+            print(f"\n {experiment_name} completed successfully!")
             return True
         else:
-            print(f"\n⚠️  {experiment_name} completed with warnings (exit code {result.returncode})")
+            print(f"\n  {experiment_name} completed with warnings (exit code {result.returncode})")
             return True  # Don't fail pipeline for optional experiments
             
     except Exception as e:
-        print(f"⚠️  Error running {experiment_name}: {e}")
+        print(f"  Error running {experiment_name}: {e}")
         print("Continuing pipeline...")
         os.chdir(original_cwd)
         return True  # Don't fail pipeline for optional experiments
@@ -99,7 +99,7 @@ def run_optional_experiment(experiment_name, script_path, description):
 def main():
     """Main pipeline runner."""
     print("="*60)
-    print("🚀 CS224W Stock RL GNN - Full Pipeline")
+    print(" CS224W Stock RL GNN - Full Pipeline")
     print("="*60)
     print("\nThis script will run all phases of the project:")
     print("  Phase 1: Data Collection & Feature Engineering")
@@ -166,12 +166,12 @@ def main():
         results[phase['name']] = 'Success' if success else 'Failed'
         
         if not success:
-            print(f"\n⚠️  {phase['name']} failed.")
+            print(f"\n  {phase['name']} failed.")
             print("Continuing to next phase...")
             # Auto-continue instead of asking for input
             # response = input().strip().lower()
             # if response != 'y':
-            #     print("\n❌ Pipeline stopped by user")
+            #     print("\n Pipeline stopped by user")
             #     break
         
         # Small delay between phases
@@ -179,17 +179,17 @@ def main():
     
     # Summary
     print("\n" + "="*60)
-    print("📊 Pipeline Summary")
+    print(" Pipeline Summary")
     print("="*60)
     
     for phase_name, status in results.items():
-        status_icon = "✅" if status == "Success" else "❌" if status == "Failed" else "⚠️"
+        status_icon = "" if status == "Success" else "" if status == "Failed" else ""
         print(f"  {status_icon} {phase_name}: {status}")
     
     # Generate report figures and additional analysis (if Phase 6 completed successfully)
     if results.get('Phase 6: Evaluation') == 'Success':
         print("\n" + "="*60)
-        print("📊 Generating Report Figures and Additional Analysis")
+        print(" Generating Report Figures and Additional Analysis")
         print("="*60)
         
         # 1. Generate main report figures
@@ -201,17 +201,17 @@ def main():
             result = subprocess.run(cmd, cwd=PROJECT_ROOT, check=False, capture_output=False)
             os.chdir(original_cwd)
             if result.returncode == 0:
-                print("\n✅ Report figures generated successfully!")
+                print("\n Report figures generated successfully!")
             else:
-                print("\n⚠️  Figure generation completed with warnings")
+                print("\n  Figure generation completed with warnings")
         except Exception as e:
-            print(f"⚠️  Error generating figures: {e}")
+            print(f"  Error generating figures: {e}")
             print("Continuing...")
             os.chdir(original_cwd)
         
         # 2. Deep IC Analysis (quick, should always run)
         print("\n" + "="*60)
-        print("📈 Running Deep IC Analysis")
+        print(" Running Deep IC Analysis")
         print("="*60)
         try:
             original_cwd = os.getcwd()
@@ -221,17 +221,17 @@ def main():
             result = subprocess.run(cmd, cwd=PROJECT_ROOT, check=False, capture_output=False)
             os.chdir(original_cwd)
             if result.returncode == 0:
-                print("\n✅ Deep IC analysis completed successfully!")
+                print("\n Deep IC analysis completed successfully!")
             else:
-                print("\n⚠️  IC analysis completed with warnings")
+                print("\n  IC analysis completed with warnings")
         except Exception as e:
-            print(f"⚠️  Error running IC analysis: {e}")
+            print(f"  Error running IC analysis: {e}")
             print("Continuing...")
             os.chdir(original_cwd)
         
         # 3. Create additional figures (PEARL, Precision@Top-K, MARL)
         print("\n" + "="*60)
-        print("🎨 Creating Additional Figures")
+        print(" Creating Additional Figures")
         print("="*60)
         try:
             original_cwd = os.getcwd()
@@ -241,16 +241,16 @@ def main():
             result = subprocess.run(cmd, cwd=PROJECT_ROOT, check=False, capture_output=False)
             os.chdir(original_cwd)
             if result.returncode == 0:
-                print("\n✅ Additional figures created successfully!")
+                print("\n Additional figures created successfully!")
             else:
-                print("\n⚠️  Additional figure creation completed with warnings")
+                print("\n  Additional figure creation completed with warnings")
         except Exception as e:
-            print(f"⚠️  Error creating additional figures: {e}")
+            print(f"  Error creating additional figures: {e}")
             print("Continuing...")
             os.chdir(original_cwd)
     
-    print("\n✅ Full pipeline execution complete!")
-    print("\n📁 Check results in:")
+    print("\n Full pipeline execution complete!")
+    print("\n Check results in:")
     print("  - models/ - Trained models")
     print("  - results/ - Evaluation results")
     print("    - gnn_node_metrics.csv - Node-level metrics")
@@ -265,7 +265,7 @@ def main():
     print("    - figure_marl_decision_flow.png - MARL decision flow")
     
     print("\n" + "="*60)
-    print("🔬 Optional Research Experiments")
+    print(" Optional Research Experiments")
     print("="*60)
     print("\nThe following experiments are available (proposal-aligned):")
     print("  1. Baseline Model Comparison (Grading Requirement)")

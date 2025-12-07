@@ -37,9 +37,9 @@ def validate_data_directories():
     for directory in directories:
         if not directory.exists():
             directory.mkdir(parents=True, exist_ok=True)
-            print(f"✅ Created directory: {directory}")
+            print(f" Created directory: {directory}")
         else:
-            print(f"📁 Directory exists: {directory}")
+            print(f" Directory exists: {directory}")
     
     return True
 
@@ -59,7 +59,7 @@ def clean_dataframe(df: pd.DataFrame,
     Returns:
         pd.DataFrame: Cleaned DataFrame
     """
-    print(f"🧹 Cleaning DataFrame with shape: {df.shape}")
+    print(f" Cleaning DataFrame with shape: {df.shape}")
     
     # Create a copy to avoid modifying original
     df_clean = df.copy()
@@ -92,7 +92,7 @@ def clean_dataframe(df: pd.DataFrame,
         if removed_duplicates > 0:
             print(f"  - Removed {removed_duplicates} duplicate rows")
     
-    print(f"✅ Cleaned DataFrame shape: {df_clean.shape}")
+    print(f" Cleaned DataFrame shape: {df_clean.shape}")
     return df_clean
 
 def normalize_features(df: pd.DataFrame, 
@@ -113,7 +113,7 @@ def normalize_features(df: pd.DataFrame,
     Returns:
         Tuple[pd.DataFrame, object]: Normalized DataFrame and fitted scaler
     """
-    print(f"📊 Normalizing features using method: {method}")
+    print(f" Normalizing features using method: {method}")
     
     df_normalized = df.copy()
     
@@ -140,7 +140,7 @@ def normalize_features(df: pd.DataFrame,
         joblib.dump(scaler, scaler_path)
         print(f"  - Saved scaler to: {scaler_path}")
     
-    print(f"✅ Normalized {len(columns)} features")
+    print(f" Normalized {len(columns)} features")
     return df_normalized, scaler
 
 def calculate_returns(price_series: pd.Series, 
@@ -182,7 +182,7 @@ def resample_data(df: pd.DataFrame,
     Returns:
         pd.DataFrame: Resampled DataFrame
     """
-    print(f"📅 Resampling data to frequency: {freq}")
+    print(f" Resampling data to frequency: {freq}")
     
     df_resampled = df.copy()
     
@@ -204,7 +204,7 @@ def resample_data(df: pd.DataFrame,
     else:
         df_resampled = df_resampled.resample(freq).agg(agg_method)
     
-    print(f"✅ Resampled from {len(df)} to {len(df_resampled)} rows")
+    print(f" Resampled from {len(df)} to {len(df_resampled)} rows")
     return df_resampled
 
 def detect_outliers(df: pd.DataFrame, 
@@ -242,7 +242,7 @@ def detect_outliers(df: pd.DataFrame,
             outliers[col] = z_scores > threshold
     
     outlier_counts = outliers[columns].sum()
-    print(f"🔍 Detected outliers by column:")
+    print(f" Detected outliers by column:")
     for col, count in outlier_counts.items():
         if count > 0:
             print(f"  - {col}: {count} outliers ({count/len(df)*100:.1f}%)")
@@ -288,8 +288,8 @@ def save_processed_data(df: pd.DataFrame,
     file_path = save_dir / filename
     df.to_csv(file_path, index=True)
     
-    print(f"💾 Saved data to: {file_path}")
-    print(f"📊 Data shape: {df.shape}")
+    print(f" Saved data to: {file_path}")
+    print(f" Data shape: {df.shape}")
     
     return str(file_path)
 
@@ -328,8 +328,8 @@ def load_data_file(filename: str,
     # Load with appropriate settings
     df = pd.read_csv(file_path, parse_dates=parse_dates, index_col=index_col)
     
-    print(f"📂 Loaded data from: {file_path}")
-    print(f"📊 Data shape: {df.shape}")
+    print(f" Loaded data from: {file_path}")
+    print(f" Data shape: {df.shape}")
     
     return df
 
@@ -378,13 +378,13 @@ def validate_ticker_data(df: pd.DataFrame,
             results['warnings'].append(f"Tickers with insufficient data (<{min_observations} obs): {len(invalid_tickers)}")
     
     # Print summary
-    print("🔍 Data Validation Results:")
+    print(" Data Validation Results:")
     print(f"  - Total tickers: {results['total_tickers']}")
     print(f"  - Valid tickers: {len(results['valid_tickers'])}")
     print(f"  - Invalid tickers: {len(results['invalid_tickers'])}")
     
     if results['warnings']:
-        print("⚠️  Warnings:")
+        print("  Warnings:")
         for warning in results['warnings']:
             print(f"    - {warning}")
     

@@ -133,7 +133,7 @@ def run_single_experiment(config, run_dir, run_name):
     originals, trainer_module = configure_training_params(config, run_dir, run_name)
     try:
         print("\n" + "=" * 70)
-        print(f"🎯 Starting sweep run: {run_name}")
+        print(f" Starting sweep run: {run_name}")
         print(f"    hidden_channels={config['hidden_channels']}, "
               f"num_layers={config['num_layers']}, "
               f"num_heads={config['num_heads']}, "
@@ -197,10 +197,10 @@ def main():
     write_summary(summary_records, summary_path)
 
     print("\n" + "=" * 70)
-    print(f"✅ Sweep completed. Results saved to: {summary_path}")
+    print(f" Sweep completed. Results saved to: {summary_path}")
     if best_record:
         best_metrics = best_record.get("results", {})
-        print("🏆 Best configuration:")
+        print(" Best configuration:")
         print(f"   Run: {best_record['run_name']}")
         print(f"   Config: {best_record['config']}")
         print(f"   Best Val F1: {best_metrics.get('best_val_f1', 'N/A')}")

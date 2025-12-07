@@ -53,7 +53,7 @@ def train_model_for_lookahead(lookahead_days, train_dates, val_dates, test_dates
     Returns model and metrics.
     """
     print(f"\n{'='*60}")
-    print(f"🔬 Training model for {lookahead_days}-day lookahead")
+    print(f" Training model for {lookahead_days}-day lookahead")
     print(f"{'='*60}")
     
     # Create targets with specific lookahead
@@ -240,7 +240,7 @@ def run_lookahead_experiment():
     Run experiments for different lookahead horizons.
     """
     print("=" * 60)
-    print("🔬 Lookahead Horizon Experiment")
+    print(" Lookahead Horizon Experiment")
     print("=" * 60)
     
     # Get all dates
@@ -255,7 +255,7 @@ def run_lookahead_experiment():
     val_dates = all_dates[split_70_idx:split_85_idx]
     test_dates = all_dates[split_85_idx:]
     
-    print(f"\n📅 Date Split:")
+    print(f"\n Date Split:")
     print(f"   Train: {len(train_dates)} dates ({train_dates[0]} to {train_dates[-1]})")
     print(f"   Val: {len(val_dates)} dates ({val_dates[0]} to {val_dates[-1]})")
     print(f"   Test: {len(test_dates)} dates ({test_dates[0]} to {test_dates[-1]})")
@@ -263,7 +263,7 @@ def run_lookahead_experiment():
     # Get tickers
     ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
     tickers = [col.replace('Close_', '') for col in ohlcv_df.columns if col.startswith('Close_')]
-    print(f"\n📊 Stocks: {len(tickers)}")
+    print(f"\n Stocks: {len(tickers)}")
     
     # Run experiments for each lookahead horizon
     results = {}
@@ -275,7 +275,7 @@ def run_lookahead_experiment():
             )
             results[lookahead] = metrics
             
-            print(f"\n✅ {lookahead}-day lookahead Results:")
+            print(f"\n {lookahead}-day lookahead Results:")
             print(f"   Val F1: {metrics['best_val_f1']:.4f}")
             print(f"   Test Accuracy: {metrics['test_accuracy']:.4f}")
             print(f"   Test F1: {metrics['test_f1']:.4f}")
@@ -283,7 +283,7 @@ def run_lookahead_experiment():
             print(f"   Test Recall: {metrics['test_recall']:.4f}")
             
         except Exception as e:
-            print(f"\n❌ Error with {lookahead}-day lookahead: {e}")
+            print(f"\n Error with {lookahead}-day lookahead: {e}")
             import traceback
             traceback.print_exc()
             results[lookahead] = {'error': str(e)}
@@ -297,7 +297,7 @@ def run_lookahead_experiment():
     
     # Print summary
     print("\n" + "=" * 60)
-    print("📊 Lookahead Horizon Experiment Summary")
+    print(" Lookahead Horizon Experiment Summary")
     print("=" * 60)
     print("\nResults by Lookahead Horizon:")
     print(results_df.to_string())
@@ -306,9 +306,9 @@ def run_lookahead_experiment():
     if len(results_df) > 0 and 'test_f1' in results_df.columns:
         best_lookahead = results_df['test_f1'].idxmax()
         best_f1 = results_df.loc[best_lookahead, 'test_f1']
-        print(f"\n🏆 Best Lookahead: {best_lookahead} days (Test F1: {best_f1:.4f})")
+        print(f"\n Best Lookahead: {best_lookahead} days (Test F1: {best_f1:.4f})")
     
-    print(f"\n📁 Results saved to:")
+    print(f"\n Results saved to:")
     print(f"  - {RESULTS_DIR / 'lookahead_horizon_results.csv'}")
     print(f"  - {RESULTS_DIR / 'lookahead_horizon_results.json'}")
     

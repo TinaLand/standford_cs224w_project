@@ -284,7 +284,7 @@ if __name__ == '__main__':
     from src.rl.integration import load_gnn_model_for_rl
     
     print("=" * 70)
-    print("🧪 Testing Improved RL Environment with Risk-Adjusted Rewards")
+    print(" Testing Improved RL Environment with Risk-Adjusted Rewards")
     print("=" * 70)
     
     # Load GNN model
@@ -356,11 +356,11 @@ if __name__ == '__main__':
     
     # Summary
     print("\n" + "=" * 70)
-    print("📊 Reward Type Comparison")
+    print(" Reward Type Comparison")
     print("=" * 70)
     results_df = pd.DataFrame(results)
     print(results_df.to_string(index=False))
     
-    print("\n✅ Improved environment tested successfully!")
-    print("💡 Use 'risk_adjusted' reward type for training to beat Buy-and-Hold.")
+    print("\n Improved environment tested successfully!")
+    print(" Use 'risk_adjusted' reward type for training to beat Buy-and-Hold.")
 

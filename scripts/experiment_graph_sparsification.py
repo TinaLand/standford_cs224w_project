@@ -55,7 +55,7 @@ def evaluate_sparsification_config(top_k, corr_threshold, test_dates, tickers):
     For full evaluation, graphs should be regenerated with these parameters.
     """
     print(f"\n{'='*60}")
-    print(f"🔬 Testing: Top-K={top_k}, Correlation Threshold={corr_threshold}")
+    print(f" Testing: Top-K={top_k}, Correlation Threshold={corr_threshold}")
     print(f"{'='*60}")
     
     # Create targets
@@ -69,7 +69,7 @@ def evaluate_sparsification_config(top_k, corr_threshold, test_dates, tickers):
     # Load pre-trained model (use existing model for quick evaluation)
     model_path = PROJECT_ROOT / "models" / "core_transformer_model.pt"
     if not model_path.exists():
-        print("⚠️  Pre-trained model not found. Skipping this configuration.")
+        print("  Pre-trained model not found. Skipping this configuration.")
         return None
     
     model = RoleAwareGraphTransformer(
@@ -195,9 +195,9 @@ def run_sparsification_experiment():
     Run experiments for different sparsification configurations.
     """
     print("=" * 60)
-    print("🔬 Graph Sparsification Experiment")
+    print(" Graph Sparsification Experiment")
     print("=" * 60)
-    print("\n⚠️  Note: This is a simplified evaluation using existing graphs.")
+    print("\n  Note: This is a simplified evaluation using existing graphs.")
     print("   For full evaluation, regenerate graphs with different parameters.")
     
     # Get test dates
@@ -211,8 +211,8 @@ def run_sparsification_experiment():
     ohlcv_df = _read_time_series_csv(OHLCV_RAW_FILE)
     tickers = [col.replace('Close_', '') for col in ohlcv_df.columns if col.startswith('Close_')]
     
-    print(f"\n📊 Test Dates: {len(test_dates)}")
-    print(f"📊 Stocks: {len(tickers)}")
+    print(f"\n Test Dates: {len(test_dates)}")
+    print(f" Stocks: {len(tickers)}")
     
     # Run experiments
     results = []
@@ -227,11 +227,11 @@ def run_sparsification_experiment():
             metrics = evaluate_sparsification_config(top_k, corr_threshold, test_dates, tickers)
             if metrics:
                 results.append(metrics)
-                print(f"\n✅ Top-K={top_k}, Threshold={corr_threshold}:")
+                print(f"\n Top-K={top_k}, Threshold={corr_threshold}:")
                 print(f"   Test Accuracy: {metrics['test_accuracy']:.4f}")
                 print(f"   Test F1: {metrics['test_f1']:.4f}")
         except Exception as e:
-            print(f"\n❌ Error with Top-K={top_k}, Threshold={corr_threshold}: {e}")
+            print(f"\n Error with Top-K={top_k}, Threshold={corr_threshold}: {e}")
             import traceback
             traceback.print_exc()
     
@@ -245,7 +245,7 @@ def run_sparsification_experiment():
         
         # Print summary
         print("\n" + "=" * 60)
-        print("📊 Graph Sparsification Experiment Summary")
+        print(" Graph Sparsification Experiment Summary")
         print("=" * 60)
         print("\nResults:")
         print(results_df.to_string())
@@ -254,11 +254,11 @@ def run_sparsification_experiment():
         if 'test_f1' in results_df.columns:
             best_idx = results_df['test_f1'].idxmax()
             best_config = results_df.loc[best_idx]
-            print(f"\n🏆 Best Configuration:")
+            print(f"\n Best Configuration:")
             print(f"   Top-K: {best_config['top_k']}, Threshold: {best_config['correlation_threshold']}")
             print(f"   Test F1: {best_config['test_f1']:.4f}")
         
-        print(f"\n📁 Results saved to:")
+        print(f"\n Results saved to:")
         print(f"  - {RESULTS_DIR / 'graph_sparsification_results.csv'}")
         print(f"  - {RESULTS_DIR / 'graph_sparsification_results.json'}")
     

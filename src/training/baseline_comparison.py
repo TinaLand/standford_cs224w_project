@@ -742,9 +742,9 @@ def run_baseline_comparison():
 if __name__ == '__main__':
     try:
         results = run_baseline_comparison()
-        print("\n✅ Baseline comparison completed successfully!")
+        print("\n Baseline comparison completed successfully!")
     except Exception as e:
-        print(f"\n❌ Error during baseline comparison: {e}")
+        print(f"\n Error during baseline comparison: {e}")
         import traceback
         traceback.print_exc()
 

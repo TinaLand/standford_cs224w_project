@@ -114,7 +114,7 @@ class StockTradingAgent(BaseTradingAgent):
         Returns:
             Dictionary with training statistics
         """
-        print(f"\n🔨 Starting RL Agent Training ({total_timesteps} timesteps)...")
+        print(f"\n Starting RL Agent Training ({total_timesteps} timesteps)...")
         
         try:
             self.agent.learn(
@@ -133,11 +133,11 @@ class StockTradingAgent(BaseTradingAgent):
                 "agent_id": self.agent_id
             }
             
-            print("✅ Training completed successfully")
+            print(" Training completed successfully")
             return stats
             
         except Exception as e:
-            print(f"❌ Training failed: {e}")
+            print(f" Training failed: {e}")
             raise
     
     def get_portfolio_allocation(self, observation: np.ndarray) -> np.ndarray:
@@ -178,7 +178,7 @@ class StockTradingAgent(BaseTradingAgent):
             path: Path to save the agent (without extension, .zip will be added)
         """
         self.agent.save(path)
-        print(f"✅ Agent saved to: {path}.zip")
+        print(f" Agent saved to: {path}.zip")
     
     def load(self, path: Path):
         """
@@ -195,7 +195,7 @@ class StockTradingAgent(BaseTradingAgent):
         
         self.agent = PPO.load(path, env=self.vec_env, device="cpu")
         self.is_trained = True
-        print(f"✅ Agent loaded from: {path}")
+        print(f" Agent loaded from: {path}")
     
     def get_action_distribution(self, observation: np.ndarray) -> np.ndarray:
         """

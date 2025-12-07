@@ -68,7 +68,7 @@ def load_gnn_model_for_independent_learning() -> torch.nn.Module:
     for param in gnn_model.parameters():
         param.requires_grad = False
     
-    print(f"✅ GNN Model loaded and frozen for independent learning")
+    print(f" GNN Model loaded and frozen for independent learning")
     return gnn_model
 
 
@@ -95,7 +95,7 @@ def determine_independent_training_period():
     start_date = graph_start + pd.Timedelta(days=start_offset_days)
     end_date = graph_end
     
-    print(f"📅 Independent Learning Training period: {start_date.date()} to {end_date.date()}")
+    print(f" Independent Learning Training period: {start_date.date()} to {end_date.date()}")
     
     return start_date, end_date
 
@@ -140,7 +140,7 @@ class IndependentLearningTrainer:
         Returns:
             Training statistics
         """
-        print(f"\n🔨 Starting Independent Learning Training ({self.total_timesteps} timesteps)")
+        print(f"\n Starting Independent Learning Training ({self.total_timesteps} timesteps)")
         print("=" * 60)
         print("Note: Each agent learns independently (no coordination)")
         print("=" * 60)
@@ -166,7 +166,7 @@ class IndependentLearningTrainer:
                 avg_return = np.mean(self.training_stats['episode_returns'][-10:])
                 print(f"Episode {episode}, Timestep {current_timestep}, Avg Return: {avg_return:.4f}")
         
-        print(f"✅ Independent Learning Training completed after {episode} episodes")
+        print(f" Independent Learning Training completed after {episode} episodes")
         return self.training_stats
     
     def _train_episode(self, episode: int) -> Dict[str, Any]:
@@ -211,7 +211,7 @@ class IndependentLearningTrainer:
                         action, _ = agent.predict(obs, deterministic=False)
                         agent_actions[sector] = action
                     except Exception as e:
-                        print(f"⚠️  Error predicting for {sector}: {e}, obs shape: {obs.shape}, expected: {expected_dim}")
+                        print(f"  Error predicting for {sector}: {e}, obs shape: {obs.shape}, expected: {expected_dim}")
                         # Fallback: random actions
                         agent_actions[sector] = np.zeros(agent.num_stocks, dtype=np.int32)
             
@@ -254,7 +254,7 @@ class IndependentLearningTrainer:
                         # In practice, would use proper experience replay
                         pass
                 except Exception as e:
-                    print(f"⚠️  Training agent {sector} failed: {e}")
+                    print(f"  Training agent {sector} failed: {e}")
         
         return {
             'total_return': total_reward,
@@ -301,7 +301,7 @@ def create_independent_agents(
         
         agents[sector_name] = agent
     
-    print(f"✅ Created {len(agents)} independent agents")
+    print(f" Created {len(agents)} independent agents")
     return agents
 
 
@@ -317,14 +317,14 @@ def run_independent_learning_training(
     Returns:
         Tuple of (agents, training_stats)
     """
-    print("\n🤖 Starting Independent Learning Training Pipeline")
+    print("\n Starting Independent Learning Training Pipeline")
     print("=" * 60)
     
     # 1. Load GNN Model
     try:
         gnn_model = load_gnn_model_for_independent_learning()
     except FileNotFoundError as e:
-        print(f"❌ Error: {e}")
+        print(f" Error: {e}")
         raise
     
     # 2. Get sector groupings
@@ -398,7 +398,7 @@ def run_independent_learning_training(
         serializable_stats = convert_to_serializable(training_stats)
         json.dump(serializable_stats, f, indent=2)
     
-    print(f"✅ Training statistics saved to: {stats_file}")
+    print(f" Training statistics saved to: {stats_file}")
     
     # Save agent models
     models_dir = MODELS_DIR / "independent_agents"
@@ -408,9 +408,9 @@ def run_independent_learning_training(
         agent_file = models_dir / f"independent_agent_{sector_name.lower()}.zip"
         try:
             agent.agent.save(str(agent_file))
-            print(f"✅ Saved agent for {sector_name}")
+            print(f" Saved agent for {sector_name}")
         except Exception as e:
-            print(f"⚠️  Failed to save agent for {sector_name}: {e}")
+            print(f"  Failed to save agent for {sector_name}: {e}")
     
     return agents, training_stats
 
@@ -426,13 +426,13 @@ if __name__ == "__main__":
     try:
         agents, stats = run_independent_learning_training()
         print("\n" + "=" * 60)
-        print("✅ Independent Learning Training Complete!")
+        print(" Independent Learning Training Complete!")
         print("=" * 60)
         print(f"\nTrained {len(agents)} independent agents")
         print(f"Total episodes: {len(stats['episode_returns'])}")
         print(f"Average return: {np.mean(stats['episode_returns']):.4f}")
     except Exception as e:
-        print(f"\n❌ Training failed: {e}")
+        print(f"\n Training failed: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

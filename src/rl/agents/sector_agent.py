@@ -144,7 +144,7 @@ class SectorAgent(BaseTradingAgent):
         """Save sector agent to file."""
         agent_path = path / f"sector_agent_{self.sector_name.lower()}.zip"
         self.agent.save(agent_path.with_suffix(''))
-        print(f"✅ Sector agent '{self.sector_name}' saved to: {agent_path}")
+        print(f" Sector agent '{self.sector_name}' saved to: {agent_path}")
     
     def load(self, path):
         """Load sector agent from file."""
@@ -155,7 +155,7 @@ class SectorAgent(BaseTradingAgent):
         
         self.agent = PPO.load(agent_path.with_suffix(''), device="cpu")
         self.is_trained = True
-        print(f"✅ Sector agent '{self.sector_name}' loaded from: {agent_path}")
+        print(f" Sector agent '{self.sector_name}' loaded from: {agent_path}")
     
     def __repr__(self):
         return f"SectorAgent(sector={self.sector_name}, stocks={self.num_stocks}, trained={self.is_trained})"

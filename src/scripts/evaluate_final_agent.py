@@ -31,7 +31,7 @@ def evaluate_final_agent():
     Evaluate the final improved RL agent.
     """
     print("=" * 80)
-    print("📊 Evaluating Final RL Agent with All Improvements")
+    print(" Evaluating Final RL Agent with All Improvements")
     print("=" * 80)
     
     # Load GNN model
@@ -56,7 +56,7 @@ def evaluate_final_agent():
     final_agent_path = PROJECT_ROOT / "models" / "rl_ppo_agent_model_final" / "ppo_stock_agent_final.zip"
     
     if not final_agent_path.exists():
-        print(f"❌ Final agent not found at {final_agent_path}")
+        print(f" Final agent not found at {final_agent_path}")
         print("   Please run phase5_rl_final_training.py first")
         return None
     
@@ -71,7 +71,7 @@ def evaluate_final_agent():
     )
     
     agent.load(final_agent_path)
-    print(f"✅ Final agent loaded from: {final_agent_path}")
+    print(f" Final agent loaded from: {final_agent_path}")
     
     # Evaluate final agent
     print("\n--- Evaluating Final Agent ---")
@@ -113,7 +113,7 @@ def evaluate_final_agent():
     
     # Create comprehensive comparison
     print("\n" + "=" * 80)
-    print("📊 Comprehensive Strategy Comparison")
+    print(" Comprehensive Strategy Comparison")
     print("=" * 80)
     
     comparison_data = []
@@ -155,7 +155,7 @@ def evaluate_final_agent():
     # Calculate improvements
     if original_metrics:
         print("\n" + "=" * 80)
-        print("📈 Final Agent vs Original Agent")
+        print(" Final Agent vs Original Agent")
         print("=" * 80)
         
         return_improvement = final_metrics['Cumulative_Return'] * 100 - original_metrics['Cumulative_Return'] * 100
@@ -170,7 +170,7 @@ def evaluate_final_agent():
     buy_hold_row = baseline_df[baseline_df['strategy'] == 'Buy-and-Hold'].iloc[0]
     
     print("\n" + "=" * 80)
-    print("🎯 Final Agent vs Buy-and-Hold")
+    print(" Final Agent vs Buy-and-Hold")
     print("=" * 80)
     
     return_vs_bh = final_metrics['Cumulative_Return'] * 100 - buy_hold_row['Cumulative_Return'] * 100
@@ -183,27 +183,27 @@ def evaluate_final_agent():
     
     # Final verdict
     print("\n" + "=" * 80)
-    print("✅ Final Verdict")
+    print(" Final Verdict")
     print("=" * 80)
     
     if sharpe_vs_bh > 0:
-        print("✅ Final Agent beats Buy-and-Hold on Sharpe Ratio (risk-adjusted returns)!")
+        print(" Final Agent beats Buy-and-Hold on Sharpe Ratio (risk-adjusted returns)!")
     else:
-        print("⚠️  Final Agent Sharpe ratio still below Buy-and-Hold")
+        print("  Final Agent Sharpe ratio still below Buy-and-Hold")
     
     if dd_vs_bh < 0:
-        print("✅ Final Agent has lower Max Drawdown (better risk control)!")
+        print(" Final Agent has lower Max Drawdown (better risk control)!")
     else:
-        print("⚠️  Final Agent Max Drawdown is higher")
+        print("  Final Agent Max Drawdown is higher")
     
     if return_vs_bh > -20:  # Within 20% of Buy-and-Hold
-        print("✅ Final Agent returns are competitive with Buy-and-Hold!")
+        print(" Final Agent returns are competitive with Buy-and-Hold!")
     else:
-        print("⚠️  Final Agent returns still significantly lower than Buy-and-Hold")
+        print("  Final Agent returns still significantly lower than Buy-and-Hold")
     
     # Save results
     comparison_df.to_csv(RESULTS_DIR / 'final_agent_comparison.csv', index=False)
-    print(f"\n✅ Comparison results saved to: {RESULTS_DIR / 'final_agent_comparison.csv'}")
+    print(f"\n Comparison results saved to: {RESULTS_DIR / 'final_agent_comparison.csv'}")
     
     return comparison_df
 

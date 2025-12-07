@@ -38,12 +38,12 @@
 
 ```
 StockTradingAgent
-├── GNN Model (RoleAwareGraphTransformer)
-│   └── Extract stock graph embedding features
-├── PPO Agent (Stable Baselines3)
-│   └── Learn trading strategies
-└── Environment (StockTradingEnv)
-    └── Simulate trading environment
+ GNN Model (RoleAwareGraphTransformer)
+    Extract stock graph embedding features
+ PPO Agent (Stable Baselines3)
+    Learn trading strategies
+ Environment (StockTradingEnv)
+     Simulate trading environment
 ```
 
 ### 2.1 **Role of GNN Model**

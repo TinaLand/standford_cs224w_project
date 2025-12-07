@@ -40,7 +40,7 @@ try:
     )
     VALIDATION_AVAILABLE = True
 except ImportError:
-    print("⚠️  Warning: Data validation utilities not available. Install required dependencies.")
+    print("  Warning: Data validation utilities not available. Install required dependencies.")
     VALIDATION_AVAILABLE = False
 
 # --- Configuration ---
@@ -152,7 +152,7 @@ def download_stock_data(tickers, start, end, output_path, enable_validation=True
                     # Use outer join to ensure all dates are included, handling missing data later
                     ohlcv_data = ohlcv_data.join(stock_df, how='outer')
             else:
-                print(f"  ⚠️  Warning: No data found for {ticker}")
+                print(f"    Warning: No data found for {ticker}")
 
         # Ensure Date index
         if not isinstance(ohlcv_data.index, pd.DatetimeIndex):
@@ -161,7 +161,7 @@ def download_stock_data(tickers, start, end, output_path, enable_validation=True
         
         # Data validation and cleaning
         if enable_validation and VALIDATION_AVAILABLE:
-            print("\n🔧 Running data validation and cleaning...")
+            print("\n Running data validation and cleaning...")
             
             # 1. Validate data quality
             validation_results = validate_ohlcv_data(ohlcv_data, tickers)
@@ -185,19 +185,19 @@ def download_stock_data(tickers, start, end, output_path, enable_validation=True
                 validation_results, suspension_report
             )
         elif enable_validation and not VALIDATION_AVAILABLE:
-            print("  ⚠️  Validation requested but utilities not available. Skipping validation.")
+            print("    Validation requested but utilities not available. Skipping validation.")
         
         # Save cleaned data
         file_path = os.path.join(output_path, 'stock_prices_ohlcv_raw.csv')
         ohlcv_data.to_csv(file_path, index_label='Date')
-        print(f"\n✅ OHLCV data saved successfully to: {file_path}")
+        print(f"\n OHLCV data saved successfully to: {file_path}")
         print(f"   Data shape: {ohlcv_data.shape}")
         print(f"   Date range: {ohlcv_data.index.min().date()} to {ohlcv_data.index.max().date()}")
         
         return ohlcv_data
         
     except Exception as e:
-        print(f"❌ Error downloading OHLCV data: {e}")
+        print(f" Error downloading OHLCV data: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -271,7 +271,7 @@ def download_fundamental_data(tickers, output_path):
             successful_tickers.append(ticker)
             
         except Exception as e:
-            print(f"  ⚠️ Failed to fetch data for {ticker}: {e}")
+            print(f"   Failed to fetch data for {ticker}: {e}")
             failed_tickers.append(ticker)
             
             # Use fallback values for failed tickers
@@ -290,17 +290,17 @@ def download_fundamental_data(tickers, output_path):
     fund_df.to_csv(file_path)
     
     # Summary
-    print(f"✅ Real fundamental data saved to: {file_path}")
-    print(f"  📊 Successfully fetched: {len(successful_tickers)}/{len(tickers)} tickers")
+    print(f" Real fundamental data saved to: {file_path}")
+    print(f"   Successfully fetched: {len(successful_tickers)}/{len(tickers)} tickers")
     if failed_tickers:
-        print(f"  ⚠️ Failed tickers (using fallback): {', '.join(failed_tickers[:5])}")
+        print(f"   Failed tickers (using fallback): {', '.join(failed_tickers[:5])}")
         if len(failed_tickers) > 5:
             print(f"    ... and {len(failed_tickers) - 5} more")
-    print(f"  📈 Data shape: {fund_df.shape}")
+    print(f"   Data shape: {fund_df.shape}")
     
     # Show sample values
     sample_tickers = successful_tickers[:3] if successful_tickers else tickers[:3]
-    print(f"  📋 Sample current values:")
+    print(f"   Sample current values:")
     for ticker in sample_tickers:
         if f'{ticker}_PE' in fund_df.columns:
             pe_val = fund_df[f'{ticker}_PE'].iloc[-1]
@@ -330,13 +330,13 @@ def download_sentiment_data(output_path):
         if not vix_raw.empty and 'Close' in vix_raw.columns:
             vix_data = vix_raw['Close']
             vix_data.name = 'VIX'
-            print("✅ Successfully downloaded VIX data")
+            print(" Successfully downloaded VIX data")
         else:
             # Fallback: create dummy VIX data
             vix_data = pd.Series(index=date_range, data=20.0, name='VIX')  # Average VIX around 20
-            print("⚠️ VIX download failed, using dummy data")
+            print(" VIX download failed, using dummy data")
     except Exception as e:
-        print(f"⚠️ VIX download error: {e}, using dummy data")
+        print(f" VIX download error: {e}, using dummy data")
         vix_data = pd.Series(index=date_range, data=20.0, name='VIX')  # Average VIX around 20
     
     # Create sentiment data DataFrame
@@ -354,7 +354,7 @@ def download_sentiment_data(output_path):
 
     file_path = os.path.join(output_path, 'sentiment_macro_raw.csv')
     sentiment_data.to_csv(file_path)
-    print(f"✅ VIX (real) and Simulated Sentiment data saved to: {file_path}")
+    print(f" VIX (real) and Simulated Sentiment data saved to: {file_path}")
 
 
 def main():
@@ -369,7 +369,7 @@ def main():
         TICKERS = fetch_top_etf_holdings(CONFIG['STOCK_SOURCE'], CONFIG['NUM_STOCKS'])
 
     if not TICKERS:
-        print("❌ ERROR: Ticker list is empty. Check configuration.")
+        print(" ERROR: Ticker list is empty. Check configuration.")
         return
 
     print(f"Starting Raw Data Collection (Phase 1) for {len(TICKERS)} stocks.")

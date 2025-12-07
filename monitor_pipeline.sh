@@ -9,7 +9,7 @@ CHECK_INTERVAL=30  # Check every 30 seconds
 cd "$PROJECT_DIR" || exit 1
 
 echo "=========================================="
-echo "🚀 Pipeline Monitor Started"
+echo " Pipeline Monitor Started"
 echo "=========================================="
 echo "Monitoring: $OUTPUT_LOG"
 echo "Check interval: ${CHECK_INTERVAL} seconds"
@@ -51,7 +51,7 @@ check_status() {
     elif grep -q "Phase 6.*Evaluation" "$OUTPUT_LOG" 2>/dev/null; then
         phase="Phase 6: Evaluation"
     elif grep -q "Pipeline Summary\|Full pipeline execution complete" "$OUTPUT_LOG" 2>/dev/null; then
-        phase="✅ COMPLETED"
+        phase=" COMPLETED"
     else
         phase="Starting..."
     fi
@@ -59,7 +59,7 @@ check_status() {
     # Check if process is running
     local pid=$(ps aux | grep "run_full_pipeline.py" | grep -v grep | awk '{print $2}' | head -1)
     if [ -z "$pid" ]; then
-        phase="⚠️  Process not running"
+        phase="  Process not running"
     fi
     
     echo "[$(date '+%H:%M:%S')] $phase$progress"
@@ -74,7 +74,7 @@ check_status() {
 generate_summary() {
     echo ""
     echo "=========================================="
-    echo "📊 Pipeline Summary Report"
+    echo " Pipeline Summary Report"
     echo "=========================================="
     echo "Time: $(date '+%Y-%m-%d %H:%M:%S')"
     echo ""
@@ -97,9 +97,9 @@ generate_summary() {
     # Process status
     local pid=$(ps aux | grep "run_full_pipeline.py" | grep -v grep | awk '{print $2}' | head -1)
     if [ -n "$pid" ]; then
-        echo "Process Status: ✅ Running (PID: $pid)"
+        echo "Process Status:  Running (PID: $pid)"
     else
-        echo "Process Status: ❌ Not running"
+        echo "Process Status:  Not running"
     fi
     echo ""
     
@@ -113,7 +113,7 @@ generate_summary() {
     
     # Phase completion status
     echo "Phase Status:"
-    grep -E "✅.*Phase|❌.*Phase" "$OUTPUT_LOG" 2>/dev/null | tail -6 | sed 's/^/  /'
+    grep -E ".*Phase|.*Phase" "$OUTPUT_LOG" 2>/dev/null | tail -6 | sed 's/^/  /'
     echo ""
 }
 

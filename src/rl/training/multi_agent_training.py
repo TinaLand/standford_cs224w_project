@@ -98,14 +98,14 @@ def train_multi_agent_system(
     3. Global reward is shared for centralized training
     """
     print("\n" + "="*60)
-    print("🤖 Training Multi-Agent RL System")
+    print(" Training Multi-Agent RL System")
     print("="*60)
     
     # Create environments for each sector
     sector_groups = coordinator.sector_groups
     all_tickers = coordinator.all_tickers
     
-    print(f"\n📊 Training Configuration:")
+    print(f"\n Training Configuration:")
     print(f"   - Number of agents: {len(coordinator.agents)}")
     print(f"   - Total stocks: {len(all_tickers)}")
     print(f"   - Timesteps: {total_timesteps}")
@@ -119,7 +119,7 @@ def train_multi_agent_system(
     }
     
     # Train each agent independently (simplified approach)
-    print("\n🔨 Training individual agents...")
+    print("\n Training individual agents...")
     
     for sector_name, agent in coordinator.agents.items():
         print(f"\n   Training {sector_name} agent ({agent.num_stocks} stocks)...")
@@ -149,18 +149,18 @@ def train_multi_agent_system(
                 'mean_length': np.mean(callback.episode_lengths) if callback.episode_lengths else 0
             }
             
-            print(f"   ✅ {sector_name} agent trained")
+            print(f"    {sector_name} agent trained")
             
         except Exception as e:
-            print(f"   ⚠️  Error training {sector_name} agent: {e}")
+            print(f"     Error training {sector_name} agent: {e}")
             training_stats['sector_performance'][sector_name] = {'error': str(e)}
     
     # Train mixing network (simplified - would need proper Q-value collection)
-    print("\n🔨 Training mixing network...")
+    print("\n Training mixing network...")
     print("   (Note: Full mixing network training requires Q-value collection)")
     print("   (This is a simplified implementation)")
     
-    print("\n✅ Multi-agent training completed!")
+    print("\n Multi-agent training completed!")
     
     return training_stats
 
@@ -178,7 +178,7 @@ def evaluate_multi_agent_system(
         Dictionary with evaluation metrics
     """
     print("\n" + "="*60)
-    print("📊 Evaluating Multi-Agent System")
+    print(" Evaluating Multi-Agent System")
     print("="*60)
     
     # Use MultiAgentTradingEnv for proper observation splitting
@@ -241,7 +241,7 @@ def evaluate_multi_agent_system(
         'n_episodes': n_episodes
     }
     
-    print(f"\n📈 Evaluation Results:")
+    print(f"\n Evaluation Results:")
     print(f"   Mean Return: {results['mean_return']*100:.2f}%")
     print(f"   Mean Sharpe: {results['mean_sharpe']:.2f}")
     print(f"   Mean Max DD: {results['mean_max_dd']*100:.2f}%")
@@ -251,22 +251,22 @@ def evaluate_multi_agent_system(
 
 def main():
     """Main training and evaluation pipeline."""
-    print("🚀 Phase 7: Multi-Agent RL Training")
+    print(" Phase 7: Multi-Agent RL Training")
     print("="*60)
     
     # Load GNN model
-    print("\n📁 Loading GNN model...")
+    print("\n Loading GNN model...")
     try:
         gnn_model = load_gnn_model_for_rl()
         gnn_model.eval()
-        print("✅ GNN model loaded")
+        print(" GNN model loaded")
     except Exception as e:
-        print(f"❌ Error loading GNN model: {e}")
+        print(f" Error loading GNN model: {e}")
         print("   Please ensure Phase 4 model is trained first.")
         return
     
     # Get all tickers from sector groups BEFORE creating coordinator
-    print("\n🤖 Creating multi-agent system...")
+    print("\n Creating multi-agent system...")
     sector_groups = SectorGrouping.load_sector_mapping()
     
     # Extract all tickers from sector groups
@@ -275,7 +275,7 @@ def main():
         all_tickers.extend(tickers)
     all_tickers = sorted(list(set(all_tickers)))
     
-    print(f"📊 Loaded {len(sector_groups)} sectors with {len(all_tickers)} total tickers")
+    print(f" Loaded {len(sector_groups)} sectors with {len(all_tickers)} total tickers")
     
     # Create multi-agent coordinator with all tickers
     coordinator = MultiAgentCoordinator(
@@ -313,7 +313,7 @@ def main():
     with open(results_file, 'w') as f:
         json.dump(results, f, indent=2, default=str)
     
-    print(f"\n✅ Results saved to: {results_file}")
+    print(f"\n Results saved to: {results_file}")
     
     # Save models
     multi_agent_dir = MODELS_DIR / "multi_agent_models"
@@ -323,9 +323,9 @@ def main():
         if agent.is_trained:
             agent_path = multi_agent_dir / f"agent_{sector_name}.zip"
             agent.agent.save(agent_path)
-            print(f"✅ Saved {sector_name} agent to: {agent_path}")
+            print(f" Saved {sector_name} agent to: {agent_path}")
     
-    print("\n🎉 Multi-Agent RL Training Complete!")
+    print("\n Multi-Agent RL Training Complete!")
 
 
 if __name__ == "__main__":

@@ -239,20 +239,20 @@ def run_marl_ablation():
     with open(output_file, 'w') as f:
         json.dump(comparison, f, indent=2, default=str)
     
-    print(f"\n✅ Results saved to: {output_file}")
+    print(f"\n Results saved to: {output_file}")
     
     # Save CSV summary
     if summary_data:
         csv_file = RESULTS_DIR / 'marl_ablation_summary.csv'
         summary_df.to_csv(csv_file, index=False)
-        print(f"✅ Summary saved to: {csv_file}")
+        print(f" Summary saved to: {csv_file}")
     
     print("\n" + "=" * 60)
     print("MARL Ablation Study Complete")
     print("=" * 60)
     
     # Analysis
-    print("\n📊 Key Findings:")
+    print("\n Key Findings:")
     if 'MARL_QMIX' in comparison and 'Independent_Learning' in comparison:
         marl_return = comparison['MARL_QMIX']['avg_return']
         iql_return = comparison['Independent_Learning']['avg_return']
