@@ -1128,27 +1128,23 @@ We choose **CTDE** over other MARL paradigms (fully centralized, fully decentral
 **Our Multi-Agent Architecture**:
 
 ```
-
- Multi-Agent RL System (CTDE)                        
-                                                      
-        
-  Agent 1:       Agent 2:       Agent N:      
-  Technology     Healthcare     Finance       
-  (10 stocks)    (10 stocks)    (10 stocks)  
-        
-                                                   
-                    
-                                                      
-                                 
-                  Mixing Network                    
-                  (QMIX-style)                      
-                                  
-                                                      
-                                 
-                  Global Reward                     
-                  (Portfolio)                       
-                                  
-
+┌───────────────────────────────────────────────────────────────┐
+│              Multi-Agent RL System (CTDE)                       │
+│                                                               │
+│  Agent 1:           Agent 2:           Agent N:              │
+│  Technology         Healthcare         Finance                │
+│  (10 stocks)        (10 stocks)        (10 stocks)            │
+│                                                               │
+│                            ↓                                  │
+│                                                               │
+│                  Mixing Network                                │
+│                  (QMIX-style)                                  │
+│                                                               │
+│                            ↓                                  │
+│                                                               │
+│                  Global Reward                                │
+│                  (Portfolio)                                  │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 **Key Components**:
