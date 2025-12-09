@@ -1,0 +1,44 @@
+{
+  "Full_Model": {
+    "accuracy": 0.5462068965517242,
+    "f1_score": 0.35325602140945583,
+    "precision_at_top10": 0.521551724137931,
+    "train_val_f1": 0.3420803871894733,
+    "description": "Full model with all edge types"
+  },
+  "Abl_NoCorrelation": {
+    "accuracy": 0.5462068965517242,
+    "f1_score": 0.35325602140945583,
+    "precision_at_top10": 0.521551724137931,
+    "train_val_f1": 0.3420803871894733,
+    "description": "Without correlation edges"
+  },
+  "Abl_NoFundSim": {
+    "accuracy": 0.5462068965517242,
+    "f1_score": 0.35325602140945583,
+    "precision_at_top10": 0.521551724137931,
+    "train_val_f1": 0.3420803871894733,
+    "description": "Without fundamental similarity edges"
+  },
+  "Abl_NoStatic": {
+    "accuracy": 0.5462068965517242,
+    "f1_score": 0.35325602140945583,
+    "precision_at_top10": 0.521551724137931,
+    "train_val_f1": 0.3420803871894733,
+    "description": "Without static edges (sector/industry)"
+  },
+  "Abl_OnlyCorrelation": {
+    "accuracy": 0.5462068965517242,
+    "f1_score": 0.35325602140945583,
+    "precision_at_top10": 0.521551724137931,
+    "train_val_f1": 0.3420803871894733,
+    "description": "Only correlation edges"
+  },
+  "Abl_OnlyFundSim": {
+    "accuracy": 0.5461494252873563,
+    "f1_score": 0.4056022802017026,
+    "precision_at_top10": 0.5439655172413793,
+    "train_val_f1": 0.35763847384742004,
+    "description": "Only fundamental similarity edges"
+  }
+}

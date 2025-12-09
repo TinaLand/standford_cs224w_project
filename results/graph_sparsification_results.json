@@ -1,0 +1,37 @@
+[
+  {
+    "top_k": 5,
+    "correlation_threshold": 0.3,
+    "test_accuracy": 0.4408,
+    "test_f1": 0.305941143808995,
+    "num_test_graphs": 50
+  },
+  {
+    "top_k": 8,
+    "correlation_threshold": 0.4,
+    "test_accuracy": 0.4408,
+    "test_f1": 0.305941143808995,
+    "num_test_graphs": 50
+  },
+  {
+    "top_k": 10,
+    "correlation_threshold": 0.5,
+    "test_accuracy": 0.4408,
+    "test_f1": 0.305941143808995,
+    "num_test_graphs": 50
+  },
+  {
+    "top_k": 15,
+    "correlation_threshold": 0.6,
+    "test_accuracy": 0.4408,
+    "test_f1": 0.305941143808995,
+    "num_test_graphs": 50
+  },
+  {
+    "top_k": 20,
+    "correlation_threshold": 0.7,
+    "test_accuracy": 0.4408,
+    "test_f1": 0.305941143808995,
+    "num_test_graphs": 50
+  }
+]

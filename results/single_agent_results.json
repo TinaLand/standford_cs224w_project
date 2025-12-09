@@ -1,0 +1,28 @@
+{
+  "model_type": "single_agent_ppo",
+  "training_config": {
+    "total_timesteps": 10000,
+    "learning_rate": 1e-05,
+    "policy": "MlpPolicy",
+    "verbose": 1
+  },
+  "training_statistics": {
+    "total_timesteps": 10000,
+    "learning_rate": 1e-05,
+    "policy": "MlpPolicy",
+    "status": "completed",
+    "agent_id": "single_ppo_agent"
+  },
+  "model_path": "/Users/tianhuihuang/Desktop/cs224_porject/results/ppo_stock_agent.zip",
+  "training_period": {
+    "start_date": "2023-02-27",
+    "end_date": "2024-12-31"
+  },
+  "status": "completed",
+  "evaluation_results": {
+    "mean_return": -35.275901794433594,
+    "std_return": 29.302173614501953,
+    "mean_length": 464.0,
+    "n_episodes": 5
+  }
+}

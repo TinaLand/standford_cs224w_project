@@ -1,0 +1,2 @@
+sharpe_ratio,ci_lower,ci_upper,p_value,n_bootstrap
+-0.946128639437194,-1.725453526941243,1.3082100889405774,0.899,1000

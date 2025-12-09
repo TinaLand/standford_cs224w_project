@@ -1,0 +1,146 @@
+[
+  {
+    "transaction_cost": 0.0,
+    "slippage": 0.0,
+    "cumulative_return": -0.9084465503692627,
+    "sharpe_ratio": 0.2851418122482938,
+    "max_drawdown": 1.8969933986663818,
+    "final_portfolio_value": 9138.9697265625,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.0001,
+    "slippage": 0.0,
+    "cumulative_return": -0.26433879137039185,
+    "sharpe_ratio": -0.6504390992912162,
+    "max_drawdown": 2.1693575382232666,
+    "final_portfolio_value": 62443.54296875,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.0005,
+    "slippage": 0.0,
+    "cumulative_return": -0.10214818269014359,
+    "sharpe_ratio": 0.7897545979165495,
+    "max_drawdown": 1.8017704486846924,
+    "final_portfolio_value": 89404.2890625,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.001,
+    "slippage": 0.0,
+    "cumulative_return": 1.0719393491744995,
+    "sharpe_ratio": 0.28499641506395945,
+    "max_drawdown": 1.4092432260513306,
+    "final_portfolio_value": 207936.59375,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.002,
+    "slippage": 0.0,
+    "cumulative_return": 0.3912616968154907,
+    "sharpe_ratio": -0.49970124583925357,
+    "max_drawdown": 3.641476631164551,
+    "final_portfolio_value": 138791.484375,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.005,
+    "slippage": 0.0,
+    "cumulative_return": 1.2375491857528687,
+    "sharpe_ratio": -0.14658491990591774,
+    "max_drawdown": 1.2731987237930298,
+    "final_portfolio_value": 224027.921875,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.001,
+    "slippage": 0.0,
+    "cumulative_return": -1.0364092588424683,
+    "sharpe_ratio": -0.4623142863711271,
+    "max_drawdown": 1.4088093042373657,
+    "final_portfolio_value": -3082.578857421875,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.001,
+    "slippage": 0.0001,
+    "cumulative_return": -0.5910553336143494,
+    "sharpe_ratio": 0.8177602912045622,
+    "max_drawdown": 1.9423103332519531,
+    "final_portfolio_value": 40911.734375,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.001,
+    "slippage": 0.0005,
+    "cumulative_return": -1.6859984397888184,
+    "sharpe_ratio": 0.5121418286357945,
+    "max_drawdown": 2.3480615615844727,
+    "final_portfolio_value": -68388.875,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.001,
+    "slippage": 0.001,
+    "cumulative_return": 0.4933803677558899,
+    "sharpe_ratio": -0.3688123783885008,
+    "max_drawdown": 1.1252700090408325,
+    "final_portfolio_value": 149279.09375,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.001,
+    "slippage": 0.002,
+    "cumulative_return": -1.108959674835205,
+    "sharpe_ratio": 0.1573252131914159,
+    "max_drawdown": 1.4925909042358398,
+    "final_portfolio_value": -9250.138671875,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.001,
+    "slippage": 0.005,
+    "cumulative_return": 1.087537407875061,
+    "sharpe_ratio": 0.6912375627966169,
+    "max_drawdown": 3.1817867755889893,
+    "final_portfolio_value": 176524.140625,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.0,
+    "slippage": 0.0,
+    "cumulative_return": -1.1040812730789185,
+    "sharpe_ratio": -0.37273782487650625,
+    "max_drawdown": 1.86589515209198,
+    "final_portfolio_value": -10444.1220703125,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.001,
+    "slippage": 0.0005,
+    "cumulative_return": 1.6347784996032715,
+    "sharpe_ratio": 0.6408276637948185,
+    "max_drawdown": 2.1307082176208496,
+    "final_portfolio_value": 263671.90625,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.002,
+    "slippage": 0.001,
+    "cumulative_return": -0.25495368242263794,
+    "sharpe_ratio": 1.1469517492597563,
+    "max_drawdown": 1.4216046333312988,
+    "final_portfolio_value": 63163.10546875,
+    "num_trading_days": 501
+  },
+  {
+    "transaction_cost": 0.005,
+    "slippage": 0.002,
+    "cumulative_return": -0.6397402286529541,
+    "sharpe_ratio": 0.7652475713047678,
+    "max_drawdown": 1.3644638061523438,
+    "final_portfolio_value": 35936.84375,
+    "num_trading_days": 501
+  }
+]

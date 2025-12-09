@@ -61,9 +61,18 @@ src/rl/models/
 src/rl/models/**/*
 
 # Results
-results/
-results/**/*
+# Ignore all results by default, but allow small result files (CSV, JSON)
+results/*
 !results/.gitkeep
+!results/*.csv
+!results/*.json
+# Ignore subdirectories and large files
+results/**/
+results/*.zip
+results/*.pt
+results/*.pth
+results/*.pkl
+results/plots/
 
 # Logs
 logs/
