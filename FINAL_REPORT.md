@@ -2,6 +2,8 @@
 
 **Stanford CS 224W (Machine Learning with Graphs) Course Project**
 
+**Repository**: [GitHub Repository](git@github.com:TinaLand/standford_cs224w_project.git)
+
 ## Abstract
 
 The stock market presents a formidable challenge for predictive modeling, with most active fund managers failing to consistently outperform market indices. According to recent SPIVA reports, over half of professional equity managers underperform benchmarks annually [Ganti, 2024]. This persistent difficulty stems from the market's inherent complexity: non-linear price dynamics, intricate temporal dependencies spanning multiple time horizons, and rich interdependencies among securities that traditional models fail to capture.
@@ -2356,7 +2358,7 @@ This project demonstrates the effectiveness of **Graph Neural Networks** for sto
 
 ```bash
 # Clone repository
-git clone <repository_url>
+git clone git@github.com:TinaLand/standford_cs224w_project.git
 cd cs224_porject
 
 # Create virtual environment
