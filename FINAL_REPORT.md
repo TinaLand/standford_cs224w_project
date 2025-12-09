@@ -1266,7 +1266,7 @@ This section presents comprehensive experimental results, including node-level a
 | **Sharpe Ratio** | 13.05 |
 | **Max Drawdown** | -99.79% |
 
-*Note: Portfolio-level metrics are computed during backtesting. Detailed results are available in `results/final_metrics.csv`. The portfolio history includes periods where portfolio value became negative due to leverage effects in the RL environment, which affects Sharpe Ratio and Max Drawdown calculations. The high Sharpe Ratio (13.05) reflects strong recovery from drawdowns, while the Max Drawdown (-99.79%) indicates significant volatility during the backtesting period. These metrics should be interpreted in the context of the high cumulative return (304.36%) achieved over the 501-day backtesting period.*
+*Note: Portfolio-level metrics are computed during backtesting. Detailed results are available in `results/final_metrics.csv`. The portfolio history includes periods where portfolio value became negative due to leverage effects in the RL environment, which affects Sharpe Ratio and Max Drawdown calculations. The high Sharpe Ratio (13.05) reflects strong recovery from drawdowns, while the Max Drawdown (-99.79%) indicates significant volatility during the backtesting period. These metrics should be interpreted in the context of the high cumulative return (304.36%) achieved over the 501-day backtesting period. See Section 7.1 for discussion of potential concentration risk and limitations.*
 
 **Key Insights**:
 
@@ -2283,6 +2283,8 @@ This section discusses the limitations of our approach and outlines potential fu
 
 4. **Static Relationships**: Some edge types (sector, supply chain) are static, missing temporal evolution
 
+5. **Portfolio Concentration Risk**: The RL agent may exhibit concentration bias, potentially allocating heavily to high-performing stocks (e.g., technology sector leaders during the test period). While this can lead to high cumulative returns, it also increases portfolio volatility and drawdown risk. The high cumulative return (304.36%) and maximum drawdown (-99.79%) observed during backtesting may reflect this concentration effect, particularly during periods of strong sector-specific performance (e.g., the AI boom in 2023-2024). Future work should incorporate position limits and diversification constraints to ensure more robust portfolio construction across different market regimes.
+
 ### 7.2 Future Improvements
 
 1. **Dynamic Edge Learning**: Learn edge weights that evolve over time
@@ -2296,6 +2298,8 @@ This section discusses the limitations of our approach and outlines potential fu
 5. **Ensemble Methods**: Combine multiple models for robustness
 
 6. **Explainability**: Add attention visualization to understand which relationships matter most
+
+7. **Portfolio Risk Management**: Implement position limits (e.g., max 10-15% per stock), diversification constraints (minimum number of holdings), and concentration risk penalties in the RL reward function to prevent over-concentration in single stocks or sectors and improve robustness across different market regimes
 
 ---
 
